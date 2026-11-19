@@ -37,7 +37,7 @@ Steps only the owner can do (Cloudflare Access, tokens, secrets, Google Calendar
 | Android emulator | `bun run android:emulator`  | Build and install the dev build on the running emulator or a plugged-in phone, then start Metro       |
 | Android phone    | `bun run android:phone`     | Pick a connected phone, build and install the dev build                                               |
 | Android APK      | `bun run android:apk`       | Build a release APK for sideloading (needs JDK 21 and ccache); `--no-build-cache` forces a full build |
-| Install the APK  | `bun run android:phone:apk` | Install the built APK on the plugged-in phone (USB debugging on)                                      |
+| Install the APK  | `bun run android:phone:apk` | Build a release APK from the current code and install it on the plugged-in phone (USB debugging on)   |
 
 - **Dev builds** compile on your Mac, use no EAS quota and reload live on edits.
 - **Native changes** need `bun run android:emulator` again; `bun run start` only opens the installed dev build.

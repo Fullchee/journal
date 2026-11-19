@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
-# Build a standalone release APK (JS bundled in, no Metro), open the Drive upload folder, and reveal the APK in Finder.
+# Build a standalone release APK (JS bundled in, no Metro) from the current code.
+# --install puts it on the USB-connected phone; otherwise it opens the Drive upload folder and reveals the APK in Finder.
 set -euo pipefail
+
+install_on_phone=false
+if [[ "${1:-}" == --install ]]; then
+	install_on_phone=true
+	shift
+fi
+
 cd "$(dirname "$0")/.."
 
 DRIVE_URL="https://drive.google.com/drive/u/0/folders/1uIDzHTp9rQKAxHKFArRUaK1xQXI7RNLO"
@@ -42,7 +50,11 @@ GRADLE_ARGS+=("$@")
 (cd android && ./gradlew "${GRADLE_ARGS[@]}")
 
 cp "$BUILT" "$APK"
-open "$DRIVE_URL"
-open -R "$APK"
 
-echo "Built $APK. Upload it to the Drive folder, then install it from Drive on the phone."
+if [[ $install_on_phone == true ]]; then
+	adb -d install -r "$APK"
+else
+	open "$DRIVE_URL"
+	open -R "$APK"
+	echo "Built $APK. Upload it to the Drive folder, then install it from Drive on the phone."
+fi

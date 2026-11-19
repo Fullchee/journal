@@ -23,7 +23,7 @@
     "android:emulator": "expo run:android",
     "android:phone": "expo run:android --device",
     "android:apk": "scripts/build-apk.sh",
-    "android:phone:apk": "adb -d install -r android/app/build/outputs/apk/release/journal.apk",
+    "android:phone:apk": "scripts/build-apk.sh --install",
     "e2e": ".maestro/run.sh",
     "emulator": "scripts/emulator.sh",
     "screenshot:web": "scripts/web-preview.sh node scripts/screenshot-web.ts",
