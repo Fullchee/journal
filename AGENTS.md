@@ -13,7 +13,7 @@ One `package.json` at the root; run every command from there. `PRODUCT.md` and `
 
 `bun run check` runs lint, typecheck, test and fallow in CI's order and prints only a failed step's output.
 
-The repo is public; personal details live only in D1. Write docs, tests and seed rows with invented examples. CI's `scripts/check-terms.sh` fails on any term in the `DENIED_TERMS` secret; the private `journal-native-archive` repo keeps the old history, issues and D1 backups.
+The repo is public; personal details live only in D1. Write docs, tests and seed rows with invented examples. The private `journal-native-archive` repo keeps the old history, issues and D1 backups.
 
 Parse JSON from outside the app (API responses, storage, model output) with a `zod/mini` schema and derive its type from the schema; never cast it `as T`.
 
