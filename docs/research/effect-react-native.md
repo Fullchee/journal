@@ -4,7 +4,7 @@ Researched 2026-11-19 against Effect [`effect@4.1.4`](https://github.com/Effect-
 
 ## Answer
 
-**Don't migrate the whole repo.** Effect 4 runs on this app's Hermes, but a full rewrite would make the repo harder for agents to keep correct, not easier. If you want Effect at all, pilot it in one Worker job.
+**Don't migrate the whole repo.** Effect 4 runs on this app's Hermes, but a full rewrite would make the repo harder for agents to keep correct, not easier. The sync jobs looked like the one place it might help; after reading them, Effect is not adopted there either (see [Sync pilot decision](#sync-pilot-decision)).
 
 - **Runs on Hermes**: Effect 4's core needs nothing this Hermes lacks. No polyfill is needed beyond the existing ones. Two Hermes bugs (dates, memory) were fixed in October 2026.
 - **Agents know the old version**: Effect 4 shipped on 2026-09-30. Most model training data shows Effect 3, whose names changed. Expect v3 code that the type checker has to reject.
@@ -30,11 +30,23 @@ The current stack: `zod/mini` for parsing, TanStack Query (with a persisted cach
 
 | Layer                                           | Adopt? | Why                                                                                                                                                                                          |
 | ----------------------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Worker sync jobs** (`hevy-sync`, `calendar`)  | Pilot  | Outside APIs, retries, partial failures: Effect's strengths. Workers run V8, so Hermes issues don't apply. `@effect/sql-d1` exists, but is `@stability unstable`.                            |
+| **Worker sync jobs** (`hevy-sync`, `calendar`)  | No     | Looked like Effect's strengths, but the code has no retries, timeouts or concurrency to manage. See [Sync pilot decision](#sync-pilot-decision).                                             |
 | **Worker request handlers** (`worker/api/*.ts`) | No     | Most are "parse body, run SQL, return JSON". Effect's `HttpApi` and `http` modules are `@stability unstable`: breaking changes can land in minor releases ([migration guide][migration]).    |
 | **`src/core`**                                  | No     | Pure, synchronous logic shared with the Worker. Effect adds overhead and no benefit.                                                                                                         |
 | **App data layer** (TanStack Query)             | No     | The persisted cache and paused-mutation queue have no Effect equivalent. `@effect/atom-react` is `@stability unstable`. Running Effects inside `queryFn` works but adds a layer for nothing. |
 | **Parsing** (`zod/mini`)                        | No     | Schema is larger and its API is newer to agents. Swap only if a Worker pilot needs Schema to share types with Effect code.                                                                   |
+
+## Sync pilot decision
+
+Decided 2026-11-19 after reading `worker/lib/hevy-sync.ts` (369 lines), `worker/lib/calendar.ts` (333) and `worker/lib/todoist.ts` (76). Effect would not make them easier to maintain.
+
+- **Typed errors already exist**: `calendar.ts` returns a `CalendarResult` union (`ok`, `not-connected`, `unreachable`). Hevy has two failure kinds: sign-in (logged, run skipped) and anything else (thrown, logged once in `syncHevy`).
+- **No retries to manage**: Hevy runs under a 45-subrequest budget per cron run. A retry spends that budget; the next daily run is the retry.
+- **No real concurrency**: the only parallel step is one `Promise.all` over calendars in `calendar.ts`.
+- **Dependencies are already passed in**: each sync takes `db`, `now` and `fetcher` as arguments, so tests swap them without Effect's `Layer`.
+- **A second style for ~780 lines**: the other Worker code stays plain `async`, so agents would switch styles by file. They would also tend to write Effect 3 APIs (see [AI-agent fit](#ai-agent-fit)).
+
+Revisit if a sync gains retries with backoff, several outside calls in parallel, or more than two failure kinds the caller must tell apart.
 
 ## Hermes compatibility
 
