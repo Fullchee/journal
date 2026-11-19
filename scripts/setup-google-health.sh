@@ -223,7 +223,7 @@ run_wizard() {
 	cd "$(git rev-parse --show-toplevel)"
 	# .env*.local is git-ignored, so the token never lands in a commit.
 	ENV_FILE=".env.local"
-	REPO="Fullchee/journal-native"
+	REPO="Fullchee/journal"
 	APP_URL="https://journal.fullchee.workers.dev"
 	REDIRECT_URI="http://localhost:8765"
 	FALLBACK_DOC="docs/research/fitbit-data.md (Option 4: Health Connect)"

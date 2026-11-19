@@ -223,7 +223,7 @@ run_wizard() {
 	TOTAL_STAGES=17
 
 	cd "$(git rev-parse --show-toplevel)"
-	REPO="Fullchee/journal-native"
+	REPO="Fullchee/journal"
 	SITE="https://journal.fullchee.workers.dev"
 	CF_ACCOUNT="296a4e1f99974dd2c529d71ef1be56c3"
 	# The old app's checkout: it owns the Pages deploy, the D1 database and the Google client.

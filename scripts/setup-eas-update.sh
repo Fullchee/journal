@@ -289,7 +289,7 @@ run_wizard() {
 
 	stage "CI secret"
 	say "CI publishes updates with the same token."
-	if confirm "Set EXPO_TOKEN as a repo secret on Fullchee/journal-native?"; then
+	if confirm "Set EXPO_TOKEN as a repo secret on Fullchee/journal?"; then
 		set_secret EXPO_TOKEN "$EXPO_TOKEN"
 	else
 		SKIPPED+=("GitHub secret EXPO_TOKEN")

@@ -61,7 +61,7 @@ Don't create PRs. Merge a branch into `main` with a squash merge (`git merge --s
 
 After `/triage` or a plan, fan unblocked `ready-for-agent` issues out to parallel worktree agents without asking. Land shared setup on `main` first and name one owner per shared file in each brief.
 
-- **Issue tracker**: GitHub Issues in `Fullchee/journal-native`. See `docs/agents/issue-tracker.md`.
+- **Issue tracker**: GitHub Issues in `Fullchee/journal`. See `docs/agents/issue-tracker.md`.
 - **Domain language**: `GLOSSARY.md`.
 - **Planning**: the effort is charted with `/wayfinder` as a `wayfinder:map` issue.
 - **Moving off `journal`** (the old SvelteKit repo, now `journal-2026-11-svelte`): `docs/api-migration.md` tracks what has moved and what blocks archiving it.
