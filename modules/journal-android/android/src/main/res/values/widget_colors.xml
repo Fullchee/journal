@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Widget palette from DESIGN.md; values-night holds each token's night twin. -->
+<resources>
+    <color name="widget_ground">#f3eee2</color>
+    <color name="widget_paper">#faf7ef</color>
+    <color name="widget_ink">#1d1c19</color>
+    <color name="widget_graphite">#5a5546</color>
+    <color name="widget_edge">#8c8268</color>
+    <color name="widget_pressed_tint">#e7dfcc</color>
+    <color name="widget_hairline">#d3c8ae</color>
+    <color name="widget_leaf">#2f5e34</color>
+</resources>

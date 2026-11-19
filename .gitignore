@@ -1,0 +1,60 @@
+# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+
+# dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native
+.kotlin/
+build/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+*.pem
+
+# local env files (wrangler reads secrets from .dev.vars)
+.dev.vars
+.env*.local
+
+# typescript
+*.tsbuildinfo
+
+example
+
+# generated native folders
+/ios
+/android
+
+# TypeScript incremental cache
+*.tsbuildinfo
+
+# Per-machine mise config, e.g. a personal EXPO_TOKEN
+mise.local.toml
+
+# Jest coverage, merged for fallow
+coverage/
+
+# lint cache
+.eslintcache
+
+# wrangler dev bundles and local state
+.wrangler/

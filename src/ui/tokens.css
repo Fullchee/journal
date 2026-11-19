@@ -1,0 +1,89 @@
+/*
+ * Journal design tokens: the Botanical Folio palette from journal/src/styles/global.css,
+ * under shadcn names so React Native Reusables classes (bg-primary, text-muted-foreground) resolve.
+ * Uniwind reads @variant light/dark; plain Tailwind 4 in a React DOM app needs a small adapter.
+ */
+@layer theme {
+  :root {
+    /* Day plate: cream paper, sepia rules, leaf green marks done and selected. */
+    @variant light {
+      --color-background: #f3eee2;
+      --color-foreground: #1d1c19;
+      --color-card: #faf7ef;
+      --color-card-foreground: #1d1c19;
+      --color-popover: #faf7ef;
+      --color-popover-foreground: #1d1c19;
+      --color-primary: #2f5e34;
+      --color-primary-foreground: #faf7ef;
+      --color-secondary: #e7dfcc;
+      --color-secondary-foreground: #1d1c19;
+      --color-muted: #e7dfcc;
+      --color-muted-foreground: #57544c;
+      --color-accent: #e7dfcc;
+      --color-accent-foreground: #1d1c19;
+      --color-destructive: #a8261c;
+      --color-border: #d3c8ae;
+      --color-input: #8c8268;
+      --color-ring: #2f5e34;
+      --color-stage-seed: #7a5a1e;
+      --color-stage-sprout: #3f7a3a;
+      --color-stage-plant: #2f5e34;
+      --color-stage-tree: #1f4224;
+
+      /* Check-in chart lines; each stays above 5:1 on the plate paper. */
+      --color-series-mood: #2f5e34;
+      --color-series-tense: #8a5a12;
+      --color-series-low: #2f5a8a;
+      --color-series-tired: #2b6660;
+      --color-series-sleep: #6a4a86;
+    }
+
+    /* Night plate: pressed-leaf green-black with cream ink. */
+    @variant dark {
+      --color-background: #141811;
+      --color-foreground: #ece6d4;
+      --color-card: #1c2118;
+      --color-card-foreground: #ece6d4;
+      --color-popover: #1c2118;
+      --color-popover-foreground: #ece6d4;
+      --color-primary: #9cc78e;
+      --color-primary-foreground: #141811;
+      --color-secondary: #262c21;
+      --color-secondary-foreground: #ece6d4;
+      --color-muted: #262c21;
+      --color-muted-foreground: #b3ad9b;
+      --color-accent: #262c21;
+      --color-accent-foreground: #ece6d4;
+      --color-destructive: #ec7f70;
+      --color-border: #3a4033;
+      --color-input: #6f7864;
+      --color-ring: #9cc78e;
+      --color-stage-seed: #d9b56c;
+      --color-stage-sprout: #a9d49b;
+      --color-stage-plant: #9cc78e;
+      --color-stage-tree: #c4dfb8;
+      --color-series-mood: #9cc78e;
+      --color-series-tense: #e0b064;
+      --color-series-low: #8fb3e0;
+      --color-series-tired: #86c9c1;
+      --color-series-sleep: #c3a6dc;
+    }
+  }
+}
+
+/*
+ * Botanical Folio type: each role names one loaded face (src/lib/fonts.ts).
+ * Android can't pick a weight or italic out of a custom family, so text never adds font-weight or italic on top.
+ */
+@theme {
+  --font-sans: AlegreyaSans_400Regular;
+  --font-sans-medium: AlegreyaSans_500Medium;
+  --font-sans-bold: AlegreyaSans_700Bold;
+  --font-caption: Alegreya_400Regular_Italic;
+  --font-display: Alegreya_500Medium_Italic;
+  --font-label: AlegreyaSansSC_500Medium;
+  --font-label-bold: AlegreyaSansSC_700Bold;
+
+  /* Alegreya Sans runs small for its size: body is 17px. */
+  --text-base: 1.0625rem;
+}

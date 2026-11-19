@@ -1,0 +1,23 @@
+{
+  "extends": "./tsconfig.strict.json",
+  "compilerOptions": {
+    // Node runs these files directly: it strips types but never rewrites syntax or import paths.
+    "target": "ESNext",
+    "lib": ["ESNext"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "erasableSyntaxOnly": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "types": ["node"]
+  },
+  "include": [
+    "stylelint.config.ts",
+    "jest.config.ts",
+    "jest.core.config.ts",
+    "scripts/**/*.ts",
+    "tools/oxlint/journal/**/*.ts",
+    ".claude/skills/journal/**/*.ts"
+  ]
+}

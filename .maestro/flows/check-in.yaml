@@ -1,0 +1,10 @@
+appId: dev.fullchee.journal
+name: Make a Check-in
+---
+- runFlow: ../common/open-app.yaml
+- runScript: ../scripts/count-check-ins.js
+- evalScript: ${output.before = output.checkIns}
+- tapOn: "Sun, upper half"
+- assertVisible: "Saved.*"
+- runFlow:
+    file: ../common/expect-one-more-check-in.yaml

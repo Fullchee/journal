@@ -1,0 +1,16 @@
+appId: dev.fullchee.journal
+name: Offline Check-in saves once back online
+---
+- runFlow: ../common/open-app.yaml
+- runScript: ../scripts/count-check-ins.js
+- evalScript: ${output.before = output.checkIns}
+- setAirplaneMode: enabled
+- extendedWaitUntil:
+    visible: "Offline.*"
+    timeout: 20000
+- tapOn: "Rain, upper half"
+- runScript: ../scripts/count-check-ins.js
+- assertTrue: ${output.checkIns == output.before}
+- setAirplaneMode: disabled
+- runFlow:
+    file: ../common/expect-one-more-check-in.yaml

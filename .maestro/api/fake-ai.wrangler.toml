@@ -1,0 +1,3 @@
+name = "journal-e2e-fake-ai"
+main = "fake-ai.ts"
+compatibility_date = "2026-11-01"

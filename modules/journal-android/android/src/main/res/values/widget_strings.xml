@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="check_in_widget_description">Check in: tap a Storm to Sun zone</string>
+    <string name="widget_zone_storm">Storm</string>
+    <string name="widget_zone_rain">Rain</string>
+    <string name="widget_zone_cloud">Cloud</string>
+    <string name="widget_zone_sun">Sun</string>
+    <string name="widget_check_in_storm">Check in: Storm</string>
+    <string name="widget_check_in_rain">Check in: Rain</string>
+    <string name="widget_check_in_cloud">Check in: Cloud</string>
+    <string name="widget_check_in_sun">Check in: Sun</string>
+    <string name="alarms_widget_description">The next Habit alarms, today\'s first</string>
+    <string name="alarms_widget_title">Next alarms</string>
+    <string name="alarms_widget_open_habits">Open Habits</string>
+    <string name="alarms_widget_none_set">No Habit alarms set</string>
+    <string name="alarms_widget_today">Today</string>
+    <string name="alarms_widget_tomorrow">Tomorrow</string>
+    <string name="alarms_widget_next_weekday">Next %1$s</string>
+    <string name="alarms_widget_not_loaded">Open the app to load alarms</string>
+    <string name="log_widget_description">Log a Habit in plain words</string>
+    <string name="log_widget_label">Log</string>
+    <string name="log_widget_open">Open the log box</string>
+    <string name="habits_widget_description">Today\'s due Habits: tick one off or open it</string>
+    <string name="habits_widget_title">Habits today</string>
+    <string name="habits_widget_open_today">Open Today</string>
+    <string name="habits_widget_tick">Done: %1$s</string>
+    <string name="habits_widget_all_done">Nothing left for today</string>
+    <string name="habits_widget_not_loaded">Open the app to load today\'s Habits</string>
+    <string name="timed_tile_label">Timed Habit</string>
+    <string name="timed_tile_start">Start %1$s</string>
+    <string name="timed_tile_stop">Stop %1$s</string>
+    <string name="timed_tile_since">Since %1$s</string>
+    <string name="timed_tile_save">Save %1$s</string>
+    <string name="timed_tile_unsaved">Not saved yet</string>
+    <string name="timed_tile_none">No timed Habit yet</string>
+</resources>

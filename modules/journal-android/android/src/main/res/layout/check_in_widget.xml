@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Storm left to Sun right, like the arch-topped zone plates on the home page. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@android:id/background"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_background"
+    android:orientation="horizontal"
+    android:paddingStart="7dp"
+    android:paddingTop="8dp"
+    android:paddingEnd="7dp"
+    android:paddingBottom="8dp">
+
+    <LinearLayout
+        android:id="@+id/zone_storm"
+        style="@style/WidgetZone"
+        android:contentDescription="@string/widget_check_in_storm">
+
+        <ImageView
+            style="@style/WidgetZoneEngraving"
+            android:src="@drawable/widget_engraving_storm" />
+
+        <TextView
+            style="@style/WidgetZoneName"
+            android:text="@string/widget_zone_storm" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/zone_rain"
+        style="@style/WidgetZone"
+        android:contentDescription="@string/widget_check_in_rain">
+
+        <ImageView
+            style="@style/WidgetZoneEngraving"
+            android:src="@drawable/widget_engraving_rain" />
+
+        <TextView
+            style="@style/WidgetZoneName"
+            android:text="@string/widget_zone_rain" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/zone_cloud"
+        style="@style/WidgetZone"
+        android:contentDescription="@string/widget_check_in_cloud">
+
+        <ImageView
+            style="@style/WidgetZoneEngraving"
+            android:src="@drawable/widget_engraving_cloud" />
+
+        <TextView
+            style="@style/WidgetZoneName"
+            android:text="@string/widget_zone_cloud" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/zone_sun"
+        style="@style/WidgetZone"
+        android:contentDescription="@string/widget_check_in_sun">
+
+        <ImageView
+            style="@style/WidgetZoneEngraving"
+            android:src="@drawable/widget_engraving_sun" />
+
+        <TextView
+            style="@style/WidgetZoneName"
+            android:text="@string/widget_zone_sun" />
+    </LinearLayout>
+</LinearLayout>

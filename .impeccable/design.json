@@ -1,0 +1,423 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-09T00:00:00Z",
+  "title": "Design System: Journal",
+  "extensions": {
+    "colorMeta": {
+      "plate-cream": {
+        "role": "neutral",
+        "displayName": "Plate Cream",
+        "canonical": "#f3eee2",
+        "tonalRamp": [
+          "oklch(15% 0.008 85)",
+          "oklch(27% 0.012 85)",
+          "oklch(39% 0.016 85)",
+          "oklch(51% 0.018 85)",
+          "oklch(63% 0.018 85)",
+          "oklch(75% 0.018 85)",
+          "oklch(86% 0.016 85)",
+          "oklch(95% 0.012 85)"
+        ]
+      },
+      "plate-paper": {
+        "role": "neutral",
+        "displayName": "Plate Paper",
+        "canonical": "#faf7ef",
+        "tonalRamp": [
+          "oklch(15% 0.006 88)",
+          "oklch(27% 0.009 88)",
+          "oklch(39% 0.012 88)",
+          "oklch(51% 0.013 88)",
+          "oklch(63% 0.013 88)",
+          "oklch(75% 0.013 88)",
+          "oklch(86% 0.011 88)",
+          "oklch(97% 0.008 88)"
+        ]
+      },
+      "fruit-black-ink": {
+        "role": "neutral",
+        "displayName": "Fruit-Black Ink",
+        "canonical": "#1d1c19",
+        "tonalRamp": [
+          "oklch(15% 0.005 90)",
+          "oklch(22% 0.006 90)",
+          "oklch(33% 0.007 90)",
+          "oklch(45% 0.008 90)",
+          "oklch(57% 0.008 90)",
+          "oklch(70% 0.007 90)",
+          "oklch(83% 0.005 90)",
+          "oklch(95% 0.003 90)"
+        ]
+      },
+      "graphite": {
+        "role": "neutral",
+        "displayName": "Graphite",
+        "canonical": "#57544c",
+        "tonalRamp": [
+          "oklch(15% 0.006 90)",
+          "oklch(27% 0.009 90)",
+          "oklch(39% 0.011 90)",
+          "oklch(45% 0.012 90)",
+          "oklch(58% 0.012 90)",
+          "oklch(70% 0.011 90)",
+          "oklch(83% 0.008 90)",
+          "oklch(95% 0.005 90)"
+        ]
+      },
+      "sepia-hairline": {
+        "role": "neutral",
+        "displayName": "Sepia Hairline",
+        "canonical": "#d3c8ae",
+        "tonalRamp": [
+          "oklch(15% 0.012 85)",
+          "oklch(27% 0.02 85)",
+          "oklch(39% 0.028 85)",
+          "oklch(51% 0.034 85)",
+          "oklch(63% 0.036 85)",
+          "oklch(74% 0.036 85)",
+          "oklch(83% 0.034 85)",
+          "oklch(95% 0.02 85)"
+        ]
+      },
+      "sepia-edge": {
+        "role": "neutral",
+        "displayName": "Sepia Edge",
+        "canonical": "#8c8268",
+        "tonalRamp": [
+          "oklch(15% 0.012 88)",
+          "oklch(27% 0.02 88)",
+          "oklch(39% 0.028 88)",
+          "oklch(51% 0.033 88)",
+          "oklch(60% 0.035 88)",
+          "oklch(72% 0.03 88)",
+          "oklch(84% 0.022 88)",
+          "oklch(95% 0.012 88)"
+        ]
+      },
+      "leaf-green": {
+        "role": "primary",
+        "displayName": "Leaf Green",
+        "canonical": "#2f5e34",
+        "tonalRamp": [
+          "oklch(15% 0.04 145)",
+          "oklch(27% 0.06 145)",
+          "oklch(44% 0.08 145)",
+          "oklch(53% 0.09 145)",
+          "oklch(64% 0.09 145)",
+          "oklch(76% 0.08 145)",
+          "oklch(86% 0.05 145)",
+          "oklch(95% 0.025 145)"
+        ]
+      },
+      "pressed-tint": {
+        "role": "neutral",
+        "displayName": "Pressed Tint",
+        "canonical": "#e7dfcc",
+        "tonalRamp": [
+          "oklch(15% 0.01 85)",
+          "oklch(27% 0.016 85)",
+          "oklch(39% 0.022 85)",
+          "oklch(51% 0.026 85)",
+          "oklch(63% 0.027 85)",
+          "oklch(75% 0.026 85)",
+          "oklch(90% 0.022 85)",
+          "oklch(96% 0.012 85)"
+        ]
+      },
+      "weed-scarlet": {
+        "role": "tertiary",
+        "displayName": "Weed Scarlet",
+        "canonical": "#a8261c",
+        "tonalRamp": [
+          "oklch(15% 0.05 30)",
+          "oklch(27% 0.09 30)",
+          "oklch(39% 0.13 30)",
+          "oklch(50% 0.16 30)",
+          "oklch(62% 0.15 30)",
+          "oklch(73% 0.11 30)",
+          "oklch(85% 0.06 30)",
+          "oklch(95% 0.02 30)"
+        ]
+      },
+      "stage-seed": {
+        "role": "secondary",
+        "displayName": "Seed Husk",
+        "canonical": "#7a5a1e"
+      },
+      "stage-sprout": {
+        "role": "secondary",
+        "displayName": "Sprout Green",
+        "canonical": "#3f7a3a"
+      },
+      "stage-plant": {
+        "role": "secondary",
+        "displayName": "Plant Green",
+        "canonical": "#2f5e34"
+      },
+      "stage-tree": {
+        "role": "secondary",
+        "displayName": "Tree Green",
+        "canonical": "#1f4224"
+      },
+      "night-ground": {
+        "role": "neutral",
+        "displayName": "Pressed-Leaf Ground (night)",
+        "canonical": "#141811"
+      },
+      "night-paper": {
+        "role": "neutral",
+        "displayName": "Night Paper",
+        "canonical": "#1c2118"
+      },
+      "night-cream-ink": {
+        "role": "neutral",
+        "displayName": "Cream Ink (night)",
+        "canonical": "#ece6d4"
+      },
+      "night-graphite": {
+        "role": "neutral",
+        "displayName": "Night Graphite",
+        "canonical": "#b3ad9b"
+      },
+      "night-hairline": {
+        "role": "neutral",
+        "displayName": "Night Hairline",
+        "canonical": "#3a4033"
+      },
+      "night-edge": {
+        "role": "neutral",
+        "displayName": "Night Edge",
+        "canonical": "#6f7864"
+      },
+      "night-leaf": {
+        "role": "primary",
+        "displayName": "Night Leaf",
+        "canonical": "#9cc78e"
+      },
+      "night-pressed-tint": {
+        "role": "neutral",
+        "displayName": "Night Pressed Tint",
+        "canonical": "#262c21"
+      },
+      "night-scarlet": {
+        "role": "tertiary",
+        "displayName": "Night Scarlet",
+        "canonical": "#ec7f70"
+      },
+      "series-mood": {
+        "role": "tertiary",
+        "displayName": "Series Mood",
+        "canonical": "#2f5e34"
+      },
+      "series-tense": {
+        "role": "tertiary",
+        "displayName": "Series Tense",
+        "canonical": "#8a5a12"
+      },
+      "series-low": {
+        "role": "tertiary",
+        "displayName": "Series Low",
+        "canonical": "#2f5a8a"
+      },
+      "series-tired": {
+        "role": "tertiary",
+        "displayName": "Series Tired",
+        "canonical": "#2b6660"
+      },
+      "series-sleep": {
+        "role": "tertiary",
+        "displayName": "Series Sleep",
+        "canonical": "#6a4a86"
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "The date at the top of home. Italic."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Section headings. Italic."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Sub-panel headings such as Add details. Italic."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Text, Habit names, hints and legends. 17px root, tabular numerals."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Small caps on buttons, nav links, day headers and plate halves."
+      },
+      "label-strong": {
+        "displayName": "Label Strong",
+        "purpose": "Zone names under the plates."
+      },
+      "stage": {
+        "displayName": "Stage",
+        "purpose": "Garden stage under a Habit name, in its stage ink. Italic."
+      }
+    },
+    "shadows": [
+      {
+        "name": "inner-hairline-filled",
+        "value": "inset 0 0 0 2px var(--color-primary), inset 0 0 0 3px color-mix(in oklch, var(--color-primary-foreground) 45%, transparent)",
+        "purpose": "Engraved inner rule on primary buttons, selected chips and done cells."
+      },
+      {
+        "name": "inner-hairline-outline",
+        "value": "inset 0 0 0 2px var(--color-card), inset 0 0 0 3px var(--color-border)",
+        "purpose": "Engraved inner rule on outline buttons and chips."
+      },
+      {
+        "name": "offset-frame",
+        "value": "outline: 1px solid var(--color-border); outline-offset: 3px",
+        "purpose": "Second frame line around zone plates and the details form."
+      },
+      {
+        "name": "rule-double",
+        "value": "border-bottom: 3px double var(--color-input)",
+        "purpose": "Engraved double hairline under the nav and day header; border-top variant opens sections."
+      }
+    ],
+    "motion": [
+      {
+        "name": "plate-fill",
+        "value": "background-color 300ms ease-out",
+        "purpose": "A zone-plate half lighting up when tapped."
+      },
+      {
+        "name": "press",
+        "value": "translateY(1px)",
+        "purpose": "Buttons nudge down while pressed."
+      },
+      {
+        "name": "skeleton-pulse",
+        "value": "opacity 1 to 0.5, 1.4s ease-in-out infinite",
+        "purpose": "Loading placeholders; only without reduced motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "wide",
+        "value": "768px"
+      },
+      {
+        "name": "page-frame",
+        "value": "1024px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Leaf green with an engraved inner hairline. Save actions and selected state.",
+      "html": "<button class=\"ds-btn-primary\">Save details</button>",
+      "css": ".ds-btn-primary { background: var(--color-primary, #2f5e34); color: var(--color-primary-foreground, #faf7ef); font-family: 'Alegreya Sans SC', sans-serif; font-size: 0.95rem; font-weight: 500; letter-spacing: 0.02em; height: 2.75rem; padding: 0 1rem; border: 1px solid transparent; border-radius: 3px; box-shadow: inset 0 0 0 2px var(--color-primary, #2f5e34), inset 0 0 0 3px color-mix(in oklch, var(--color-primary-foreground, #faf7ef) 45%, transparent); cursor: pointer; transition: background 150ms; } .ds-btn-primary:hover { background: color-mix(in oklch, var(--color-primary, #2f5e34) 85%, transparent); } .ds-btn-primary:active { transform: translateY(1px); } .ds-btn-primary:focus-visible { outline: 2px solid var(--color-ring, #2f5e34); outline-offset: 2px; }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Paper fill, sepia stroke, inner hairline. Secondary actions such as Skip.",
+      "html": "<button class=\"ds-btn-outline\">Skip</button>",
+      "css": ".ds-btn-outline { background: var(--color-card, #faf7ef); color: var(--color-foreground, #1d1c19); font-family: 'Alegreya Sans SC', sans-serif; font-size: 0.95rem; font-weight: 500; letter-spacing: 0.02em; height: 2.75rem; padding: 0 1rem; border: 1px solid var(--color-input, #8c8268); border-radius: 3px; box-shadow: inset 0 0 0 2px var(--color-card, #faf7ef), inset 0 0 0 3px var(--color-border, #d3c8ae); cursor: pointer; } .ds-btn-outline:hover { background: var(--color-muted, #e7dfcc); box-shadow: inset 0 0 0 2px var(--color-muted, #e7dfcc), inset 0 0 0 3px var(--color-border, #d3c8ae); } .ds-btn-outline:active { transform: translateY(1px); } .ds-btn-outline:focus-visible { outline: 2px solid var(--color-ring, #2f5e34); outline-offset: 2px; }"
+    },
+    {
+      "name": "Choice Chips",
+      "kind": "chip",
+      "refersTo": "choice-chip",
+      "description": "Single-choice chips with an Other field; selected turns leaf green.",
+      "html": "<div class=\"ds-chips\"><button class=\"ds-chip\" aria-pressed=\"false\">Home</button><button class=\"ds-chip\" aria-pressed=\"true\">Work</button><input class=\"ds-chip-input\" placeholder=\"Other…\"></div>",
+      "css": ".ds-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; } .ds-chip { height: 2.75rem; padding: 0 0.875rem; font-family: 'Alegreya Sans SC', sans-serif; font-size: 1rem; font-weight: 500; border-radius: 3px; border: 1px solid var(--color-input, #8c8268); background: var(--color-card, #faf7ef); color: var(--color-foreground, #1d1c19); box-shadow: inset 0 0 0 2px var(--color-card, #faf7ef), inset 0 0 0 3px var(--color-border, #d3c8ae); cursor: pointer; } .ds-chip:hover { background: var(--color-muted, #e7dfcc); } .ds-chip[aria-pressed=true] { background: var(--color-primary, #2f5e34); color: var(--color-primary-foreground, #faf7ef); border-color: transparent; box-shadow: inset 0 0 0 2px var(--color-primary, #2f5e34), inset 0 0 0 3px color-mix(in oklch, var(--color-primary-foreground, #faf7ef) 45%, transparent); } .ds-chip:focus-visible { outline: 2px solid var(--color-ring, #2f5e34); outline-offset: 2px; } .ds-chip-input { height: 2.75rem; width: 9rem; padding: 0 0.625rem; font: inherit; border: 1px solid var(--color-input, #8c8268); border-radius: 0.3rem; background: transparent; color: var(--color-foreground, #1d1c19); caret-color: var(--color-ring, #2f5e34); } .ds-chip-input:focus-visible { outline: none; border-color: var(--color-ring, #2f5e34); box-shadow: 0 0 0 3px color-mix(in oklch, var(--color-ring, #2f5e34) 50%, transparent); }"
+    },
+    {
+      "name": "Navigation",
+      "kind": "nav",
+      "refersTo": "nav-link",
+      "description": "Five tabs (Today, Habits, Check-ins, Connections, Notes): bottom bar on phones, compact top bar from 768px. Active tab in leaf green.",
+      "html": "<nav class=\"ds-nav\"><a href=\"#\" class=\"ds-nav-link\">Check-ins</a><a href=\"#\" class=\"ds-nav-link\" aria-current=\"page\">Habits</a><a href=\"#\" class=\"ds-nav-link\">Library</a><a href=\"#\" class=\"ds-nav-link\">Goals</a></nav>",
+      "css": ".ds-nav { display: flex; flex-wrap: wrap; gap: 0 0.25rem; padding-bottom: 0.25rem; border-bottom: 3px double var(--color-input, #8c8268); } .ds-nav-link { font-family: 'Alegreya Sans SC', sans-serif; font-size: 0.95rem; letter-spacing: 0.025em; color: var(--color-muted-foreground, #57544c); padding: 0.5rem 0.625rem; border-radius: 0.225rem; text-decoration: none; } .ds-nav-link:hover, .ds-nav-link:focus-visible { background: var(--color-muted, #e7dfcc); color: var(--color-foreground, #1d1c19); } .ds-nav-link[aria-current=page] { color: var(--color-primary, #2f5e34); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 0.35em; }"
+    },
+    {
+      "name": "Zone Plate",
+      "kind": "custom",
+      "refersTo": "zone-plate",
+      "description": "Arch-topped Storm to Sun plate split into upper and lower half buttons; a tapped half stays lit.",
+      "html": "<div class=\"ds-plate-wrap\"><div class=\"ds-plate\"><button class=\"ds-half ds-upper\" aria-pressed=\"true\"><svg viewBox=\"0 0 60 48\" width=\"80\" height=\"64\" fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"30\" cy=\"24\" r=\"9\" stroke-width=\"1.2\"/><path d=\"M43 24h8M9 24h8M30 11V3M30 37v8M39 15l6-6M15 39l6-6M39 33l6 6M15 9l6 6\" stroke-width=\"1.1\"/></svg><span>upper</span></button><button class=\"ds-half ds-lower\" aria-pressed=\"false\"><span>lower</span></button></div><span class=\"ds-zone\">Sun</span></div>",
+      "css": ".ds-plate-wrap { display: inline-flex; flex-direction: column; align-items: center; width: 6.5rem; } .ds-plate { display: flex; flex-direction: column; width: 100%; overflow: hidden; border-radius: 9999px 9999px 0 0; border: 1px solid var(--color-input, #8c8268); background: var(--color-card, #faf7ef); outline: 1px solid var(--color-border, #d3c8ae); outline-offset: 3px; } .ds-half { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 0.125rem; padding: 0.5rem 0.25rem; background: transparent; border: 0; color: var(--color-foreground, #1d1c19); cursor: pointer; transition: background-color 300ms ease-out; outline-offset: -4px; } .ds-half span { font-family: 'Alegreya Sans SC', sans-serif; font-size: 0.9rem; color: var(--color-muted-foreground, #57544c); } .ds-upper { min-height: 7rem; padding-top: 1rem; } .ds-lower { min-height: 3.5rem; border-top: 1px solid var(--color-input, #8c8268); } .ds-half:hover { background: var(--color-muted, #e7dfcc); } .ds-half[aria-pressed=true] { background: var(--color-primary, #2f5e34); color: var(--color-primary-foreground, #faf7ef); } .ds-half[aria-pressed=true] span { color: inherit; } .ds-half:focus-visible { outline: 2px solid var(--color-ring, #2f5e34); } .ds-zone { margin-top: 0.625rem; font-family: 'Alegreya Sans SC', sans-serif; font-size: 1rem; font-weight: 700; letter-spacing: 0.025em; color: var(--color-foreground, #1d1c19); }"
+    },
+    {
+      "name": "Habit Tracker Row",
+      "kind": "custom",
+      "refersTo": "tracker-cell",
+      "description": "Habit name, italic stage, progress, and a fixed seven-day strip of tap cells.",
+      "html": "<div class=\"ds-row\"><div class=\"ds-row-head\"><span><span class=\"ds-name\">Morning wind down</span><span class=\"ds-stage\">seed</span></span><span class=\"ds-progress\">2 of 7 this week</span></div><div class=\"ds-strip\"><button class=\"ds-cell\"></button><button class=\"ds-cell ds-done\" aria-pressed=\"true\"><svg viewBox=\"0 0 24 24\" width=\"20\" height=\"20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M20 6 9 17l-5-5\"/></svg></button><button class=\"ds-cell ds-missed\"><svg viewBox=\"0 0 24 24\" width=\"20\" height=\"20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\"><path d=\"M18 6 6 18M6 6l12 12\"/></svg></button><span class=\"ds-notdue\">–</span><button class=\"ds-cell\"></button><button class=\"ds-cell ds-done\"><svg viewBox=\"0 0 24 24\" width=\"20\" height=\"20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M20 6 9 17l-5-5\"/></svg></button><button class=\"ds-cell\"></button></div></div>",
+      "css": ".ds-row { padding: 0.75rem 0; border-bottom: 1px solid var(--color-border, #d3c8ae); max-width: 22rem; } .ds-row-head { display: flex; justify-content: space-between; align-items: baseline; gap: 0.75rem; margin-bottom: 0.5rem; } .ds-name { font-weight: 500; } .ds-stage { display: block; font-family: 'Alegreya Variable', serif; font-style: italic; font-size: 0.95rem; color: var(--color-stage-seed, #7a5a1e); } .ds-progress { font-size: 0.9rem; color: var(--color-muted-foreground, #57544c); white-space: nowrap; } .ds-strip { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.375rem; } .ds-cell { height: 2.75rem; display: grid; place-items: center; border: 1px solid var(--color-input, #8c8268); border-radius: 3px; background: transparent; color: var(--color-foreground, #1d1c19); cursor: pointer; } .ds-cell:hover { background: var(--color-muted, #e7dfcc); } .ds-done { background: var(--color-primary, #2f5e34); color: var(--color-primary-foreground, #faf7ef); border-color: transparent; box-shadow: inset 0 0 0 2px var(--color-primary, #2f5e34), inset 0 0 0 3px color-mix(in oklch, var(--color-primary-foreground, #faf7ef) 45%, transparent); } .ds-missed { background: var(--color-muted, #e7dfcc); color: var(--color-muted-foreground, #57544c); } .ds-cell:focus-visible { outline: 2px solid var(--color-ring, #2f5e34); outline-offset: 2px; } .ds-notdue { display: grid; place-items: center; height: 2.75rem; color: var(--color-muted-foreground, #57544c); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Botanical Folio",
+    "overview": "Every screen is one engraved plate from a naturalist's folio. A cream ground carries sepia hairline rules and fruit-black ink. Leaf green is the only colour that says \"this is chosen\" or \"this is done\". Scarlet appears in one place only: a weed over its ceiling.\n\nThe plate is calm and quiet, built for a phone and for low capacity. Structure comes from rules and frames, not from cards or shadows. Headings are set in Alegreya italic, like a plate caption. Running text is Alegreya Sans. Small labels on controls are Alegreya Sans SC. Imagery is line engraving: hatching and cross-hatching stand in for tone.\n\nAt night the plate turns to pressed-leaf green-black with cream ink. Night follows the device setting only (`userInterfaceStyle: automatic`); there is no manual toggle.\n\nThe world rejects the wellness stack of rounded cards and emoji faces, and the wide spreadsheet tracker.",
+    "keyCharacteristics": [
+      "Cream plate, sepia rules, fruit-black ink.",
+      "Leaf green marks done and selected; scarlet marks only a weed over its ceiling.",
+      "Italic serif headings, humanist sans text, small-caps labels.",
+      "Engraved double hairlines divide sections.",
+      "Arch-topped frames and engraved line art, never filled illustration.",
+      "Flat: depth comes from inner hairlines and offset outlines, not drop shadows."
+    ],
+    "rules": [
+      {
+        "name": "The One Green Voice Rule",
+        "body": "Leaf green means selected, done, today or a link. Never use it for decoration.",
+        "section": "colors"
+      },
+      {
+        "name": "The Single Red Rule",
+        "body": "Scarlet marks only a weed over its ceiling and destructive actions. A logged weed day is plain ink; a missed day is neutral tint.",
+        "section": "colors"
+      },
+      {
+        "name": "The Caption Rule",
+        "body": "Headings are always Alegreya italic. Never set a heading in the sans or in small caps.",
+        "section": "typography"
+      },
+      {
+        "name": "The Small Caps Labels Controls Rule",
+        "body": "Small caps name a control or a column: a button, a tab, a day, a zone. They never float above a heading as a decorative label.",
+        "section": "typography"
+      },
+      {
+        "name": "The Engraved Not Lifted Rule",
+        "body": "Show depth with doubled lines. Never add a blur shadow, an offset drop shadow or Android elevation.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Arch Rule",
+        "body": "The arch frames a Storm to Sun zone. It is the system's signature silhouette; reuse it for zone-like specimens, not for generic cards.",
+        "section": "shapes"
+      }
+    ],
+    "dos": [
+      "Do open each section with the engraved double rule (3px double, sepia edge).",
+      "Do set every heading in Alegreya italic and every control label in Alegreya Sans SC.",
+      "Do keep every tap target at least 2.75rem (44px) tall.",
+      "Do draw icons and illustration as thin line engravings in the current text colour, with hatching for tone.",
+      "Do give every light colour token a night twin under `@variant dark` in `tokens.css`.",
+      "Do use the shadcn token classes (`bg-primary`, `text-muted-foreground`), never raw hex in components."
+    ],
+    "donts": [
+      "Don't use scarlet for anything except a weed over its ceiling or a destructive action.",
+      "Don't use leaf green as decoration; it means selected, done, today or a link.",
+      "Don't add blur shadows, offset drop shadows or Android elevation; depth is doubled hairlines.",
+      "Don't use rounded wellness cards, emoji faces or filled illustrations.",
+      "Don't let the seven-day strip scroll sideways or grow into a wide spreadsheet.",
+      "Don't put small-caps labels above headings as decoration."
+    ]
+  }
+}

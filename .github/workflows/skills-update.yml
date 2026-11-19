@@ -1,0 +1,57 @@
+name: Skills update
+
+# Renovate can't read skills-lock.json (it pins content hashes, not versions), so this job runs
+# `skills update` weekly. Skills are agent instructions, so a person reads each diff before it reaches main:
+# the job pushes a rolling branch and keeps one issue open that links its diff.
+on:
+  schedule:
+    # Monday 08:00 Toronto (EST), with Renovate.
+    - cron: "0 13 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: skills-update
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  update:
+    name: Update vendored skills
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      BRANCH: chore/skills-update
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+      # Reads the Bun version from package.json `packageManager`.
+      - uses: oven-sh/setup-bun@v2.2.0
+      # Pinned: a new CLI can rewrite the lockfile format or move skill folders.
+      - run: bunx skills@1.8.1 update --project --yes
+      - name: Push the branch and open the issue
+        run: |
+          if git diff --quiet && [ -z "$(git ls-files --others --exclude-standard)" ]; then
+            echo "Skills are up to date."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$BRANCH"
+          git add -A
+          git commit -m "chore(skills): update vendored skills"
+          git push --force origin "$BRANCH"
+          title="Update vendored skills"
+          body="The weekly \`bunx skills update --project\` changed skills: https://github.com/$GITHUB_REPOSITORY/compare/main...$BRANCH
+
+          1. Read each \`SKILL.md\` diff; skills are agent instructions.
+          2. Squash-merge \`$BRANCH\` into \`main\`, then close this issue."
+          issue=$(gh issue list --repo "$GITHUB_REPOSITORY" --state all --search "\"$title\" in:title" --json number,title --jq "map(select(.title == \"$title\"))[0].number // empty")
+          if [ -n "$issue" ]; then
+            gh issue edit "$issue" --repo "$GITHUB_REPOSITORY" --body "$body"
+            gh issue reopen "$issue" --repo "$GITHUB_REPOSITORY" || true
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --assignee "$GITHUB_REPOSITORY_OWNER" --title "$title" --body "$body"
+          fi

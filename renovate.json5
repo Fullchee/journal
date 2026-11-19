@@ -1,0 +1,75 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  extends: ["github>Fullchee/renovate-config"],
+
+  enabledManagers: ["bun", "github-actions"],
+
+  // Matches `install.minimumReleaseAge = 604800` in bunfig.toml.
+  minimumReleaseAge: "7 days",
+
+  packageRules: [
+    // TS 7 runs `tsc`, while typescript-eslint needs TS 6's API: both are aliases (AGENTS.md). depName is the package.json key, packageName the alias target.
+    {
+      matchDepNames: ["typescript", "@typescript/native"],
+      enabled: false,
+    },
+    {
+      matchPackageNames: ["typescript", "@typescript/typescript6"],
+      enabled: false,
+    },
+
+    // bun in packageManager drives CI; mise pins the local bun.
+    { matchDepTypes: ["packageManager"], enabled: false },
+
+    // Expo SDK pins (expo/bundledNativeModules.json). Move with `bunx expo install --fix` plus `expo-doctor`.
+    {
+      matchPackageNames: [
+        "expo",
+        "expo-*",
+        "@expo/**",
+        "react",
+        "react-dom",
+        "react-native",
+        "react-native-*",
+        "!react-native-enriched-markdown",
+        "!react-native-health-connect",
+        "!react-native-notify-kit",
+        "@react-native/**",
+        "@react-native-community/datetimepicker",
+        "@sentry/react-native",
+        "@types/react",
+        "babel-preset-expo",
+        "jest-expo",
+      ],
+      enabled: false,
+    },
+
+    // Native modules outside the SDK: a bump needs a new APK before it reaches the phone.
+    {
+      matchPackageNames: [
+        "react-native-enriched-markdown",
+        "react-native-health-connect",
+        "react-native-notify-kit",
+      ],
+      addLabels: ["native-risk"],
+      automerge: false,
+    },
+
+    // Groups that move together. Later rules win, so the named groups below pull their packages out of this one.
+    {
+      matchManagers: ["bun"],
+      matchDepTypes: ["devDependencies"],
+      matchUpdateTypes: ["minor", "patch"],
+      groupName: "dev dependencies",
+    },
+    {
+      matchPackageNames: ["oxlint", "oxlint-tsgolint", "@oxlint/plugins", "oxfmt"],
+      groupName: "oxc tooling",
+    },
+    {
+      matchPackageNames: ["tailwindcss", "@tailwindcss/**", "uniwind"],
+      groupName: "tailwind",
+    },
+    { matchManagers: ["github-actions"], groupName: "github actions" },
+  ],
+}

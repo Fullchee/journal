@@ -1,0 +1,10 @@
+appId: dev.fullchee.journal
+---
+# The queue sends in the background; give it a few tries before failing.
+- retry:
+    maxRetries: 5
+    commands:
+      - waitForAnimationToEnd:
+          timeout: 3000
+      - runScript: ../scripts/count-check-ins.js
+      - assertTrue: ${output.checkIns == output.before + 1}

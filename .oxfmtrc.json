@@ -1,0 +1,17 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "sortPackageJson": false,
+  "sortTailwindcss": { "stylesheet": "./src/global.css" },
+  "ignorePatterns": [
+    "bun.lock",
+    "skills-lock.json",
+    ".agents/",
+    ".claude/skills/expo-*/",
+    ".claude/skills/eas-*/",
+    ".impeccable/",
+    "tools/oxlint/anti-slop/",
+    "src/uniwind-types.d.ts",
+    "src/env.d.ts",
+    "src/core/__tests__/fixtures/weekly-notes/"
+  ]
+}

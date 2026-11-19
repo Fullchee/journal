@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A zone plate: Plate Paper column with a fully rounded top and square foot; Pressed Tint while pressed. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/widget_pressed_tint" />
+            <stroke android:width="1dp" android:color="@color/widget_edge" />
+            <corners android:topLeftRadius="200dp" android:topRightRadius="200dp" android:bottomLeftRadius="1dp" android:bottomRightRadius="1dp" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/widget_paper" />
+            <stroke android:width="1dp" android:color="@color/widget_edge" />
+            <corners android:topLeftRadius="200dp" android:topRightRadius="200dp" android:bottomLeftRadius="1dp" android:bottomRightRadius="1dp" />
+        </shape>
+    </item>
+</selector>

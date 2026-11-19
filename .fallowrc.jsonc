@@ -1,0 +1,111 @@
+{
+  "$schema": "./node_modules/fallow/schema.json",
+  // Vendored oxlint plugin; `install-anti-slop` owns it and replaces it on update.
+  // Maestro smoke flows live in a dot folder, which fallow skips unless re-included.
+  // Workflow scripts run inside Claude Code's Workflow tool, which allows top-level `return`; nothing imports them.
+  "ignorePatterns": ["tools/oxlint/anti-slop/**", "!.maestro/**", ".claude/workflows/**"],
+  "entry": [
+    // wrangler.jsonc `main`
+    "worker/index.ts",
+    // Metro and Babel configs: fallow finds them only under their `.js` names
+    "metro.config.cjs",
+    "babel.config.cjs",
+    // Read by `expo-updates` fingerprinting
+    "fingerprint.config.cjs",
+    // Jest `setupFiles` and `moduleNameMapper` targets in jest.config.ts
+    "jest/setup.ts",
+    "jest/css-stub.ts",
+    "jest/lucide-react-native.cjs",
+    "jest/reanimated-mock.ts",
+    "jest/sonner-native.ts",
+    // Maestro: the fake AI worker (fake-ai.wrangler.toml `main`) and `runScript` files
+    ".maestro/api/fake-ai.ts",
+    ".maestro/scripts/*.js",
+    // `screenshot:web` in package.json runs it through web-preview.sh
+    "scripts/screenshot-web.ts",
+  ],
+  // lint:sh runs the system shellcheck and shfmt (Homebrew locally; CI installs pinned releases).
+  "ignoreBinaries": ["shellcheck", "shfmt"],
+  "ignoreDependencies": [
+    // babel.config.cjs preset
+    "babel-preset-expo",
+    // Native modules Expo loads without an import: fonts, the app.json `userInterfaceStyle`, the auth-session browser
+    "expo-font",
+    "expo-system-ui",
+    "expo-web-browser",
+    // Imported only by the vendored anti-slop plugin, which is ignored above
+    "@oxlint/plugins",
+  ],
+  // worker/index.ts routes each api module by its `onRequest*` handlers, so every module exports the same names.
+  "ignoreExports": [
+    {
+      "file": "worker/api/**",
+      "exports": [
+        "onRequestGet",
+        "onRequestPost",
+        "onRequestPatch",
+        "onRequestPut",
+        "onRequestDelete",
+      ],
+    },
+    // Fallow resolves `./components/toast` to its `.web.tsx` twin; Metro loads this one on Android.
+    { "file": "src/ui/components/toast.tsx", "exports": ["showUndoToast", "Toaster"] },
+  ],
+  // Dependencies point down: the app uses ui and core, the worker and ui use core, core uses nothing.
+  "boundaries": {
+    "zones": [
+      { "name": "core", "patterns": ["src/core/**"] },
+      { "name": "ui", "patterns": ["src/ui/**"] },
+      { "name": "worker", "patterns": ["worker/**"] },
+      { "name": "app", "patterns": ["src/**", "jest/**"] },
+    ],
+    "rules": [
+      { "from": "core", "allow": [] },
+      { "from": "ui", "allow": ["core"] },
+      { "from": "worker", "allow": ["core"] },
+      { "from": "app", "allow": ["core", "ui"] },
+    ],
+  },
+  // Strict: every warn-by-default rule fails, plus the opt-in checks.
+  "rules": {
+    "deprecated-exports-in-use": "error",
+    "unused-dev-dependencies": "error",
+    "unused-optional-dependencies": "error",
+    "unused-store-members": "error",
+    "unprovided-injects": "error",
+    "unrendered-components": "error",
+    "unused-component-props": "error",
+    "unused-component-emits": "error",
+    "unused-component-inputs": "error",
+    "unused-component-outputs": "error",
+    "unused-svelte-events": "error",
+    "unused-effect-layers": "error",
+    "unused-tagged-errors": "error",
+    "unproduced-catch-tags": "error",
+    "unused-server-actions": "error",
+    "unused-load-data-keys": "error",
+    "thin-wrapper": "error",
+    "css-token-drift": "error",
+    "css-duplicate-block": "error",
+    "css-selector-complexity": "error",
+    "css-dead-surface": "error",
+    "css-broken-reference": "error",
+    "type-only-dependencies": "error",
+    "test-only-dependencies": "error",
+    "dev-dependencies-in-production": "error",
+    "re-export-cycle": "error",
+    "package-cycle": "error",
+    "stale-suppressions": "error",
+    "require-suppression-reason": "error",
+    "unused-catalog-entries": "error",
+    "empty-catalog-groups": "error",
+    "unused-dependency-overrides": "error",
+    "policy-violation": "error",
+    "invalid-client-export": "error",
+    "mixed-client-server-barrel": "error",
+    "misplaced-directive": "error",
+    "weakened-tests": "error",
+    "added-suppression": "error",
+    "test-only-branch": "error",
+  },
+}

@@ -1,0 +1,156 @@
+name: CI
+
+# Docs-only pushes skip CI: nothing ships from them, and secrets.yml still scans them.
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Parallel agents push often; a newer push supersedes a stale check, and its release then skips.
+    concurrency:
+      group: check-${{ github.ref }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v7
+      # Jest and Expo run on Node; bun only installs and starts scripts.
+      - uses: actions/setup-node@v7
+        id: node
+        with:
+          node-version-file: .nvmrc
+      - uses: oven-sh/setup-bun@v2.2.0
+        with:
+          bun-version-file: package.json
+      # Restoring node_modules whole skips resolving and linking every package.
+      - name: Cache node_modules
+        id: node-modules
+        uses: actions/cache@v6
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-node${{ steps.node.outputs.node-version }}-${{ hashFiles('bun.lock') }}
+      # Each run saves a fresh copy; the prefix restores the newest one.
+      - uses: actions/cache@v6
+        with:
+          path: |
+            *.tsbuildinfo
+            worker/tsconfig.tsbuildinfo
+            /tmp/jest_*
+          key: checks-${{ runner.os }}-${{ github.sha }}
+          restore-keys: checks-${{ runner.os }}-
+      # `lint:sh` needs these; pinned to the versions Homebrew gives the owner, since the runner's shellcheck is older.
+      - name: Install shellcheck and shfmt
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          curl -fsSL -o shellcheck.tar.xz https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.linux.x86_64.tar.xz
+          echo "8c3be12b05d5c177a04c29e3c78ce89ac86f1595681cab149b65b97c4e227198  shellcheck.tar.xz" | sha256sum -c -
+          tar -xJf shellcheck.tar.xz --strip-components=1 -C "$HOME/.local/bin" shellcheck-v0.11.0/shellcheck
+          rm shellcheck.tar.xz
+          curl -fsSL -o "$HOME/.local/bin/shfmt" https://github.com/mvdan/sh/releases/download/v3.13.1/shfmt_v3.13.1_linux_amd64
+          echo "fb096c5d1ac6beabbdbaa2874d025badb03ee07929f0c9ff67563ce8c75398b1  $HOME/.local/bin/shfmt" | sha256sum -c -
+          chmod +x "$HOME/.local/bin/shfmt"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - if: steps.node-modules.outputs.cache-hit != 'true'
+        run: bun install --frozen-lockfile
+      # The postinstall writes the gitignored typed routes; a cache hit skips the install that runs it.
+      - if: steps.node-modules.outputs.cache-hit == 'true'
+        run: bun run postinstall
+      # `bun run check` runs these same steps; separate steps keep each one's pass or fail visible in the Actions UI.
+      - run: bun run lint
+        if: ${{ !cancelled() }}
+      - run: bun run typecheck
+        if: ${{ !cancelled() }}
+      - run: bun run test
+        if: ${{ !cancelled() }}
+      # Reads the coverage the test step writes for real CRAP scores.
+      - run: bun run fallow
+        if: ${{ !cancelled() }}
+
+  # Ships the web app and the Worker, then publishes the JS bundle over the air.
+  # One job pays for checkout, Node, bun and the install once per push.
+  # The update runs after the deploy, so a phone never runs code that expects a column the server lacks.
+  # The fingerprint runtime version only matches APKs with the same native code, so a native change waits for a new APK.
+  release:
+    needs: check
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    # A newer push replaces a queued release, but never cancels one mid-upload.
+    concurrency:
+      group: release
+      cancel-in-progress: false
+    environment:
+      name: production
+      url: https://journal.fullchee.workers.dev
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - uses: oven-sh/setup-bun@v2.2.0
+        with:
+          bun-version-file: package.json
+      - uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+      - uses: actions/cache@v6
+        with:
+          path: /tmp/metro-cache
+          key: metro-${{ runner.os }}-${{ github.sha }}
+          restore-keys: metro-${{ runner.os }}-
+      - run: bun install --frozen-lockfile
+      - run: bunx expo export -p web
+        env:
+          EXPO_NO_TELEMETRY: "1"
+          EXPO_PUBLIC_ACCESS_CLIENT_ID: ${{ vars.EXPO_PUBLIC_ACCESS_CLIENT_ID }}
+          # Unset keeps Sentry off on web; see docs/sentry.md.
+          EXPO_PUBLIC_SENTRY_DSN: ${{ vars.EXPO_PUBLIC_SENTRY_DSN }}
+      - run: bunx wrangler@4 d1 migrations apply fullchee-dashboard --remote
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          WRANGLER_SEND_METRICS: "false"
+      - run: bunx wrangler@4 deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          WRANGLER_SEND_METRICS: "false"
+      # An update reaches only APKs with its fingerprint, so a new one strands the installed APK without an error.
+      - name: Warn when the fingerprint changes
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EXPO_NO_TELEMETRY: "1"
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          new=$(bunx expo-updates runtimeversion:resolve --platform android | tail -1 | jq -r .runtimeVersion)
+          last=$(bunx eas-cli@27.2.0 update:list --branch production --limit 1 --json --non-interactive 2>/dev/null | jq -r '.currentPage[0].runtimeVersion // empty')
+          echo "Fingerprint: $new (last update: ${last:-none})"
+          if [ -n "$last" ] && [ "$new" != "$last" ]; then
+            echo "::warning title=Rebuild the APK::Native code changed (fingerprint $last -> $new). The installed APK gets no more updates. Run bun run android:apk and install it."
+            # The warning fires on one passing run only, so one reused issue keeps the reminder until the owner reinstalls.
+            title="Rebuild the APK"
+            body="Native code changed in $GITHUB_SHA (fingerprint \`$last\` -> \`$new\`). The installed APK gets no more updates until you rebuild it.
+
+          1. Run \`bun run android:apk\` and install the APK.
+          2. Close this issue."
+            issue=$(gh issue list --repo "$GITHUB_REPOSITORY" --state all --search "\"$title\" in:title" --json number,title --jq "map(select(.title == \"$title\"))[0].number // empty")
+            if [ -n "$issue" ]; then
+              gh issue edit "$issue" --repo "$GITHUB_REPOSITORY" --body "$body"
+              gh issue reopen "$issue" --repo "$GITHUB_REPOSITORY" || true
+            else
+              gh issue create --repo "$GITHUB_REPOSITORY" --assignee "$GITHUB_REPOSITORY_OWNER" --title "$title" --body "$body"
+            fi
+          fi
+      - run: bunx eas-cli@27.2.0 update --channel production --platform android --environment production --message "$(git log -1 --format=%s)" --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EXPO_NO_TELEMETRY: "1"

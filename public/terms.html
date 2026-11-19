@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Terms of Service</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #faf7f2;
+        --fg: #2b2620;
+        --muted: #6b6258;
+        --accent: #8a4b2a;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #1c1916;
+          --fg: #ece6dd;
+          --muted: #a39a8f;
+          --accent: #e0a07a;
+        }
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font:
+          1.0625rem/1.6 Georgia,
+          "Times New Roman",
+          serif;
+      }
+      main {
+        max-width: 40rem;
+        margin: 0 auto;
+        padding: 2rem 1rem 4rem;
+      }
+      h1 {
+        font-style: italic;
+        font-weight: 600;
+      }
+      p.updated {
+        color: var(--muted);
+      }
+      a {
+        color: var(--accent);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Terms of Service</h1>
+      <p class="updated">Last updated 6 November 2026</p>
+
+      <p>This is a private, single-user app. No one else can sign in.</p>
+
+      <ul>
+        <li>The app is provided as is, with no warranty and no promise that it stays available.</li>
+        <li>Access can be removed at any time.</li>
+      </ul>
+
+      <p>
+        How the app handles Google data is described in the <a href="/privacy">Privacy Policy</a>.
+      </p>
+    </main>
+  </body>
+</html>

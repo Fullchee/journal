@@ -1,0 +1,14 @@
+appId: dev.fullchee.journal
+name: Check off a Habit
+---
+- runFlow: ../common/open-app.yaml
+- tapOn: "Stretch today"
+# A done Habit leaves "Habits due today".
+- assertNotVisible: "Stretch today"
+- retry:
+    maxRetries: 5
+    commands:
+      - waitForAnimationToEnd:
+          timeout: 3000
+      - runScript: ../scripts/count-today-checks.js
+      - assertTrue: ${output.todayChecks.stretch == 1}

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A list row under a Sepia Hairline rule; Pressed Tint while pressed. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_pressed="true">
+        <layer-list>
+            <item><color android:color="@color/widget_hairline" /></item>
+            <item android:top="1dp"><color android:color="@color/widget_pressed_tint" /></item>
+        </layer-list>
+    </item>
+    <item>
+        <layer-list>
+            <item><color android:color="@color/widget_hairline" /></item>
+            <item android:top="1dp"><color android:color="@color/widget_ground" /></item>
+        </layer-list>
+    </item>
+</selector>

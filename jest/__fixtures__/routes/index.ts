@@ -1,0 +1,1 @@
+globalThis.loadedRoutes.push("index");

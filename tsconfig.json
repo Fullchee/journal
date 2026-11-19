@@ -1,0 +1,11 @@
+{
+  "extends": ["expo/tsconfig.base", "./tsconfig.strict.json"],
+  "compilerOptions": {
+    "types": ["jest", "node"],
+    "paths": {
+      "@/*": ["./src/*"],
+      "@/assets/*": ["./assets/*"]
+    }
+  },
+  "include": ["src", "jest", "plugins", "modules", ".expo/types/**/*.ts", "expo-env.d.ts"]
+}

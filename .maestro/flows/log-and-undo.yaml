@@ -1,0 +1,14 @@
+appId: dev.fullchee.journal
+name: Log "walked 20 min" and undo it
+---
+- runFlow: ../common/open-app.yaml
+- tapOn: "Log something"
+- inputText: "walked 20 min"
+- tapOn: "Send"
+- extendedWaitUntil:
+    visible: "Logged Walk: 20 min.*"
+    timeout: 20000
+- tapOn: "Undo"
+- extendedWaitUntil:
+    visible: "Undone"
+    timeout: 20000

@@ -1,0 +1,26 @@
+# The smoke-flow API: the app's Worker with local-only bindings. No binding here may reach Cloudflare.
+name = "journal-e2e"
+main = "../../worker/index.ts"
+tsconfig = "../../worker/tsconfig.json"
+compatibility_date = "2026-11-01"
+
+[vars]
+OWNER_EMAIL = "e2e@example.com"
+# Requests carry no Access JWT, so the API takes this email instead; real Access tokens never reach it.
+DEV_EMAIL = "e2e@example.com"
+TEAM_DOMAIN = "e2e.invalid"
+POLICY_AUD = "e2e"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "journal-e2e"
+database_id = "00000000-0000-0000-0000-000000000000"
+
+[[r2_buckets]]
+binding = "ATTACHMENTS"
+bucket_name = "journal-e2e-attachments"
+
+# Replaces Workers AI, which only runs on Cloudflare.
+[[services]]
+binding = "AI"
+service = "journal-e2e-fake-ai"

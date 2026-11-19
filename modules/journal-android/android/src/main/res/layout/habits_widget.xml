@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Today's open Habits under an italic caption on the engraved plate; sized like alarms_widget.xml for rowsThatFit. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@android:id/background"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_background"
+    android:orientation="vertical"
+    android:paddingStart="12dp"
+    android:paddingTop="8dp"
+    android:paddingEnd="12dp"
+    android:paddingBottom="8dp">
+
+    <TextView
+        android:id="@+id/habits_header"
+        style="@style/WidgetCaption"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="32dp"
+        android:gravity="center_vertical"
+        android:contentDescription="@string/habits_widget_open_today"
+        android:text="@string/habits_widget_title" />
+
+    <LinearLayout
+        android:id="@+id/habits_list"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical" />
+
+    <TextView
+        android:id="@+id/habits_empty"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/widget_row"
+        android:minHeight="40dp"
+        android:gravity="center_vertical"
+        android:text="@string/habits_widget_not_loaded"
+        android:textColor="@color/widget_graphite"
+        android:textSize="14sp" />
+</LinearLayout>

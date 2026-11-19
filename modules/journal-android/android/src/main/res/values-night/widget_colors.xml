@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="widget_ground">#141811</color>
+    <color name="widget_paper">#1c2118</color>
+    <color name="widget_ink">#ece6d4</color>
+    <color name="widget_graphite">#b3ad9b</color>
+    <color name="widget_edge">#6f7864</color>
+    <color name="widget_pressed_tint">#262c21</color>
+    <color name="widget_hairline">#3a4033</color>
+    <color name="widget_leaf">#9cc78e</color>
+</resources>

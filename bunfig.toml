@@ -1,0 +1,6 @@
+[install]
+# Bun's isolated linker gives expo-constants, expo-font and @expo/log-box two store copies each
+# (same version, different peer hash), which expo-doctor flags as duplicate native modules.
+linker = "hoisted"
+# Skip versions younger than 7 days: most malicious releases are caught and pulled within that window.
+minimumReleaseAge = 604800

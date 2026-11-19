@@ -1,0 +1,11 @@
+appId: dev.fullchee.journal
+---
+# Fresh app data per flow; the debug build then loads the bundle from the runner's Metro.
+- launchApp:
+    clearState: true
+    stopApp: true
+    permissions:
+      all: allow
+- extendedWaitUntil:
+    visible: "How's the weather?"
+    timeout: 120000

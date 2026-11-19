@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The next alarms, today's first, under an italic caption on the engraved plate. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@android:id/background"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_background"
+    android:orientation="vertical"
+    android:paddingStart="12dp"
+    android:paddingTop="8dp"
+    android:paddingEnd="12dp"
+    android:paddingBottom="8dp">
+
+    <TextView
+        android:id="@+id/alarms_header"
+        style="@style/WidgetCaption"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="32dp"
+        android:gravity="center_vertical"
+        android:contentDescription="@string/alarms_widget_open_habits"
+        android:text="@string/alarms_widget_title" />
+
+    <LinearLayout
+        android:id="@+id/alarms_list"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical" />
+
+    <TextView
+        android:id="@+id/alarms_empty"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/widget_row"
+        android:minHeight="40dp"
+        android:gravity="center_vertical"
+        android:text="@string/alarms_widget_none_set"
+        android:textColor="@color/widget_graphite"
+        android:textSize="14sp" />
+</LinearLayout>

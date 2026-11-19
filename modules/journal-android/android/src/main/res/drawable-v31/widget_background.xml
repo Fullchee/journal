@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The engraved plate on Android 12+, rounded to the launcher's widget radius so its mask never cuts the rules. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/widget_ground" />
+            <stroke android:width="1dp" android:color="@color/widget_edge" />
+            <corners android:radius="@android:dimen/system_app_widget_background_radius" />
+        </shape>
+    </item>
+    <item android:bottom="4dp" android:left="4dp" android:right="4dp" android:top="4dp">
+        <shape android:shape="rectangle">
+            <stroke android:width="1dp" android:color="@color/widget_hairline" />
+            <corners android:radius="@android:dimen/system_app_widget_inner_radius" />
+        </shape>
+    </item>
+</layer-list>

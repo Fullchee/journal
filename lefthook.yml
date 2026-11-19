@@ -1,0 +1,57 @@
+# TypeScript 7 checks the app, the worker and the Node scripts (about 5 s): the worker imports src/core.
+pre-commit:
+  commands:
+    # Formats the staged files and stages the result, so a commit never fails on style alone.
+    format:
+      glob: "*.{js,cjs,mjs,jsx,ts,tsx,json,jsonc,md,yml,yaml,css,toml}"
+      run: bunx oxfmt --no-error-on-unmatched-pattern {staged_files}
+      stage_fixed: true
+    # lint:sh fails on unformatted scripts.
+    shfmt:
+      glob: "*.sh"
+      exclude: ".agents/**"
+      run: shfmt --write {staged_files}
+      stage_fixed: true
+    # Vendored skills under .agents keep their upstream scripts; CI's lint:sh skips them too.
+    shellcheck:
+      glob: "*.sh"
+      exclude: ".agents/**"
+      run: shellcheck {staged_files}
+    # The repo holds Cloudflare and Google tokens; audited false positives and vendored paths live in .secrets.baseline.
+    # `--no-verify` skips this, so .github/workflows/secrets.yml scans every push to main too.
+    detect-secrets:
+      run: uvx --from detect-secrets==1.5.0 detect-secrets-hook --baseline .secrets.baseline {staged_files}
+    typecheck:
+      glob: "*.{ts,tsx}"
+      run: bunx tsc --noEmit && bunx tsc --noEmit -p worker && bunx tsc --noEmit -p tsconfig.node.json
+
+# Lints only the pushed files for speed; CI lints the whole repo.
+pre-push:
+  commands:
+    oxlint:
+      glob: "*.{js,cjs,mjs,jsx,ts,tsx}"
+      run: bunx oxlint {push_files}
+    stylelint:
+      glob: "*.css"
+      run: bunx stylelint --allow-empty-input {push_files}
+    # Fallow on the files changed since origin/main (about 4 s). Health is left to CI: without its coverage, CRAP scores misfire.
+    fallow:
+      glob: "*.{js,cjs,mjs,jsx,ts,tsx}"
+      run: bunx fallow --quiet --fail-on-issues --changed-since origin/main --only dupes,dead-code,architecture
+
+# Another session may have added a dependency; keep node_modules in step with bun.lock.
+post-merge:
+  commands:
+    install:
+      run: scripts/install-if-lock-changed.sh
+
+post-rewrite:
+  commands:
+    install:
+      run: scripts/install-if-lock-changed.sh
+
+post-checkout:
+  commands:
+    install:
+      # Skip with `LEFTHOOK=0 git worktree add …` for a docs or CI-only worktree: no install, and removing it is instant.
+      run: scripts/install-if-lock-changed.sh
