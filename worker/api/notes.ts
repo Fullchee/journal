@@ -39,6 +39,15 @@ const TYPES = {
     extra: "",
     byTrack: false,
   },
+  career: {
+    table: "career_notes",
+    title: "title",
+    detail: "updated_at",
+    order: "title",
+    listed: "",
+    extra: "",
+    byTrack: false,
+  },
 };
 
 const isNoteType = (name: string): name is keyof typeof TYPES => Object.hasOwn(TYPES, name);
@@ -166,7 +175,8 @@ const ReflectionFields = z.object({
   body: Body,
 });
 
-const HealthRecordFields = z.object({ title: NoteTitle, body: Body });
+// Health records and Career notes are only a unique title and a body.
+const TitledFields = z.object({ title: NoteTitle, body: Body });
 
 interface Insert {
   sql: string;
@@ -188,10 +198,16 @@ const insertReflection = ({
   args: [track, periodKind, period, body],
 });
 
-const insertHealthRecord = ({ title, body }: z.infer<typeof HealthRecordFields>) => ({
-  sql: "INSERT INTO health_records (title, body) VALUES (?, ?) RETURNING id",
-  args: [title, body],
-});
+async function readTitledInsert(request: Request, table: string): Promise<Insert | null> {
+  const note = await readJson(request, TitledFields);
+
+  return (
+    note && {
+      sql: `INSERT INTO ${table} (title, body) VALUES (?, ?) RETURNING id`,
+      args: [note.title, note.body],
+    }
+  );
+}
 
 // How POST builds each type's row; null means the payload is invalid.
 async function readInsert(
@@ -212,10 +228,9 @@ async function readInsert(
       return reflection && insertReflection(reflection);
     }
 
-    case "health-records": {
-      const record = await readJson(request, HealthRecordFields);
-
-      return record && insertHealthRecord(record);
+    case "health-records":
+    case "career": {
+      return readTitledInsert(request, TYPES[name].table);
     }
   }
 }
@@ -306,6 +321,7 @@ const DELETES: Record<keyof typeof TYPES, string[]> = {
   ],
   reflections: ["DELETE FROM reflections WHERE id = ?"],
   "health-records": ["DELETE FROM health_records WHERE id = ?"],
+  career: ["DELETE FROM career_notes WHERE id = ?"],
 };
 
 export async function onRequestDelete(context: NoteContext) {

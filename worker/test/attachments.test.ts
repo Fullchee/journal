@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import type { Env } from "@worker/lib/env";
-import { onRequestGet, onRequestPost } from "@worker/api/attachments";
+import { onRequestGet, onRequestPost, onRequestPut } from "@worker/api/attachments";
 import { accessHeaders, makeEnv, OWNER } from "./helpers/env";
 
 const ETAG = '"abc"';
@@ -219,6 +219,113 @@ test("an upload declaring over 10 MB is a 413 before the body is read", async ()
 test("an uploaded url round-trips through the GET handler", async () => {
   const objects: Record<string, string> = {};
   const url = await urlOf(await post("habits", { objects }));
+  const res = await get(url.replace("/api/attachments/", "").split("/"), { objects });
+
+  assert.equal(await res.text(), "png-bytes");
+});
+
+test("an encoded path is read from its decoded key", async () => {
+  const res = await get(["Wind%20down", "Untitled.png"], {
+    objects: { "Wind down/Untitled.png": "png-bytes" },
+  });
+
+  assert.equal(await res.text(), "png-bytes");
+});
+
+test("an encoded segment that climbs out of its folder is refused", async () => {
+  assert.equal((await get(["%2E%2E", "secret"], { objects: { "../secret": "x" } })).status, 400);
+});
+
+test("an encoded slash inside a segment is refused", async () => {
+  assert.equal((await get(["a%2Fb.png"], { objects: { "a/b.png": "x" } })).status, 400);
+});
+
+test("a malformed escape is refused", async () => {
+  assert.equal((await get(["%E0%A4%A.png"])).status, 400);
+});
+
+const putCareer = (
+  path: string[],
+  {
+    email = OWNER,
+    body = "png-bytes",
+    objects = {},
+    puts = [],
+  }: {
+    email?: string | null;
+    body?: BodyInit;
+    objects?: Record<string, string>;
+    puts?: Put[];
+  } = {},
+) =>
+  onRequestPut({
+    env: { ...makeEnv(), ATTACHMENTS: bucket(objects, puts) },
+    params: { path },
+    request: new Request(`https://x/api/attachments/${path.join("/")}`, {
+      method: "PUT",
+      headers: { ...accessHeaders(email), "content-type": "application/json" },
+      body,
+    }),
+  });
+
+test("a career image is stored at its own path, typed by its extension", async () => {
+  const puts: Put[] = [];
+  const res = await putCareer(["career", "stories", "Launch%20day.PNG"], { puts });
+
+  assert.equal(res.status, 200);
+  assert.equal(await urlOf(res), "/api/attachments/career/stories/Launch%20day.PNG");
+  assert.deepEqual(
+    puts.map(({ key, contentType }) => ({ key, contentType })),
+    [{ key: "career/stories/Launch day.PNG", contentType: "image/png" }],
+  );
+});
+
+test("putting a career image again overwrites the same key", async () => {
+  const objects: Record<string, string> = {};
+  await putCareer(["career", "a.jpg"], { objects, body: "old" });
+  await putCareer(["career", "a.jpg"], { objects, body: "new" });
+
+  assert.deepEqual(objects, { "career/a.jpg": "new" });
+});
+
+for (const { ext, type } of [
+  { ext: "jpeg", type: "image/jpeg" },
+  { ext: "gif", type: "image/gif" },
+  { ext: "webp", type: "image/webp" },
+]) {
+  test(`a career .${ext} is stored as ${type}`, async () => {
+    const puts: Put[] = [];
+    await putCareer(["career", `a.${ext}`], { puts });
+
+    assert.equal(puts[0]?.contentType, type);
+  });
+}
+
+test("a put outside career/ is refused", async () => {
+  assert.equal((await putCareer(["habits", "a.png"])).status, 400);
+  assert.equal((await putCareer(["career"])).status, 400);
+  assert.equal((await putCareer(["career", "..", "a.png"])).status, 400);
+});
+
+test("a career file that is not an image is a 415", async () => {
+  assert.equal((await putCareer(["career", "review.html"])).status, 415);
+});
+
+test("a career image over 10 MB is a 413", async () => {
+  assert.equal((await putCareer(["career", "a.png"], { body: new Blob([TOO_LARGE]) })).status, 413);
+});
+
+test("a career put from a non-owner is refused", async () => {
+  assert.equal((await putCareer(["career", "a.png"], { email: "other@example.com" })).status, 403);
+});
+
+test("a career put that bypassed Access is refused", async () => {
+  assert.equal((await putCareer(["career", "a.png"], { email: null })).status, 401);
+});
+
+test("a put career image round-trips through the GET handler", async () => {
+  const objects: Record<string, string> = {};
+  const url = await urlOf(await putCareer(["career", "My%20photo.png"], { objects }));
   const res = await get(url.replace("/api/attachments/", "").split("/"), { objects });
 
   assert.equal(await res.text(), "png-bytes");

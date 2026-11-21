@@ -129,4 +129,6 @@ Moved in from the `work-log` vault (`docs/work-log-migration.md`); the terms mat
 - **Blocked action** — a Plan action whose PR is open and green with a review request pending. Out of my hands, so it leaves the Hit rate.
 - **Anchor** — the one smallest open work task I'm on right now.
   _Avoid_: focus task, current todo
+- **Career note** — one note from the vault's `career/` folder (career stories, interviewing, promotions), titled by its path there. Part of the Work track: review views and search never read it.
+  _Avoid_: career doc, brag doc
 - **Work backlog** — work todos captured blind, read only when picking a new Anchor. They live in Todoist's job Pool.
