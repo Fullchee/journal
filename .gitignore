@@ -58,3 +58,5 @@ coverage/
 
 # wrangler dev bundles and local state
 .wrangler/
+
+.env.local

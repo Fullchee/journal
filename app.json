@@ -99,7 +99,14 @@
         }
       ],
       "react-native-health-connect",
-      "@sentry/react-native"
+      [
+        "@sentry/react-native",
+        {
+          "url": "https://sentry.io/",
+          "project": "journal",
+          "organization": "fullchee"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
