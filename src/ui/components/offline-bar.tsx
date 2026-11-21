@@ -2,19 +2,11 @@ import { View } from "react-native";
 
 import { Text } from "./text";
 
-interface OfflineBarProps {
-  /** The status bar's height: the bar fills the area behind it, so its label sits just below. */
-  topInset: number;
-}
-
 /** A thin inverted-ink strip across the top of every screen while the app has no connection. */
-export function OfflineBar({ topInset }: OfflineBarProps) {
+export function OfflineBar() {
   return (
-    <View
-      className="border-border bg-foreground items-center border-b"
-      // oxlint-disable-next-line shadcn/no-inline-styles -- the top inset comes from the device at runtime
-      style={{ paddingTop: topInset }}
-    >
+    // pt-safe fills the area behind the status bar, so the label sits just below it.
+    <View className="border-border bg-foreground items-center border-b pt-safe">
       <Text
         aria-live="polite"
         className="text-background font-label text-xs leading-4 tracking-wide"

@@ -56,7 +56,7 @@ const buttonVariants = cva(
 
 const buttonTextVariants = cva(
   cn(
-    "text-foreground font-label text-[0.95rem] tracking-wide",
+    "text-foreground font-label text-label tracking-wide",
     Platform.select({ web: "pointer-events-none transition-colors" }),
   ),
   {

@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Animated, Easing, Modal, PanResponder, Pressable, View } from "react-native";
 import { useReducedMotion } from "react-native-reanimated";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // The panel starts this far below its resting place, so it slides in from under the screen's edge.
 const SLIDE_FROM = 600;
@@ -25,7 +24,6 @@ export function BottomSheet({
   onClose: () => void;
   children: ReactNode;
 }) {
-  const insets = useSafeAreaInsets();
   const reduceMotion = useReducedMotion();
   const [offset] = useState(() => new Animated.Value(reduceMotion ? 0 : SLIDE_FROM));
 
@@ -72,9 +70,7 @@ export function BottomSheet({
         >
           <View
             testID="sheet-panel"
-            className="border-input bg-card rounded-t-lg border sm:rounded-lg"
-            // oxlint-disable-next-line shadcn/no-inline-styles -- the bottom inset comes from the device at runtime
-            style={{ paddingBottom: insets.bottom }}
+            className="border-input bg-card rounded-t-lg border pb-safe sm:rounded-lg"
           >
             <View
               testID="sheet-handle"

@@ -23,6 +23,7 @@ function Sprout({ onDone }: SproutProps) {
   const { drawn, fadeStyle } = useDrawThenFade({ ...TIMING, onDone });
 
   return (
+    // oxlint-disable-next-line shadcn/no-inline-styles -- Reanimated drives the fade on the UI thread
     <Animated.View style={fadeStyle} testID="sprout" aria-hidden>
       <Svg viewBox="0 0 48 64" width={96} height={128} fill="none">
         <DrawnLine

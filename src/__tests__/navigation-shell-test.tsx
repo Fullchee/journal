@@ -1,5 +1,6 @@
 import {
   act,
+  fireEvent,
   renderRouter,
   screen,
   testRouter,
@@ -7,6 +8,7 @@ import {
   within,
 } from "expo-router/testing-library";
 import { userEvent } from "@testing-library/react-native";
+import { Uniwind } from "uniwind";
 
 import type * as ReactModule from "react";
 
@@ -203,6 +205,19 @@ describe("phone layout", () => {
 
     await testRouter.back();
     expect(screen).toHavePathname("/connections");
+  });
+
+  it("hands the device insets to Uniwind for its safe-area classes", async () => {
+    const updateInsets = jest.spyOn(Uniwind, "updateInsets");
+    const insets = { top: 24, right: 0, bottom: 16, left: 0 };
+    await renderRouter(APP_DIR, { initialUrl: "/habits" });
+
+    const frame = { x: 0, y: 0, width: 390, height: 900 };
+    await fireEvent(screen.getByTestId("safe-area-listener"), "insetsChange", {
+      nativeEvent: { insets, frame },
+    });
+
+    expect(updateInsets).toHaveBeenCalledWith(insets);
   });
 
   it("shows the offline bar on every screen while offline and hides it online", async () => {

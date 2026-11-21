@@ -16,13 +16,13 @@ const textVariants = cva(
     variants: {
       variant: {
         default: "",
-        display: "font-display text-[2rem] leading-tight",
+        display: "font-display text-display leading-tight",
         headline: cn(
           "font-caption text-2xl leading-tight",
           Platform.select({ web: "text-balance" }),
         ),
         title: cn("font-caption text-xl leading-tight", Platform.select({ web: "text-balance" })),
-        label: "font-label text-[0.95rem] tracking-wide",
+        label: "font-label text-label tracking-wide",
         muted: "text-muted-foreground text-sm",
       },
     },

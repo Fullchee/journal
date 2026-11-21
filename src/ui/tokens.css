@@ -89,4 +89,10 @@
 
   /* Alegreya Sans runs small for its size: body is 17px. */
   --text-base: 1.0625rem;
+
+  /* DESIGN.md's type roles. No --color-* token shares these names, so the linter reads them as sizes. */
+  --text-display: 2rem;
+  --text-label: 0.95rem;
+  --text-zone: 0.9rem;
+  --text-day-header: 0.85rem;
 }

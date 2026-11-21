@@ -21,6 +21,7 @@ function Tick({ onDone }: TickProps) {
   const { drawn, fadeStyle } = useDrawThenFade({ ...TIMING, onDone });
 
   return (
+    // oxlint-disable-next-line shadcn/no-inline-styles -- Reanimated drives the fade on the UI thread
     <Animated.View style={fadeStyle} testID="tick" aria-hidden>
       <Svg viewBox="0 0 24 24" width={28} height={28} fill="none">
         <DrawnLine testID="tick line" d={TICK} length={LENGTH} drawn={drawn} strokeWidth={1.6} />

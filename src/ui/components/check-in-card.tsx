@@ -193,7 +193,7 @@ function ZonePlates({ picked, marked, onPick }: ZonePlatesProps) {
                         adjustsFontSizeToFit
                         maxFontSizeMultiplier={GRID_FONT_SCALE}
                         className={cn(
-                          "font-label text-[0.9rem]",
+                          "font-label text-zone",
                           on ? "text-primary-foreground" : "text-muted-foreground",
                         )}
                       >

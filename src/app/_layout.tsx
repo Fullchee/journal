@@ -10,7 +10,12 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect, type ReactNode } from "react";
 import { Platform, StyleSheet, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { SafeAreaInsetsContext, useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  SafeAreaInsetsContext,
+  SafeAreaListener,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
+import { Uniwind } from "uniwind";
 import { ENV } from "varlock/env";
 
 import { CelebrationProvider } from "@/components/celebration";
@@ -56,7 +61,7 @@ function CrashScreen({ retry }: ErrorBoundaryProps) {
   return (
     <View
       className="bg-background flex-1 justify-center gap-4 p-4"
-      // oxlint-disable-next-line shadcn/no-inline-styles -- the insets come from the device at runtime
+      // oxlint-disable-next-line shadcn/no-inline-styles -- a root crash unmounts the SafeAreaListener, so pt-safe may read no insets
       style={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + 16 }}
     >
       <StatusBar style="auto" />
@@ -91,19 +96,25 @@ function RootLayout() {
   return (
     // oxlint-disable-next-line shadcn/no-inline-styles -- GestureHandlerRootView takes no className
     <GestureHandlerRootView style={styles.root}>
-      <DataProvider>
-        <ThemeProvider value={theme}>
-          <StatusBar style="auto" />
-          <MarkdownImageSourceProvider value={resolveImageSource}>
-            <OfflineFrame>
-              <CelebrationProvider>
-                <RootStack />
-              </CelebrationProvider>
-            </OfflineFrame>
-            <Toaster bottomOffset={insets.bottom + aboveTabBar + TOAST_GAP} />
-          </MarkdownImageSourceProvider>
-        </ThemeProvider>
-      </DataProvider>
+      {/* Uniwind's pt-safe and pb-safe classes read the insets this listener hands it. */}
+      <SafeAreaListener
+        testID="safe-area-listener"
+        onChange={({ insets }) => Uniwind.updateInsets(insets)}
+      >
+        <DataProvider>
+          <ThemeProvider value={theme}>
+            <StatusBar style="auto" />
+            <MarkdownImageSourceProvider value={resolveImageSource}>
+              <OfflineFrame>
+                <CelebrationProvider>
+                  <RootStack />
+                </CelebrationProvider>
+              </OfflineFrame>
+              <Toaster bottomOffset={insets.bottom + aboveTabBar + TOAST_GAP} />
+            </MarkdownImageSourceProvider>
+          </ThemeProvider>
+        </DataProvider>
+      </SafeAreaListener>
     </GestureHandlerRootView>
   );
 }
@@ -124,7 +135,7 @@ function OfflineFrame({ children }: { children: ReactNode }) {
         <>
           {/* The bar inverts the theme's ink, so the status bar icons over it invert too. */}
           <StatusBar style="inverted" />
-          <OfflineBar topInset={insets.top} />
+          <OfflineBar />
         </>
       )}
       <SafeAreaInsetsContext value={isOnline ? insets : { ...insets, top: 0 }}>

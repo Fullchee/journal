@@ -43,6 +43,7 @@ function Leaf({ onDone }: LeafProps) {
   });
 
   return (
+    // oxlint-disable-next-line shadcn/no-inline-styles -- Reanimated drives the fade on the UI thread
     <Animated.View style={fadeStyle} testID="leaf" aria-hidden>
       {/* oxlint-disable-next-line shadcn/no-inline-styles -- the blade unfolds from its base */}
       <Animated.View testID="leaf blade" style={[{ transformOrigin: "bottom" }, unfold]}>

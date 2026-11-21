@@ -212,7 +212,7 @@ function HabitRow({ habit, row, expanded, streak, onToggle, onOpen }: HabitRowPr
       >
         <Text className="font-sans-medium text-lg">{row.name}</Text>
         <View className="flex-row flex-wrap gap-x-3">
-          <Text className={cn("font-caption text-[0.95rem]", STAGE_TEXT[habit.stage])}>
+          <Text className={cn("font-caption text-label", STAGE_TEXT[habit.stage])}>
             {row.stage}
           </Text>
           <Text

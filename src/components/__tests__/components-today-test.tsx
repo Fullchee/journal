@@ -11,8 +11,6 @@ import type { HabitsBody } from "@/lib/data/habits";
 import { habit, timedHabit } from "../../../jest/fixtures";
 // eslint-disable-next-line no-restricted-imports -- jest/ sits outside src, so no @/ alias reaches it
 import type * as RouteMocks from "../../../jest/route-mocks";
-// eslint-disable-next-line no-restricted-imports -- jest/ sits outside src, so no @/ alias reaches it
-import { InSafeArea } from "../../../jest/safe-area";
 
 jest.mock("expo-router", () => ({
   router: { push: jest.fn() },
@@ -90,7 +88,6 @@ describe("HabitsDueToday", () => {
       <CelebrationProvider>
         <HabitsDueToday />
       </CelebrationProvider>,
-      { wrapper: InSafeArea },
     );
     await userEvent.press(screen.getByLabelText("Walk today: show entries"));
 

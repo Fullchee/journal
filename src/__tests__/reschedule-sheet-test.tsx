@@ -3,9 +3,6 @@ import { fireEvent, render, screen, userEvent } from "@testing-library/react-nat
 import { TextInput } from "react-native";
 import * as Reanimated from "react-native-reanimated";
 
-// eslint-disable-next-line no-restricted-imports -- jest/ sits outside src, so no @/ alias reaches it
-import { InSafeArea } from "../../jest/safe-area";
-
 const sheetProps = (over: Partial<RescheduleSheetProps> = {}): RescheduleSheetProps => ({
   name: "Portage",
   defaultDate: "2026-11-09",
@@ -23,7 +20,7 @@ const save = () => screen.getByRole("button", { name: "Reschedule" });
 describe("RescheduleSheet", () => {
   it("saves the date, the cause and the note", async () => {
     const props = sheetProps();
-    await render(<RescheduleSheet {...props} />, { wrapper: InSafeArea });
+    await render(<RescheduleSheet {...props} />);
 
     expect(screen.getByLabelText("New date")).toHaveDisplayValue("2026-11-09");
     await userEvent.press(screen.getByRole("radio", { name: "Put it off" }));
@@ -39,7 +36,7 @@ describe("RescheduleSheet", () => {
 
   it("waits for a cause before saving", async () => {
     const props = sheetProps();
-    await render(<RescheduleSheet {...props} />, { wrapper: InSafeArea });
+    await render(<RescheduleSheet {...props} />);
 
     expect(save()).toBeDisabled();
     await userEvent.press(screen.getByRole("radio", { name: "Couldn't — outside" }));
@@ -48,7 +45,7 @@ describe("RescheduleSheet", () => {
   });
 
   it.each(["2026-11-07", ""])("refuses the date %j, before the earliest one", async (date) => {
-    await render(<RescheduleSheet {...sheetProps()} />, { wrapper: InSafeArea });
+    await render(<RescheduleSheet {...sheetProps()} />);
 
     await userEvent.press(screen.getByRole("radio", { name: "Put it off" }));
     await userEvent.paste(screen.getByLabelText("New date"), date);
@@ -57,7 +54,7 @@ describe("RescheduleSheet", () => {
   });
 
   it("needs a connection to save", async () => {
-    await render(<RescheduleSheet {...sheetProps({ offline: true })} />, { wrapper: InSafeArea });
+    await render(<RescheduleSheet {...sheetProps({ offline: true })} />);
 
     await userEvent.press(screen.getByRole("radio", { name: "Put it off" }));
 
@@ -66,7 +63,7 @@ describe("RescheduleSheet", () => {
   });
 
   it("holds Save while sending", async () => {
-    await render(<RescheduleSheet {...sheetProps({ pending: true })} />, { wrapper: InSafeArea });
+    await render(<RescheduleSheet {...sheetProps({ pending: true })} />);
 
     await userEvent.press(screen.getByRole("radio", { name: "Put it off" }));
 
@@ -74,7 +71,7 @@ describe("RescheduleSheet", () => {
   });
 
   it("says so when the save failed, and lets it be tried again", async () => {
-    await render(<RescheduleSheet {...sheetProps({ failed: true })} />, { wrapper: InSafeArea });
+    await render(<RescheduleSheet {...sheetProps({ failed: true })} />);
 
     await userEvent.press(screen.getByRole("radio", { name: "Put it off" }));
 
@@ -84,7 +81,7 @@ describe("RescheduleSheet", () => {
 
   it("closes on Cancel", async () => {
     const props = sheetProps();
-    await render(<RescheduleSheet {...props} />, { wrapper: InSafeArea });
+    await render(<RescheduleSheet {...props} />);
 
     await userEvent.press(screen.getByRole("button", { name: "Cancel" }));
 
@@ -94,7 +91,7 @@ describe("RescheduleSheet", () => {
 
 async function renderSkip() {
   const props = { name: "Read", onSave: jest.fn(), onClose: jest.fn() };
-  await render(<SkipSheet {...props} />, { wrapper: InSafeArea });
+  await render(<SkipSheet {...props} />);
 
   return props;
 }
@@ -133,7 +130,6 @@ const openSheet = (onClose = jest.fn()) =>
     <BottomSheet label="Walk, Saturday 14 November" onClose={onClose}>
       <Text>Inside</Text>
     </BottomSheet>,
-    { wrapper: InSafeArea },
   );
 
 describe("BottomSheet", () => {
@@ -142,7 +138,10 @@ describe("BottomSheet", () => {
 
     expect(screen.getByLabelText("Walk, Saturday 14 November")).toBeOnTheScreen();
     expect(screen.getByTestId("sheet-handle", { includeHiddenElements: true })).toBeOnTheScreen();
-    expect(screen.getByTestId("sheet-panel")).toHaveStyle({ paddingBottom: 24 });
+    expect(screen.getByTestId("sheet-panel")).toHaveProp(
+      "className",
+      expect.stringContaining("pb-safe"),
+    );
   });
 
   it("closes from the scrim", async () => {

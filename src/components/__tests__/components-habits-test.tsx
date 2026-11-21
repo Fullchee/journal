@@ -9,8 +9,6 @@ import { useIsOnline } from "@/lib/data/data-provider";
 
 // eslint-disable-next-line no-restricted-imports -- jest/ sits outside src, so no @/ alias reaches it
 import { habit, timedHabit } from "../../../jest/fixtures";
-// eslint-disable-next-line no-restricted-imports -- jest/ sits outside src, so no @/ alias reaches it
-import { InSafeArea } from "../../../jest/safe-area";
 
 interface CirclesState {
   data: { circles: Circle[] };
@@ -105,7 +103,6 @@ describe("HabitDayDetail", () => {
   const show = (date: string, durations = {}) =>
     render(
       <HabitDayDetail detail={{ habit: walk, date }} durations={durations} onClose={jest.fn()} />,
-      { wrapper: InSafeArea },
     );
 
   it("deletes an entry with what its Undo needs to log it again", async () => {

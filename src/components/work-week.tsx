@@ -198,7 +198,7 @@ function HitRateColumn({ plan }: { plan: ScoredPlan }) {
         <Band at={BAND.low} />
         <Band at={BAND.high} />
       </View>
-      <Text variant="label" className="text-muted-foreground text-sm">
+      <Text variant="label" className="text-muted-foreground text-day-header">
         {weekday(plan.day)}
       </Text>
       <Text variant="muted">{dayOfMonth(plan.day)}</Text>

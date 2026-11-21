@@ -68,8 +68,8 @@
     ],
     "shadcn/no-raw-colors": "error",
     "shadcn/no-arbitrary-values": "error",
-    // Reanimated styles run on the UI thread, so they can't be classes.
-    "shadcn/no-inline-styles": ["error", { "allowDynamicIdentifiers": ["fadeStyle", "unfold"] }],
+    // A style a runtime value needs (insets, Reanimated, chart geometry) takes a disable comment with its reason.
+    "shadcn/no-inline-styles": "error",
     // Uniwind generates bg-border from the theme's --color-border; the linter misreads it.
     "shadcn/no-unknown-classes": ["error", { "allow": ["bg-border"] }],
     "shadcn/require-static-classes": "error",
@@ -908,7 +908,6 @@
       "files": ["src/ui/**"],
       "rules": {
         "shadcn/no-restyle": "off",
-        "shadcn/no-arbitrary-values": "off",
         "shadcn/require-static-classes": "off"
       }
     },
