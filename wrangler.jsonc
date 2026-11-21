@@ -18,12 +18,12 @@
   ],
   "r2_buckets": [{ "binding": "ATTACHMENTS", "bucket_name": "fullchee-dashboard-attachments" }],
   "ai": { "binding": "AI" },
-  // Daily Hevy sync (worker/lib/hevy-sync.ts), off the hour as Hevy asks.
-  "triggers": { "crons": ["23 7 * * *", "47 8 * * *"] },
+  // worker/index.ts maps each cron to its job: the Hevy sync (off the hour, as Hevy asks), the Evening review pass and the Fitbit session sync.
+  "triggers": { "crons": ["23 7 * * *", "47 8 * * *", "11 9 * * *"] },
   "vars": {
     "TEAM_DOMAIN": "fullchee.cloudflareaccess.com",
     // AUD tags of the Access apps that may guard journal.fullchee.workers.dev: fullchee-dashboard, then the workers.dev app.
     "POLICY_AUD": "8a5b42e91e685b89a88287dfc2a39f05ce32d98e28c15ad7c4e69f5baad4bf90,71f531e12882158ca95fc93f8092664f5d3b1e26d6190cf052691b4f78c55dd4",
   },
-  // Secrets (wrangler secret put; locally, .dev.vars): OWNER_EMAIL, HEVY_HABIT, TODOIST_TOKEN, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN.
+  // Secrets (wrangler secret put; locally, .dev.vars): OWNER_EMAIL, HEVY_HABIT, TODOIST_TOKEN, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN, GOOGLE_HEALTH_CLIENT_ID, GOOGLE_HEALTH_CLIENT_SECRET, GOOGLE_HEALTH_REFRESH_TOKEN.
 }

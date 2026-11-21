@@ -40,6 +40,7 @@ import * as workWeeks from "@worker/api/work/weeks";
 import * as workouts from "@worker/api/workouts";
 import type { Env, PagesContext } from "@worker/lib/env";
 import { confirmYesterday } from "@worker/lib/evening-review";
+import { syncFitbitSessions } from "@worker/lib/fitbit-sessions";
 import { syncHevy } from "@worker/lib/hevy-sync";
 import { json } from "@worker/lib/json";
 
@@ -170,17 +171,34 @@ interface ExecutionContext {
   waitUntil: (promise: Promise<unknown>) => void;
 }
 
-/** wrangler.jsonc's cron for the Evening review's next-morning pass; it runs alone because the Hevy sync spends most of a run's subrequests. */
+type CronJob = (env: Env, now: Date) => Promise<void>;
+
+/** wrangler.jsonc's crons. Each runs one job alone: the Hevy sync spends most of a run's subrequests. */
+export const HEVY_SYNC_CRON = "23 7 * * *";
 export const EVENING_REVIEW_CRON = "47 8 * * *";
+export const FITBIT_SESSIONS_CRON = "11 9 * * *";
+
+const CRON_JOBS = new Map<string, CronJob>([
+  [HEVY_SYNC_CRON, (env, now) => syncHevy(env.DB, now, fetch, env.HEVY_HABIT)],
+  [
+    EVENING_REVIEW_CRON,
+    async (env, now) => {
+      await confirmYesterday(env, now);
+    },
+  ],
+  [FITBIT_SESSIONS_CRON, (env, now) => syncFitbitSessions(env, now, fetch)],
+]);
 
 function scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext) {
-  const now = new Date(controller.scheduledTime);
+  const job = CRON_JOBS.get(controller.cron);
 
-  ctx.waitUntil(
-    controller.cron === EVENING_REVIEW_CRON
-      ? confirmYesterday(env, now)
-      : syncHevy(env.DB, now, fetch, env.HEVY_HABIT),
-  );
+  if (job === undefined) {
+    console.error(`No job runs on cron "${controller.cron}"; add it to CRON_JOBS.`);
+
+    return;
+  }
+
+  ctx.waitUntil(job(env, new Date(controller.scheduledTime)));
 }
 
 export default { fetch: route, scheduled };
