@@ -18,6 +18,9 @@ jest.mock("@sentry/react-native", () => ({
   wrapExpoRouterErrorBoundary: <T>(boundary: T) => boundary,
   expoRouterIntegration: jest.fn(() => ({ name: "ExpoRouter" })),
   consoleLoggingIntegration: jest.fn(() => ({ name: "ConsoleLogs" })),
+  mobileReplayIntegration: jest.fn(() => ({ name: "MobileReplay" })),
+  browserReplayIntegration: jest.fn(() => ({ name: "Replay" })),
+  feedbackIntegration: jest.fn(() => ({ name: "Feedback" })),
 }));
 
 jest.mock("../modules/journal-android", () => ({

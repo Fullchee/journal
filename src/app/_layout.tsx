@@ -11,6 +11,7 @@ import { useEffect, type ReactNode } from "react";
 import { Platform, StyleSheet, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaInsetsContext, useSafeAreaInsets } from "react-native-safe-area-context";
+import { ENV } from "varlock/env";
 
 import { CelebrationProvider } from "@/components/celebration";
 import { TAB_BAR_HEIGHT } from "@/components/tab-bar";
@@ -29,7 +30,7 @@ import { initSentry } from "@/lib/sentry";
 import { useHabitWidgets } from "@/lib/widgets/use-habit-widgets";
 
 // Before the first render, so errors and the app start trace from boot are captured.
-initSentry();
+initSentry(ENV.EXPO_PUBLIC_SENTRY_DSN);
 
 // The stored session and the fonts take a moment to load; the splash covers them so nothing flashes.
 void SplashScreen.preventAutoHideAsync();
@@ -54,7 +55,7 @@ function CrashScreen({ retry }: ErrorBoundaryProps) {
 
   return (
     <View
-      className="bg-background flex-1 justify-center gap-4 p-4"
+      className="flex-1 justify-center gap-4 bg-background p-4"
       style={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + 16 }}
     >
       <StatusBar style="auto" />

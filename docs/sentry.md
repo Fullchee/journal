@@ -1,6 +1,6 @@
 # Sentry (#129)
 
-Android and web report errors, traces, breadcrumbs and console logs to one Sentry project. Sentry stays off until `EXPO_PUBLIC_SENTRY_DSN` is set: without it, `initSentry` (`src/lib/sentry.ts`) never calls `Sentry.init` and the app sends nothing.
+Android and web report errors, traces, breadcrumbs, console logs, session replays (10% of sessions, every session with an error) and user feedback to one Sentry project. Sentry stays off until `EXPO_PUBLIC_SENTRY_DSN` is set: without it, `initSentry` (`src/lib/sentry.ts`) never calls `Sentry.init` and the app sends nothing.
 
 ## Where each value lives
 
