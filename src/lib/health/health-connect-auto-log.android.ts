@@ -1,6 +1,5 @@
 import {
   HEALTH_CONNECT_ORIGINS,
-  HEALTH_CONNECT_SOURCES,
   HealthConnectSession,
   healthConnectReadFrom,
   sourceSessions,
@@ -20,9 +19,9 @@ import {
 } from "react-native-health-connect";
 import * as z from "zod/mini";
 
-import { useImportDurations } from "@/lib/data/habits";
+import { useImportDurations, useTodayHabits } from "@/lib/data/habits";
 import type {
-  HealthConnectAutoLog,
+  CalmAutoLog,
   ImportDurations,
   LinkResult,
 } from "@/lib/health/health-connect-auto-log";
@@ -107,34 +106,53 @@ async function logNewSessions(
   return added;
 }
 
-async function link(
-  source: HealthConnectSource,
-  habit: string,
-  importDurations: ImportDurations,
-): Promise<LinkResult> {
+async function link(habit: string, importDurations: ImportDurations): Promise<LinkResult> {
   if (!(await isHealthConnectReady())) return { status: "unavailable" };
 
-  if (!canRead(source, await requestPermission([readPermission(source)])))
+  if (!canRead("calm", await requestPermission([readPermission("calm")])))
     return { status: "denied" };
 
   const fresh = { habit, readAt: null };
 
-  await storeLink(source, fresh);
+  await storeLink("calm", fresh);
 
-  return { status: "linked", added: await logNewSessions(source, fresh, importDurations) };
+  return { status: "linked", added: await logNewSessions("calm", fresh, importDurations) };
 }
 
-async function linkedHabit(source: HealthConnectSource) {
-  const stored = await storedLink(source);
+async function linkedHabit() {
+  const stored = await storedLink("calm");
 
   return stored?.habit ?? null;
 }
 
-export const healthConnectAutoLog: HealthConnectAutoLog = {
+export const calmAutoLog: CalmAutoLog = {
   linkedHabit,
   link,
-  unlink: (source) => storage.removeItem(linkKey(source)),
+  unlink: () => storage.removeItem(linkKey("calm")),
 };
+
+// Android shows its permission screen once; after a denial the owner grants Exercise in Health Connect's settings.
+const HEVY_ASKED_KEY = "hevy-auto-log:asked";
+
+type Granted = Awaited<ReturnType<typeof getGrantedPermissions>>;
+
+async function canReadHevy(granted: Granted) {
+  if (canRead("hevy", granted)) return true;
+
+  if ((await storage.getItem(HEVY_ASKED_KEY)) !== null) return false;
+  await storage.setItem(HEVY_ASKED_KEY, "1");
+
+  return canRead("hevy", await requestPermission([readPermission("hevy")]));
+}
+
+// A new Hevy Habit starts over: its read time belonged to the old one.
+async function logHevy(hevyHabit: string, granted: Granted, importDurations: ImportDurations) {
+  if (!(await canReadHevy(granted))) return;
+  const stored = await storedLink("hevy");
+  const hevyLink = stored?.habit === hevyHabit ? stored : { habit: hevyHabit, readAt: null };
+
+  await logNewSessions("hevy", hevyLink, importDurations);
+}
 
 // One read at a time: the app coming to the foreground mid-read would otherwise post the same sessions twice.
 interface InFlightRead {
@@ -143,29 +161,21 @@ interface InFlightRead {
 
 const reading: InFlightRead = { current: null };
 
-async function storedLinks() {
-  const stored = await Promise.all(
-    HEALTH_CONNECT_SOURCES.map(async (source) => ({ source, link: await storedLink(source) })),
-  );
+async function readAll(importDurations: ImportDurations, hevyHabit: string | undefined) {
+  const calmLink = await storedLink("calm");
 
-  return stored.flatMap(({ source, link: found }) =>
-    found === null ? [] : { source, link: found },
-  );
-}
-
-async function readLinked(importDurations: ImportDurations) {
-  const linked = await storedLinks();
-
-  if (linked.length === 0 || !(await isHealthConnectReady())) return;
+  if ((calmLink === null && hevyHabit === undefined) || !(await isHealthConnectReady())) return;
   const granted = await getGrantedPermissions();
 
-  for (const { source, link: found } of linked)
-    if (canRead(source, granted)) await logNewSessions(source, found, importDurations);
+  if (calmLink !== null && canRead("calm", granted))
+    await logNewSessions("calm", calmLink, importDurations);
+
+  if (hevyHabit !== undefined) await logHevy(hevyHabit, granted, importDurations);
 }
 
-async function readSettled(importDurations: ImportDurations) {
+async function readSettled(importDurations: ImportDurations, hevyHabit: string | undefined) {
   try {
-    await readLinked(importDurations);
+    await readAll(importDurations, hevyHabit);
   } catch {
     // Offline or a Health Connect hiccup: the kept read time makes the next open try again.
   } finally {
@@ -173,23 +183,31 @@ async function readSettled(importDurations: ImportDurations) {
   }
 }
 
-function readOnce(importDurations: ImportDurations) {
-  reading.current ??= readSettled(importDurations);
+function readOnce(importDurations: ImportDurations, hevyHabit: string | undefined) {
+  reading.current ??= readSettled(importDurations, hevyHabit);
 
   return reading.current;
 }
 
-/** Mount once inside the signed-in app: logs each linked source's new sessions on its Habit when the app opens or returns to the front. */
+/**
+ * Mount once inside the signed-in app: when the app opens or returns to the front, logs new Calm sessions on the
+ * linked Habit and new Hevy workouts on the Worker's `HEVY_HABIT`.
+ */
 export function useHealthConnectAutoLog() {
   const { mutateAsync } = useImportDurations();
+  const habits = useTodayHabits();
+  const hevyHabit = habits.data?.hevyHabit;
+  // A read started before the Habits load would hold off the one that knows Hevy's Habit.
+  const loaded = !habits.isPending;
 
   useEffect(() => {
-    void readOnce(mutateAsync);
+    if (!loaded) return;
+    void readOnce(mutateAsync, hevyHabit);
 
     const listener = AppState.addEventListener("change", (state) => {
-      if (state === "active") void readOnce(mutateAsync);
+      if (state === "active") void readOnce(mutateAsync, hevyHabit);
     });
 
     return () => listener.remove();
-  }, [mutateAsync]);
+  }, [mutateAsync, hevyHabit, loaded]);
 }

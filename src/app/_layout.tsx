@@ -55,7 +55,7 @@ function CrashScreen({ retry }: ErrorBoundaryProps) {
 
   return (
     <View
-      className="flex-1 justify-center gap-4 bg-background p-4"
+      className="bg-background flex-1 justify-center gap-4 p-4"
       style={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + 16 }}
     >
       <StatusBar style="auto" />

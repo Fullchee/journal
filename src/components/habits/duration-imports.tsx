@@ -4,7 +4,7 @@ import { FileUp } from "lucide-react-native";
 import { useState } from "react";
 import { View } from "react-native";
 
-import { HealthConnectImport } from "@/components/habits/health-connect-import";
+import { CalmImport } from "@/components/habits/calm-import";
 import { useIsOnline } from "@/lib/data/data-provider";
 import { useImportDurations } from "@/lib/data/habits";
 import { pickCsvText } from "@/lib/pick-csv";
@@ -61,13 +61,12 @@ function InsightTimerImport({ habit }: { habit: string }) {
   );
 }
 
-/** A Duration Habit's imports: Insight Timer's CSV log, plus Calm's and Hevy's Health Connect links. */
+/** A Duration Habit's imports: Insight Timer's CSV log, plus Calm's Health Connect link. Hevy logs on `HEVY_HABIT` unasked. */
 export function DurationImports({ habit }: { habit: string }) {
   return (
     <View className="border-border gap-2 border-t pt-4">
       <InsightTimerImport habit={habit} />
-      <HealthConnectImport habit={habit} source="calm" />
-      <HealthConnectImport habit={habit} source="hevy" />
+      <CalmImport habit={habit} />
     </View>
   );
 }

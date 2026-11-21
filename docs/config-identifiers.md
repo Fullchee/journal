@@ -11,7 +11,7 @@ What #167 removed from tracked config before the repo goes public (#160), and wh
 | Pages project name    | `wrangler.jsonc` comment | Dropped: the comment only named the old `journal` repo's Pages project |
 | License holder (Expo) | `LICENSE`                | Replaced by Fullchee Zhang; the Expo template credit is gone           |
 
-The Worker reads both secrets as `env.OWNER_EMAIL` and `env.HEVY_HABIT`, the same as the old vars, so `worker/` is unchanged.
+The Worker reads both secrets as `env.OWNER_EMAIL` and `env.HEVY_HABIT`. `GET /api/habits` sends `HEVY_HABIT` to the app, which logs Hevy workouts from Health Connect on that Habit.
 
 A deploy never deletes secrets, so CI keeps both. To change one, run `bunx wrangler secret put <NAME>` from the repo.
 

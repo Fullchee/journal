@@ -12,10 +12,7 @@ import {
   requestPermission,
 } from "react-native-health-connect";
 
-import {
-  healthConnectAutoLog,
-  useHealthConnectAutoLog,
-} from "@/lib/health/health-connect-auto-log.android";
+import { calmAutoLog, useHealthConnectAutoLog } from "@/lib/health/health-connect-auto-log.android";
 import { createQueryClient } from "@/lib/data/query-client";
 
 // eslint-disable-next-line no-restricted-imports -- jest/ sits outside src, so no @/ alias reaches it
@@ -57,6 +54,7 @@ const LINK_KEY = "calm-auto-log";
 
 const CALM_PACKAGE = HEALTH_CONNECT_ORIGINS.calm.package;
 const HEVY_KEY = "hevy-auto-log";
+const HEVY_ASKED_KEY = "hevy-auto-log:asked";
 
 const MINDFULNESS = [{ accessType: "read", recordType: "MindfulnessSession" }] as const;
 const EXERCISE = { accessType: "read", recordType: "ExerciseSession" } as const;
@@ -74,8 +72,10 @@ const session = (startTime: string, endTime: string) => ({
 
 const MORNING = session("2026-11-10T12:30:00Z", "2026-11-10T12:40:00Z");
 
-function serve(added = 1, fail = false) {
+// `hevyHabit` is the Worker's HEVY_HABIT, which GET /api/habits sends.
+function serve(added = 1, fail = false, hevyHabit?: string) {
   return fakeApi({
+    "/api/habits": () => ({ habits: [], hevyHabit }),
     "POST /api/habits": () => {
       if (fail) throw new Error("offline");
 
@@ -96,6 +96,7 @@ beforeEach(async () => {
   await new Promise((resolve) => setImmediate(resolve));
   await storage.removeItem(LINK_KEY);
   await storage.removeItem(HEVY_KEY);
+  await storage.removeItem(HEVY_ASKED_KEY);
   jest.clearAllMocks();
   jest.mocked(readRecords).mockReset();
   jest.mocked(getSdkStatus).mockResolvedValue(SdkAvailabilityStatus.SDK_AVAILABLE);
@@ -106,9 +107,9 @@ beforeEach(async () => {
 
 afterEach(() => jest.useRealTimers());
 
-describe("healthConnectAutoLog.link", () => {
+describe("calmAutoLog.link", () => {
   it("reads Calm's last 30 days, logs them on the Habit and remembers when it read", async () => {
-    const result = await healthConnectAutoLog.link("calm", "meditate", importDurations);
+    const result = await calmAutoLog.link("meditate", importDurations);
 
     expect(result).toEqual({ status: "linked", added: 1 });
     expect(readRecords).toHaveBeenCalledWith("MindfulnessSession", {
@@ -120,7 +121,7 @@ describe("healthConnectAutoLog.link", () => {
       entries: [{ date: "2026-11-10", startTime: "07:30", minutes: 10 }],
     });
     expect(await storedLink()).toBe(linkText(NOW.toISOString()));
-    expect(await healthConnectAutoLog.linkedHabit("calm")).toBe("meditate");
+    expect(await calmAutoLog.linkedHabit()).toBe("meditate");
   });
 
   it("reads every page Health Connect returns, skipping records it can't read", async () => {
@@ -132,7 +133,7 @@ describe("healthConnectAutoLog.link", () => {
       .mockResolvedValueOnce({ records: [MORNING, broken], pageToken: "next" })
       .mockResolvedValueOnce({ records: [evening], pageToken: "" });
 
-    await healthConnectAutoLog.link("calm", "meditate", importDurations);
+    await calmAutoLog.link("meditate", importDurations);
 
     expect(jest.mocked(readRecords).mock.calls[1]?.[1]).toMatchObject({ pageToken: "next" });
     expect(importDurations).toHaveBeenCalledWith({
@@ -147,65 +148,39 @@ describe("healthConnectAutoLog.link", () => {
   it("posts nothing when Calm has no sessions yet", async () => {
     jest.mocked(readRecords).mockResolvedValue({ records: [] });
 
-    expect(await healthConnectAutoLog.link("calm", "meditate", importDurations)).toEqual({
+    expect(await calmAutoLog.link("meditate", importDurations)).toEqual({
       status: "linked",
       added: 0,
     });
     expect(importDurations).not.toHaveBeenCalled();
   });
 
-  it("reads Hevy's workouts from Exercise on its own link, leaving Calm's alone", async () => {
-    const workout = {
-      ...session("2026-11-10T22:48:00Z", "2026-11-11T01:09:00Z"),
-      recordType: "ExerciseSession",
-      metadata: { dataOrigin: HEALTH_CONNECT_ORIGINS.hevy.package },
-    };
-
-    jest.mocked(requestPermission).mockResolvedValue([EXERCISE]);
-    jest.mocked(readRecords).mockResolvedValue({ records: [workout] });
-
-    expect(await healthConnectAutoLog.link("hevy", "lift", importDurations)).toEqual({
-      status: "linked",
-      added: 1,
-    });
-    expect(readRecords).toHaveBeenCalledWith("ExerciseSession", {
-      timeRangeFilter: { operator: "after", startTime: "2026-10-12T12:00:00.000Z" },
-      dataOriginFilter: [HEALTH_CONNECT_ORIGINS.hevy.package],
-    });
-    expect(importDurations).toHaveBeenCalledWith({
-      habit: "lift",
-      entries: [{ date: "2026-11-10", startTime: "17:48", minutes: 141 }],
-    });
-    expect(await healthConnectAutoLog.linkedHabit("hevy")).toBe("lift");
-    expect(await healthConnectAutoLog.linkedHabit("calm")).toBeNull();
-  });
-
   it("stops when Health Connect is missing or outdated", async () => {
     jest.mocked(getSdkStatus).mockResolvedValue(SdkAvailabilityStatus.SDK_UNAVAILABLE);
 
-    expect(await healthConnectAutoLog.link("calm", "meditate", importDurations)).toEqual({
+    expect(await calmAutoLog.link("meditate", importDurations)).toEqual({
       status: "unavailable",
     });
     expect(requestPermission).not.toHaveBeenCalled();
-    expect(await healthConnectAutoLog.linkedHabit("calm")).toBeNull();
+    expect(await calmAutoLog.linkedHabit()).toBeNull();
   });
 
   it("stops when the owner doesn't allow reading Mindfulness", async () => {
     jest.mocked(requestPermission).mockResolvedValue([{ accessType: "read", recordType: "Steps" }]);
 
-    expect(await healthConnectAutoLog.link("calm", "meditate", importDurations)).toEqual({
+    expect(await calmAutoLog.link("meditate", importDurations)).toEqual({
       status: "denied",
     });
-    expect(await healthConnectAutoLog.linkedHabit("calm")).toBeNull();
+    expect(await calmAutoLog.linkedHabit()).toBeNull();
   });
 });
 
-describe("healthConnectAutoLog.unlink", () => {
+describe("calmAutoLog.unlink", () => {
   it("forgets the linked Habit", async () => {
-    await healthConnectAutoLog.link("calm", "meditate", importDurations);
-    await healthConnectAutoLog.unlink("calm");
+    await calmAutoLog.link("meditate", importDurations);
+    await calmAutoLog.unlink();
 
-    expect(await healthConnectAutoLog.linkedHabit("calm")).toBeNull();
+    expect(await calmAutoLog.linkedHabit()).toBeNull();
   });
 
   it.each([
@@ -214,11 +189,20 @@ describe("healthConnectAutoLog.unlink", () => {
   ])("treats an unreadable stored link as none: %s", async (_id, text) => {
     await storage.setItem(LINK_KEY, text);
 
-    expect(await healthConnectAutoLog.linkedHabit("calm")).toBeNull();
+    expect(await calmAutoLog.linkedHabit()).toBeNull();
   });
 });
 
 const link = (readAt: string | null) => storage.setItem(LINK_KEY, linkText(readAt));
+
+const hevyText = (readAt: Date | null, habit = "lift") =>
+  JSON.stringify({ habit, readAt: readAt?.toISOString() ?? null });
+
+const WORKOUT = {
+  ...session("2026-11-10T22:48:00Z", "2026-11-11T01:09:00Z"),
+  recordType: "ExerciseSession",
+  metadata: { dataOrigin: HEALTH_CONNECT_ORIGINS.hevy.package },
+};
 
 async function mountAutoLog() {
   const client = createQueryClient();
@@ -251,23 +235,20 @@ describe("useHealthConnectAutoLog", () => {
     ]);
   });
 
-  it("reads each linked source with the access the owner granted it", async () => {
+  it("reads Calm's link and Hevy's Habit with the access the owner granted each", async () => {
     await link(null);
-    await storage.setItem(HEVY_KEY, JSON.stringify({ habit: "lift", readAt: null }));
+    serve(1, false, "lift");
     jest.mocked(getGrantedPermissions).mockResolvedValue([...MINDFULNESS, EXERCISE]);
     jest.mocked(readRecords).mockResolvedValue({ records: [] });
 
     await mountAutoLog();
 
-    await waitFor(async () =>
-      expect(await storage.getItem(HEVY_KEY)).toBe(
-        JSON.stringify({ habit: "lift", readAt: NOW.toISOString() }),
-      ),
-    );
+    await waitFor(async () => expect(await storage.getItem(HEVY_KEY)).toBe(hevyText(NOW)));
     expect(jest.mocked(readRecords).mock.calls.map(([type]) => type)).toEqual([
       "MindfulnessSession",
       "ExerciseSession",
     ]);
+    expect(requestPermission).not.toHaveBeenCalled();
   });
 
   it("reads nothing until a Habit is linked", async () => {
@@ -278,6 +259,16 @@ describe("useHealthConnectAutoLog", () => {
 
     expect(getSdkStatus).not.toHaveBeenCalled();
     expect(writes).toEqual([]);
+  });
+
+  it("reads nothing while Health Connect is missing", async () => {
+    await link(null);
+    jest.mocked(getSdkStatus).mockResolvedValue(SdkAvailabilityStatus.SDK_UNAVAILABLE);
+
+    await mountAutoLog();
+
+    await waitFor(() => expect(getSdkStatus).toHaveBeenCalled());
+    expect(getGrantedPermissions).not.toHaveBeenCalled();
   });
 
   it("reads nothing once the owner revokes Mindfulness access", async () => {
@@ -320,5 +311,94 @@ describe("useHealthConnectAutoLog", () => {
     });
 
     await waitFor(() => expect(readRecords).toHaveBeenCalledTimes(2));
+  });
+});
+
+describe("useHealthConnectAutoLog for Hevy", () => {
+  beforeEach(() => {
+    jest.mocked(getGrantedPermissions).mockResolvedValue([EXERCISE]);
+    jest.mocked(readRecords).mockResolvedValue({ records: [WORKOUT] });
+  });
+
+  it("logs Hevy's workouts on the Worker's Hevy Habit without a link", async () => {
+    const { writes } = serve(1, false, "lift");
+
+    await mountAutoLog();
+
+    await waitFor(async () => expect(await storage.getItem(HEVY_KEY)).toBe(hevyText(NOW)));
+    expect(readRecords).toHaveBeenCalledWith("ExerciseSession", {
+      timeRangeFilter: { operator: "after", startTime: "2026-10-12T12:00:00.000Z" },
+      dataOriginFilter: [HEALTH_CONNECT_ORIGINS.hevy.package],
+    });
+    expect(writes.map(({ body }) => body)).toEqual([
+      {
+        type: "import-durations",
+        habit: "lift",
+        entries: [{ date: "2026-11-10", startTime: "17:48", minutes: 141 }],
+      },
+    ]);
+  });
+
+  it("reads Hevy from a day before the last read", async () => {
+    await storage.setItem(HEVY_KEY, hevyText(new Date("2026-11-10T08:00:00.000Z")));
+    serve(1, false, "lift");
+
+    await mountAutoLog();
+
+    await waitFor(async () => expect(await storage.getItem(HEVY_KEY)).toBe(hevyText(NOW)));
+    expect(jest.mocked(readRecords).mock.calls[0]?.[1].timeRangeFilter).toEqual({
+      operator: "after",
+      startTime: "2026-11-09T08:00:00.000Z",
+    });
+  });
+
+  it("starts over when the Worker names a new Hevy Habit", async () => {
+    await storage.setItem(HEVY_KEY, hevyText(new Date("2026-11-10T08:00:00.000Z"), "gym"));
+    serve(1, false, "lift");
+
+    await mountAutoLog();
+
+    await waitFor(async () => expect(await storage.getItem(HEVY_KEY)).toBe(hevyText(NOW)));
+    expect(jest.mocked(readRecords).mock.calls[0]?.[1].timeRangeFilter).toEqual({
+      operator: "after",
+      startTime: "2026-10-12T12:00:00.000Z",
+    });
+  });
+
+  it("asks for Exercise access once, then reads when the owner allows it", async () => {
+    jest.mocked(getGrantedPermissions).mockResolvedValue([]);
+    jest.mocked(requestPermission).mockResolvedValue([EXERCISE]);
+    serve(1, false, "lift");
+
+    await mountAutoLog();
+
+    await waitFor(async () => expect(await storage.getItem(HEVY_KEY)).toBe(hevyText(NOW)));
+    expect(requestPermission).toHaveBeenCalledWith([EXERCISE]);
+  });
+
+  it("never asks again after the owner denies Exercise access", async () => {
+    const listeners: ((state: AppStateStatus) => void)[] = [];
+
+    jest.spyOn(AppState, "addEventListener").mockImplementation((_type, listener) => {
+      listeners.push(listener);
+
+      return { remove: jest.fn() };
+    });
+    jest.mocked(getGrantedPermissions).mockResolvedValue([]);
+    jest.mocked(requestPermission).mockResolvedValue([]);
+    serve(1, false, "lift");
+
+    await mountAutoLog();
+    await waitFor(() => expect(requestPermission).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(AppState.addEventListener).toHaveBeenCalled());
+    await act(async () => {
+      for (const listener of listeners) listener("active");
+
+      await new Promise((resolve) => setImmediate(resolve));
+    });
+
+    await waitFor(() => expect(getGrantedPermissions).toHaveBeenCalledTimes(2));
+    expect(requestPermission).toHaveBeenCalledTimes(1);
+    expect(readRecords).not.toHaveBeenCalled();
   });
 });

@@ -1,10 +1,9 @@
-import type { HealthConnectSource } from "@/core";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, userEvent, waitFor } from "@testing-library/react-native";
 
-import { HealthConnectImport } from "@/components/habits/health-connect-import";
+import { CalmImport } from "@/components/habits/calm-import";
 import { createQueryClient } from "@/lib/data/query-client";
-import type { HealthConnectAutoLog, LinkResult } from "@/lib/health/health-connect-auto-log";
+import type { CalmAutoLog, LinkResult } from "@/lib/health/health-connect-auto-log";
 import type * as AutoLogModule from "@/lib/health/health-connect-auto-log";
 
 // eslint-disable-next-line no-restricted-imports -- jest/ sits outside src, so no @/ alias reaches it
@@ -14,16 +13,16 @@ jest.mock("@/lib/api/api-fetch", () => ({ apiFetch: jest.fn() }));
 
 // Stands in for the Android link; the last test swaps in the off-Android stub's null.
 jest.mock("@/lib/health/health-connect-auto-log", () => ({
-  healthConnectAutoLog: { linkedHabit: jest.fn(), link: jest.fn(), unlink: jest.fn() },
+  calmAutoLog: { linkedHabit: jest.fn(), link: jest.fn(), unlink: jest.fn() },
 }));
 
-const mocked = jest.requireMock<{ healthConnectAutoLog: HealthConnectAutoLog | null }>(
+const mocked = jest.requireMock<{ calmAutoLog: CalmAutoLog | null }>(
   "@/lib/health/health-connect-auto-log",
 );
 
-const autoLog = jest.requireMock<{ healthConnectAutoLog: jest.Mocked<HealthConnectAutoLog> }>(
+const autoLog = jest.requireMock<{ calmAutoLog: jest.Mocked<CalmAutoLog> }>(
   "@/lib/health/health-connect-auto-log",
-).healthConnectAutoLog;
+).calmAutoLog;
 
 const LINKED: LinkResult = { status: "linked", added: 2 };
 
@@ -31,7 +30,7 @@ function linkedTo(habit: string | null, result = LINKED) {
   const state = { linked: habit };
 
   autoLog.linkedHabit.mockImplementation(() => Promise.resolve(state.linked));
-  autoLog.link.mockImplementation((_source, linked) => {
+  autoLog.link.mockImplementation((linked) => {
     state.linked = linked;
 
     return Promise.resolve(result);
@@ -43,10 +42,10 @@ function linkedTo(habit: string | null, result = LINKED) {
   });
 }
 
-const show = (source: HealthConnectSource = "calm") =>
+const show = () =>
   render(
     <QueryClientProvider client={createQueryClient()}>
-      <HealthConnectImport habit="meditate" source={source} />
+      <CalmImport habit="meditate" />
     </QueryClientProvider>,
   );
 
@@ -60,7 +59,7 @@ async function press(name: string) {
 
 beforeEach(() => fakeApi());
 
-describe("HealthConnectImport", () => {
+describe("CalmImport", () => {
   it("links the Habit to Calm and says how many sessions it added", async () => {
     linkedTo(null);
     await show();
@@ -68,7 +67,7 @@ describe("HealthConnectImport", () => {
     await press("Auto-log Calm sessions");
 
     expect(await screen.findByText("Added 2 sessions from Calm.")).toBeOnTheScreen();
-    expect(autoLog.link).toHaveBeenCalledWith("calm", "meditate", expect.any(Function));
+    expect(autoLog.link).toHaveBeenCalledWith("meditate", expect.any(Function));
     expect(await screen.findByRole("button", { name: "Stop logging Calm" })).toBeOnTheScreen();
     expect(
       screen.getByText("Calm sessions from Health Connect are logged here when the app opens."),
@@ -113,7 +112,7 @@ describe("HealthConnectImport", () => {
     await press("Stop logging Calm");
 
     expect(await screen.findByText("Calm sessions are no longer logged here.")).toBeOnTheScreen();
-    expect(autoLog.unlink).toHaveBeenCalledWith("calm");
+    expect(autoLog.unlink).toHaveBeenCalled();
     expect(await screen.findByRole("button", { name: "Auto-log Calm sessions" })).toBeOnTheScreen();
   });
 
@@ -124,24 +123,12 @@ describe("HealthConnectImport", () => {
     expect(await screen.findByRole("button", { name: "Auto-log Calm sessions" })).toBeOnTheScreen();
   });
 
-  it("links the Habit to Hevy's workouts, asking for Exercise access", async () => {
-    linkedTo(null, { status: "denied" });
-    await show("hevy");
-
-    await press("Auto-log Hevy workouts");
-
-    expect(
-      await screen.findByText("Allow Journal to read Exercise in Health Connect, then try again."),
-    ).toBeOnTheScreen();
-    expect(autoLog.link).toHaveBeenCalledWith("hevy", "meditate", expect.any(Function));
-  });
-
   it("shows nothing off Android, where Health Connect is missing", async () => {
     const stub = jest.requireActual<typeof AutoLogModule>("@/lib/health/health-connect-auto-log");
 
-    mocked.healthConnectAutoLog = stub.healthConnectAutoLog;
+    mocked.calmAutoLog = stub.calmAutoLog;
     await show();
-    mocked.healthConnectAutoLog = autoLog;
+    mocked.calmAutoLog = autoLog;
 
     expect(stub.useHealthConnectAutoLog).not.toThrow();
     expect(screen.queryByRole("button")).not.toBeOnTheScreen();

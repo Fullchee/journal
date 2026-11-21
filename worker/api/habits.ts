@@ -302,7 +302,10 @@ function applyChange(env: Env, change: Change): Promise<Applied> {
   }
 }
 
-/** `view` picks the Habits; `since` adds each count, duration entry and Skip cause from that date on, and every Reschedule. */
+/**
+ * `view` picks the Habits; `since` adds each count, duration entry and Skip cause from that date on, and every Reschedule.
+ * `hevyHabit` names the Habit the phone logs Hevy workouts on; it is left out while the secret is unset.
+ */
 export async function onRequestGet({ request, env }: PagesContext) {
   const viewer = await authorize(request, env);
 
@@ -315,7 +318,7 @@ export async function onRequestGet({ request, env }: PagesContext) {
   if (view === undefined || (since !== null && !DATE.test(since)))
     return json({ error: "bad query" }, 400);
 
-  const body = await view(env);
+  const body = { ...(await view(env)), hevyHabit: env.HEVY_HABIT };
 
   if (since === null) return json(body);
 

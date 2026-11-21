@@ -712,6 +712,17 @@ test("a view without `since` sends no counts or durations", async () => {
   assert.deepEqual(["counts" in body, "durations" in body], [false, false]);
 });
 
+test("every view names the Habit Hevy workouts log on", async () => {
+  const env = { ...makeEnv(), HEVY_HABIT: "lift" };
+  const body = await readJson<{ hevyHabit?: string }>(await get(env, OWNER, "?view=home"));
+  assert.equal(body.hevyHabit, "lift");
+});
+
+test("a view leaves out the Hevy Habit while HEVY_HABIT is unset", async () => {
+  const body = await readJson<{ hevyHabit?: string }>(await get(makeEnv(), OWNER, "?view=home"));
+  assert.equal("hevyHabit" in body, false);
+});
+
 // "sit" becomes a duration Habit with three entries; "up" keeps one left over from an earlier Record style.
 async function seedDurations() {
   const env = makeEnvWithExec();

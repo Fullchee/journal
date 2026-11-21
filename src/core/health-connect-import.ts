@@ -3,16 +3,16 @@ import * as z from "zod/mini";
 import { torontoDay, torontoTime } from "./calendar";
 import { clampMinutes, oncePerStart, type ImportedEntry } from "./csv-import";
 
-/** The apps whose Health Connect sessions log as Duration entries. */
-export const HEALTH_CONNECT_SOURCES = ["calm", "hevy"] as const;
-
-export type HealthConnectSource = (typeof HEALTH_CONNECT_SOURCES)[number];
-
-/** Each source's Android package, which Health Connect names as each record's `dataOrigin`, and the record type it writes. */
+/**
+ * The apps whose Health Connect sessions log as Duration entries: each one's Android package, which Health Connect
+ * names as each record's `dataOrigin`, and the record type it writes.
+ */
 export const HEALTH_CONNECT_ORIGINS = {
   calm: { package: "com.calm.android", recordType: "MindfulnessSession" },
   hevy: { package: "com.hevy", recordType: "ExerciseSession" },
-} as const satisfies Record<HealthConnectSource, { package: string; recordType: string }>;
+} as const;
+
+export type HealthConnectSource = keyof typeof HEALTH_CONNECT_ORIGINS;
 
 const DAY_MS = 86_400_000;
 

@@ -48,9 +48,13 @@ import {
 /** `tracker` lists every Habit with Goals; `home` the active ones; `library` the ones without a target. */
 type HabitsView = "tracker" | "home" | "library";
 
-/** `counts`, `durations`, `reschedules` and `skips` come only when the query names a `since` date. */
+/**
+ * `counts`, `durations`, `reschedules` and `skips` come only when the query names a `since` date.
+ * `hevyHabit` is the Habit Hevy workouts log on, missing while the Worker's `HEVY_HABIT` is unset.
+ */
 export const HabitsBody = z.object({
   habits: z.array(Habit),
+  hevyHabit: z.optional(z.string()),
   goals: z.optional(z.array(Goal)),
   counts: z.optional(Counts),
   durations: z.optional(Durations),
