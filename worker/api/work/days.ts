@@ -34,11 +34,28 @@ const WorkDay = z.object({
   included: keptUnlessSent(Included),
 });
 
-/** Lists the POST shape; a day's entries come back from /api/work/weekly-notes. */
+/**
+ * Lists the POST shape, or only `?day=`'s row so Today can read its Anchor.
+ * A day's entries come back from /api/work/weekly-notes.
+ */
 export async function onRequestGet({ request, env }: PagesContext) {
   const columns = Object.keys(WorkDay.shape).join(", ");
+  const day = new URL(request.url).searchParams.get("day");
 
-  return listDays(request, env, "days", `SELECT ${columns} FROM work_days ORDER BY day DESC`);
+  if (day === null)
+    return listDays(request, env, "days", `SELECT ${columns} FROM work_days ORDER BY day DESC`);
+
+  const viewer = await authorizeWriter(request, env);
+
+  if (viewer instanceof Response) return viewer;
+
+  if (!IsoDate.safeParse(day).success) return json({ error: "invalid day" }, 400);
+
+  const { results } = await env.DB.prepare(`SELECT ${columns} FROM work_days WHERE day = ?`)
+    .bind(day)
+    .all();
+
+  return json({ days: results });
 }
 
 export async function onRequestPost({ request, env }: PagesContext) {

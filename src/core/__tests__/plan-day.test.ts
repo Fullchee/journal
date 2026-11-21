@@ -3,6 +3,7 @@ import {
   busySpans,
   fitBlocks,
   freeWindows,
+  isJobHours,
   packBlocks,
   poolOf,
   targetDay,
@@ -27,6 +28,15 @@ test("targetDay is today before 17:00 Toronto and tomorrow from 17:00", () => {
 
 test("targetDay uses the Toronto date, not the UTC date", () => {
   assert.equal(targetDay(new Date("2026-11-07T03:00:00Z")), "2026-11-07");
+});
+
+test("isJobHours holds from 09:00 to before 17:00 Toronto on weekdays only", () => {
+  // 2026-11-06 is a Friday in EST (UTC-5); 2026-11-07 is a Saturday.
+  assert.equal(isJobHours(new Date("2026-11-06T13:59:00-05:00")), true);
+  assert.equal(isJobHours(new Date("2026-11-06T09:00:00-05:00")), true);
+  assert.equal(isJobHours(new Date("2026-11-06T08:59:00-05:00")), false);
+  assert.equal(isJobHours(new Date("2026-11-06T17:00:00-05:00")), false);
+  assert.equal(isJobHours(new Date("2026-11-07T10:00:00-05:00")), false);
 });
 
 test("poolOf sends only the Job project to the job pool", () => {

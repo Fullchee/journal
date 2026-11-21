@@ -100,7 +100,10 @@ const APP_DIR = "./src/app";
 
 beforeAll(() => preloadRoutes(APP_DIR));
 
-const TODAY = torontoDay(new Date());
+// A Thursday morning before job hours, so the Anchor stays hidden unless a test moves the clock.
+const NOW = new Date("2026-11-12T08:00:00-05:00");
+
+const TODAY = torontoDay(NOW);
 
 const mom = connection();
 
@@ -133,6 +136,7 @@ const todayRoutes = ({
 });
 
 beforeEach(() => {
+  jest.setSystemTime(NOW);
   mockWindow.width = 390;
   mockLocation.position = null;
   setRouteQueryClient(createQueryClient());
@@ -785,6 +789,26 @@ describe("Today", () => {
 
     expect(await screen.findByText("Logged Walk.")).toBeOnTheScreen();
     expect(screen).toHavePathname("/");
+  });
+
+  it("shows the Work day's Anchor between the Check-in card and Habits in job hours", async () => {
+    jest.setSystemTime(new Date(`${TODAY}T10:00:00-05:00`));
+    fakeApi({
+      ...todayRoutes({}),
+      [`/api/work/days?day=${TODAY}`]: () => ({ days: [{ day: TODAY, anchor: "Review APP-101" }] }),
+    });
+    await renderRouter(APP_DIR, { initialUrl: "/" });
+
+    expect(await screen.findByText("Review APP-101")).toBeOnTheScreen();
+
+    // getAll returns matches in screen order: the Check-in card's "When?", the Anchor, then a Habit.
+    const marks = screen.getAllByText(/^(When\?|Review APP-101|Read)$/);
+
+    expect(marks).toEqual([
+      screen.getByText("When?"),
+      screen.getByText("Review APP-101"),
+      screen.getByText("Read"),
+    ]);
   });
 
   it("puts Check-in and Habits beside Connections and Plan from 768px", async () => {

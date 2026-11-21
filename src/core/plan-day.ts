@@ -76,6 +76,15 @@ export function targetDay(now: Date) {
   return minuteOfDay(now) < EVENING_HOUR * 60 ? today : shiftDay(today, 1);
 }
 
+const isWeekend = (day: string) => [0, 6].includes(dayOfWeek(day));
+
+/** Whether `now` falls in the job Pool's hours on a weekday, Toronto time. */
+export function isJobHours(now: Date) {
+  const minute = minuteOfDay(now);
+
+  return !isWeekend(torontoDay(now)) && minute >= POOLS.job.start && minute < POOLS.job.end;
+}
+
 export const poolOf = (task: Pick<SizedTask, "projectId">): Pool =>
   task.projectId === JOB_PROJECT ? "job" : "personal";
 
@@ -107,9 +116,7 @@ const subtract = (windows: Span[], cut: Span): Span[] =>
   });
 
 export function freeWindows(pool: Pool, day: string, busy: Span[]) {
-  const weekday = dayOfWeek(day);
-
-  return pool === "job" && (weekday === 0 || weekday === 6)
+  return pool === "job" && isWeekend(day)
     ? []
     : [LUNCH, ...busy].reduce((windows, cut) => subtract(windows, cut), [POOLS[pool]]);
 }

@@ -24,6 +24,7 @@ import { Section } from "@/components/screen";
 import { EveningReviewRow } from "@/components/today/evening-review-row";
 import { HabitsDueToday } from "@/components/today/habits-due-today";
 import { HealthPlanCard } from "@/components/today/health-plan-card";
+import { WorkAnchor } from "@/components/today/work-anchor";
 import { useIsWide } from "@/hooks/use-is-wide";
 import { useLogDraft } from "@/hooks/use-log-draft";
 import { dismissCapture, retryCapture, useFailedCaptures } from "@/lib/data/captures";
@@ -229,6 +230,7 @@ export default function TodayScreen() {
 
   const left = [
     <CheckInSection key={`check-in-${asked.at}`} zone={asked.zone} />,
+    <WorkAnchor key="anchor" />,
     <HabitsDueToday key="habits" />,
     <EveningReviewRow key="evening-review" />,
   ];

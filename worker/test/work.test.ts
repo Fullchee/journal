@@ -178,6 +178,29 @@ test("a day posted with no other field is stored once and keeps what it had", as
   assert.equal(days[0].anchor, "APP-101 review");
 });
 
+test("GET days?day= lists only that Work day, so Today can read its Anchor", async () => {
+  const env = makeEnv();
+  await post(env, "days", [historyDay, { day: "2026-11-05", anchor: "APP-101 review" }]);
+
+  const { days } = await list(env, "days?day=2026-11-05");
+
+  assert.deepEqual(
+    days.map(({ day, anchor }: { day: string; anchor: string }) => ({ day, anchor })),
+    [{ day: "2026-11-05", anchor: "APP-101 review" }],
+  );
+  assert.deepEqual((await list(env, "days?day=2026-11-06")).days, []);
+});
+
+test("GET days refuses a day that is not an ISO date, after checking Access", async () => {
+  const env = makeEnv();
+
+  assert.equal((await call(env, { method: "GET", path: "days?day=friday" })).status, 400);
+  assert.equal(
+    (await call(env, { method: "GET", path: "days?day=2026-11-05", headers: {} })).status,
+    401,
+  );
+});
+
 test("GET plans rebuilds each Plan with its Hit rate, leaving out Blocked actions", async () => {
   const env = makeEnv();
   await post(env, "plans", PLAN_LOG);
