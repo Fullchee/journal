@@ -1,7 +1,7 @@
 import type { Counts, FitbitRule, RecordStyle } from "@/core";
 
 import type { HabitCheck } from "@/lib/data/habits";
-import type { ImportDurations, LinkResult } from "@/lib/health/calm-auto-log";
+import type { ImportDurations, LinkResult } from "@/lib/health/health-connect-auto-log";
 
 /** Where a read writes: queued checks for a check Habit, imported minutes for a Duration Habit. */
 export interface FitbitWriters {

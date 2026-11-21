@@ -1,6 +1,6 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react-native";
-import { CALM_PACKAGE } from "@/core";
+import { HEALTH_CONNECT_ORIGINS } from "@/core";
 import storage from "expo-sqlite/kv-store";
 import type { ReactNode } from "react";
 import { AppState, type AppStateStatus } from "react-native";
@@ -12,7 +12,10 @@ import {
   requestPermission,
 } from "react-native-health-connect";
 
-import { calmAutoLog, useCalmAutoLog } from "@/lib/health/calm-auto-log.android";
+import {
+  healthConnectAutoLog,
+  useHealthConnectAutoLog,
+} from "@/lib/health/health-connect-auto-log.android";
 import { createQueryClient } from "@/lib/data/query-client";
 
 // eslint-disable-next-line no-restricted-imports -- jest/ sits outside src, so no @/ alias reaches it
@@ -52,7 +55,11 @@ jest.mock("react-native-health-connect", () => ({
 
 const LINK_KEY = "calm-auto-log";
 
+const CALM_PACKAGE = HEALTH_CONNECT_ORIGINS.calm.package;
+const HEVY_KEY = "hevy-auto-log";
+
 const MINDFULNESS = [{ accessType: "read", recordType: "MindfulnessSession" }] as const;
+const EXERCISE = { accessType: "read", recordType: "ExerciseSession" } as const;
 
 // 12:00 UTC is 07:00 in Toronto.
 const NOW = new Date("2026-11-11T12:00:00Z");
@@ -85,7 +92,10 @@ const importDurations = jest.fn(() => Promise.resolve(1));
 
 beforeEach(async () => {
   jest.useFakeTimers({ now: NOW, doNotFake: ["nextTick", "setImmediate", "queueMicrotask"] });
+  // Lets the last test's read finish, so each test starts a fresh one.
+  await new Promise((resolve) => setImmediate(resolve));
   await storage.removeItem(LINK_KEY);
+  await storage.removeItem(HEVY_KEY);
   jest.clearAllMocks();
   jest.mocked(readRecords).mockReset();
   jest.mocked(getSdkStatus).mockResolvedValue(SdkAvailabilityStatus.SDK_AVAILABLE);
@@ -96,9 +106,9 @@ beforeEach(async () => {
 
 afterEach(() => jest.useRealTimers());
 
-describe("calmAutoLog.link", () => {
+describe("healthConnectAutoLog.link", () => {
   it("reads Calm's last 30 days, logs them on the Habit and remembers when it read", async () => {
-    const result = await calmAutoLog.link("meditate", importDurations);
+    const result = await healthConnectAutoLog.link("calm", "meditate", importDurations);
 
     expect(result).toEqual({ status: "linked", added: 1 });
     expect(readRecords).toHaveBeenCalledWith("MindfulnessSession", {
@@ -110,7 +120,7 @@ describe("calmAutoLog.link", () => {
       entries: [{ date: "2026-11-10", startTime: "07:30", minutes: 10 }],
     });
     expect(await storedLink()).toBe(linkText(NOW.toISOString()));
-    expect(await calmAutoLog.linkedHabit()).toBe("meditate");
+    expect(await healthConnectAutoLog.linkedHabit("calm")).toBe("meditate");
   });
 
   it("reads every page Health Connect returns, skipping records it can't read", async () => {
@@ -122,7 +132,7 @@ describe("calmAutoLog.link", () => {
       .mockResolvedValueOnce({ records: [MORNING, broken], pageToken: "next" })
       .mockResolvedValueOnce({ records: [evening], pageToken: "" });
 
-    await calmAutoLog.link("meditate", importDurations);
+    await healthConnectAutoLog.link("calm", "meditate", importDurations);
 
     expect(jest.mocked(readRecords).mock.calls[1]?.[1]).toMatchObject({ pageToken: "next" });
     expect(importDurations).toHaveBeenCalledWith({
@@ -137,35 +147,65 @@ describe("calmAutoLog.link", () => {
   it("posts nothing when Calm has no sessions yet", async () => {
     jest.mocked(readRecords).mockResolvedValue({ records: [] });
 
-    expect(await calmAutoLog.link("meditate", importDurations)).toEqual({
+    expect(await healthConnectAutoLog.link("calm", "meditate", importDurations)).toEqual({
       status: "linked",
       added: 0,
     });
     expect(importDurations).not.toHaveBeenCalled();
   });
 
+  it("reads Hevy's workouts from Exercise on its own link, leaving Calm's alone", async () => {
+    const workout = {
+      ...session("2026-11-10T22:48:00Z", "2026-11-11T01:09:00Z"),
+      recordType: "ExerciseSession",
+      metadata: { dataOrigin: HEALTH_CONNECT_ORIGINS.hevy.package },
+    };
+
+    jest.mocked(requestPermission).mockResolvedValue([EXERCISE]);
+    jest.mocked(readRecords).mockResolvedValue({ records: [workout] });
+
+    expect(await healthConnectAutoLog.link("hevy", "lift", importDurations)).toEqual({
+      status: "linked",
+      added: 1,
+    });
+    expect(readRecords).toHaveBeenCalledWith("ExerciseSession", {
+      timeRangeFilter: { operator: "after", startTime: "2026-10-12T12:00:00.000Z" },
+      dataOriginFilter: [HEALTH_CONNECT_ORIGINS.hevy.package],
+    });
+    expect(importDurations).toHaveBeenCalledWith({
+      habit: "lift",
+      entries: [{ date: "2026-11-10", startTime: "17:48", minutes: 141 }],
+    });
+    expect(await healthConnectAutoLog.linkedHabit("hevy")).toBe("lift");
+    expect(await healthConnectAutoLog.linkedHabit("calm")).toBeNull();
+  });
+
   it("stops when Health Connect is missing or outdated", async () => {
     jest.mocked(getSdkStatus).mockResolvedValue(SdkAvailabilityStatus.SDK_UNAVAILABLE);
 
-    expect(await calmAutoLog.link("meditate", importDurations)).toEqual({ status: "unavailable" });
+    expect(await healthConnectAutoLog.link("calm", "meditate", importDurations)).toEqual({
+      status: "unavailable",
+    });
     expect(requestPermission).not.toHaveBeenCalled();
-    expect(await calmAutoLog.linkedHabit()).toBeNull();
+    expect(await healthConnectAutoLog.linkedHabit("calm")).toBeNull();
   });
 
   it("stops when the owner doesn't allow reading Mindfulness", async () => {
     jest.mocked(requestPermission).mockResolvedValue([{ accessType: "read", recordType: "Steps" }]);
 
-    expect(await calmAutoLog.link("meditate", importDurations)).toEqual({ status: "denied" });
-    expect(await calmAutoLog.linkedHabit()).toBeNull();
+    expect(await healthConnectAutoLog.link("calm", "meditate", importDurations)).toEqual({
+      status: "denied",
+    });
+    expect(await healthConnectAutoLog.linkedHabit("calm")).toBeNull();
   });
 });
 
-describe("calmAutoLog.unlink", () => {
+describe("healthConnectAutoLog.unlink", () => {
   it("forgets the linked Habit", async () => {
-    await calmAutoLog.link("meditate", importDurations);
-    await calmAutoLog.unlink();
+    await healthConnectAutoLog.link("calm", "meditate", importDurations);
+    await healthConnectAutoLog.unlink("calm");
 
-    expect(await calmAutoLog.linkedHabit()).toBeNull();
+    expect(await healthConnectAutoLog.linkedHabit("calm")).toBeNull();
   });
 
   it.each([
@@ -174,7 +214,7 @@ describe("calmAutoLog.unlink", () => {
   ])("treats an unreadable stored link as none: %s", async (_id, text) => {
     await storage.setItem(LINK_KEY, text);
 
-    expect(await calmAutoLog.linkedHabit()).toBeNull();
+    expect(await healthConnectAutoLog.linkedHabit("calm")).toBeNull();
   });
 });
 
@@ -187,10 +227,10 @@ async function mountAutoLog() {
     <QueryClientProvider client={client}>{children}</QueryClientProvider>
   );
 
-  return renderHook(useCalmAutoLog, { wrapper });
+  return renderHook(useHealthConnectAutoLog, { wrapper });
 }
 
-describe("useCalmAutoLog", () => {
+describe("useHealthConnectAutoLog", () => {
   it("logs new sessions on the linked Habit when the app opens, from a day before the last read", async () => {
     await link("2026-11-10T08:00:00.000Z");
     const { writes } = serve();
@@ -208,6 +248,25 @@ describe("useCalmAutoLog", () => {
         habit: "meditate",
         entries: [{ date: "2026-11-10", startTime: "07:30", minutes: 10 }],
       },
+    ]);
+  });
+
+  it("reads each linked source with the access the owner granted it", async () => {
+    await link(null);
+    await storage.setItem(HEVY_KEY, JSON.stringify({ habit: "lift", readAt: null }));
+    jest.mocked(getGrantedPermissions).mockResolvedValue([...MINDFULNESS, EXERCISE]);
+    jest.mocked(readRecords).mockResolvedValue({ records: [] });
+
+    await mountAutoLog();
+
+    await waitFor(async () =>
+      expect(await storage.getItem(HEVY_KEY)).toBe(
+        JSON.stringify({ habit: "lift", readAt: NOW.toISOString() }),
+      ),
+    );
+    expect(jest.mocked(readRecords).mock.calls.map(([type]) => type)).toEqual([
+      "MindfulnessSession",
+      "ExerciseSession",
     ]);
   });
 

@@ -4,7 +4,7 @@ import type { FitbitRule, RecordStyle } from "@/core";
 
 import { FitbitImport } from "@/components/habits/fitbit-import";
 import { createQueryClient } from "@/lib/data/query-client";
-import type { LinkResult } from "@/lib/health/calm-auto-log";
+import type { LinkResult } from "@/lib/health/health-connect-auto-log";
 import type {
   FitbitAutoLog,
   FitbitLink,

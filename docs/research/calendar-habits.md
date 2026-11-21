@@ -52,7 +52,7 @@ Deleting one instance of a recurring event can mean three things, so a deletion 
 
 - **Scope**: the Worker's token (`scripts/setup-google-calendar.sh`) has `calendar.events` and `calendar.freebusy`. `calendar.events` reads events on any calendar by ID, including the shared FuYi calendar. A picker that lists the owner's calendars and series needs `calendar.calendarlist.readonly` too, so the owner re-runs the setup script once.
 - **Work calendar**: "Shockwave Hill Runs" is on the work Google account, which the Worker cannot read. Copy it to the personal calendar or leave it out.
-- **Hevy overlap**: never link a series to the Habit the Hevy sync logs (`HEVY_HABIT`, "Lift weights"), or one workout logs twice.
+- **Hevy overlap**: never link a series to the Habit Hevy logs to through Health Connect ("Lift weights"), or one workout logs twice.
 - **Time zone**: some FuYi instances carry `timeZone: "UTC"` with a `-04:00`/`-05:00` offset. Place an entry on its Toronto Day from the offset timestamp (`torontoDay`), never from the `timeZone` field.
 
 ## Rejected

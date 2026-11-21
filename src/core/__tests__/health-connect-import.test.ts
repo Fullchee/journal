@@ -1,5 +1,15 @@
 import assert from "node:assert/strict";
-import { CALM_PACKAGE, MindfulnessSession, calmReadFrom, calmSessions } from "@/core/calm-import";
+import {
+  HEALTH_CONNECT_ORIGINS,
+  HealthConnectSession,
+  healthConnectReadFrom,
+  sourceSessions,
+} from "@/core/health-connect-import";
+
+const CALM_PACKAGE: string = HEALTH_CONNECT_ORIGINS.calm.package;
+
+const calmSessions = (sessions: Parameters<typeof sourceSessions>[1]) =>
+  sourceSessions("calm", sessions);
 
 const session = (startTime: string, endTime: string, dataOrigin = CALM_PACKAGE) => ({
   startTime,
@@ -25,7 +35,7 @@ test("calmSessions puts a late-night UTC session on the Toronto Day it started",
   ]);
 });
 
-test("calmSessions leaves out other apps' sessions", () => {
+test("sourceSessions leaves out other apps' sessions", () => {
   const sessions = [
     session("2026-11-05T12:30:00Z", "2026-11-05T12:40:00Z", "com.spotlightsix.zentimerlite2"),
     session("2026-11-05T13:30:00Z", "2026-11-05T13:40:00Z"),
@@ -54,7 +64,7 @@ test.each([
   assert.equal(calmSessions([session("2026-11-05T12:30:00Z", end)])[0]?.minutes, minutes);
 });
 
-test("MindfulnessSession reads a Health Connect record, dropping fields a Duration entry doesn't need", () => {
+test("HealthConnectSession reads a Health Connect record, dropping fields a Duration entry doesn't need", () => {
   const record = {
     recordType: "MindfulnessSession",
     mindfulnessSessionType: 1,
@@ -62,7 +72,7 @@ test("MindfulnessSession reads a Health Connect record, dropping fields a Durati
   };
 
   assert.deepEqual(
-    MindfulnessSession.parse(record),
+    HealthConnectSession.parse(record),
     session("2026-11-05T12:30:00Z", "2026-11-05T12:40:00Z"),
   );
 });
@@ -71,17 +81,31 @@ test.each([
   ["no_origin", { startTime: "2026-11-05T12:30:00Z", endTime: "2026-11-05T12:40:00Z" }],
   ["bad_time", session("yesterday", "2026-11-05T12:40:00Z")],
   ["not_a_record", "MindfulnessSession"],
-])("MindfulnessSession refuses a record it can't read: %s", (_id, record) => {
-  assert.equal(MindfulnessSession.safeParse(record).success, false);
+])("HealthConnectSession refuses a record it can't read: %s", (_id, record) => {
+  assert.equal(HealthConnectSession.safeParse(record).success, false);
 });
 
-test("calmReadFrom starts a first read 30 days back, as far as Health Connect allows", () => {
-  assert.equal(calmReadFrom(null, new Date("2026-11-11T12:00:00Z")), "2026-10-12T12:00:00.000Z");
-});
-
-test("calmReadFrom overlaps the last read by a day, so a late-synced session still arrives", () => {
+test("healthConnectReadFrom starts a first read 30 days back, as far as Health Connect allows", () => {
   assert.equal(
-    calmReadFrom("2026-11-10T08:00:00.000Z", new Date("2026-11-11T12:00:00Z")),
+    healthConnectReadFrom(null, new Date("2026-11-11T12:00:00Z")),
+    "2026-10-12T12:00:00.000Z",
+  );
+});
+
+test("healthConnectReadFrom overlaps the last read by a day, so a late-synced session still arrives", () => {
+  assert.equal(
+    healthConnectReadFrom("2026-11-10T08:00:00.000Z", new Date("2026-11-11T12:00:00Z")),
     "2026-11-09T08:00:00.000Z",
   );
+});
+
+test("sourceSessions logs Hevy's workouts and leaves out Calm's", () => {
+  const sessions = [
+    session("2026-11-05T22:48:00Z", "2026-11-06T01:09:00Z", HEALTH_CONNECT_ORIGINS.hevy.package),
+    session("2026-11-05T12:30:00Z", "2026-11-05T12:40:00Z"),
+  ];
+
+  assert.deepEqual(sourceSessions("hevy", sessions), [
+    { date: "2026-11-05", startTime: "17:48", minutes: 141 },
+  ]);
 });

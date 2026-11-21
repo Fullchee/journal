@@ -45,10 +45,14 @@ async function seedPillars(env: Env) {
     );
   }
 
-  // 01:00 UTC on 11 Nov is 20:00 on 10 Nov in Toronto.
+  // Two workouts on one Day count once; another Habit's entries never count.
   await seed(
     env,
-    `INSERT INTO hevy_workouts (id, "index", title, start_time, end_time, seen_at) VALUES ('h1', 1, 'Legs', '2026-11-11T01:00:00.000Z', '2026-11-11T02:00:00.000Z', 'x')`,
+    "INSERT INTO habits (id, name, record) VALUES ('lift', 'Lift', 'duration'), ('walk', 'Walk', 'duration')",
+  );
+  await seed(
+    env,
+    "INSERT INTO habit_durations (habit, date, start_time, minutes) VALUES ('lift', '2026-11-10', '07:00', 60), ('lift', '2026-11-10', '18:00', 30), ('walk', '2026-11-11', '07:00', 30)",
   );
   await seed(
     env,
@@ -62,7 +66,7 @@ interface Body {
 }
 
 test("GET scores each pillar Goal from the window's rows", async () => {
-  const env = makeEnv();
+  const env = { ...makeEnv(), HEVY_HABIT: "lift" };
   await seedPillars(env);
 
   const { bars } = await readJson<Body>(await call(env, END));
@@ -75,6 +79,18 @@ test("GET scores each pillar Goal from the window's rows", async () => {
       ["connection", "scored", "In person on 1 day"],
       ["stress", "none", "Link a Habit to see this"],
     ],
+  );
+});
+
+test("GET counts only the watch's strength Days when no Habit logs Hevy", async () => {
+  const env = makeEnv();
+  await seedPillars(env);
+
+  const { bars } = await readJson<Body>(await call(env, END));
+
+  assert.match(
+    bars.find(({ pillar }) => pillar === "activity")?.value ?? "",
+    /1 of 2 strength days/,
   );
 });
 

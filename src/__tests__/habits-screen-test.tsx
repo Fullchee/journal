@@ -1162,7 +1162,7 @@ describe("Insight Timer import", () => {
     expect(await screen.findByText("Couldn't import. Try again.")).toBeOnTheScreen();
   });
 
-  it("shows on a duration Habit with no Hevy CSV import, since the Worker syncs Hevy", async () => {
+  it("shows on a duration Habit with no Hevy CSV import, since Hevy arrives through Health Connect", async () => {
     fakeApi(HABITS_ROUTES);
     await renderRouter(APP_DIR, { initialUrl: "/habit/read" });
 

@@ -66,7 +66,7 @@ export * from "./csv-import";
 
 export * from "./insight-timer-import";
 
-export * from "./calm-import";
+export * from "./health-connect-import";
 
 export * from "./fitbit-auto-complete";
 

@@ -4,6 +4,8 @@ Research for syncing Hevy strength workouts hands-off, as `scripts/garmin/` does
 
 > **Update 2026-11-17**: the Garmin push is gone ([#135](https://github.com/Fullchee/journal-native/issues/135)). Fitbit data now reaches the app through Health Connect, filtered by `FITBIT_PACKAGE` in `src/core/fitbit-auto-complete.ts`. To switch back to Garmin, set that filter to Garmin Connect's package, `com.garmin.android.apps.connectmobile`. The Garmin parts below describe the removed push.
 
+> **Update 2026-11-20**: route 2 replaced route 1. The phone links Hevy on the Habit's screen ("Auto-log Hevy workouts") and logs each Health Connect session from `com.hevy` as a Duration entry (`src/lib/health/health-connect-auto-log.android.ts`). The Worker's private-API sync and its `hevy_*` tables are gone (migration `0005_drop_hevy_sync.sql`). The history before the link came from a one-off load of Hevy's CSV export into `habit_durations`. Route 1 below describes the removed sync.
+
 ## Answer
 
 | Rank | Route                                                                                             | Free?         | Sets, reps, weight | Verdict                                                                                                                    |

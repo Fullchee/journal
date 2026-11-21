@@ -56,7 +56,7 @@ export interface Env {
   /** Personal API token for the Todoist REST API; a Worker secret. */
   TODOIST_TOKEN: string;
   DEV_EMAIL?: string;
-  /** The Duration Habit each synced Hevy workout logs to; unset, the sync logs nothing (lib/hevy-sync.ts). */
+  /** The Duration Habit the phone logs Hevy workouts on through Health Connect; its Days count as strength Days (api/pillars.ts). */
   HEVY_HABIT?: string;
   /** Google Calendar secrets (#85); see lib/calendar.ts. */
   GOOGLE_CLIENT_ID?: string;

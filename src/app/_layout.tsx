@@ -22,7 +22,7 @@ import { useAlarmSchedule } from "@/lib/alarms/use-alarm-schedule";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { useCheckInPrompt } from "@/lib/check-in-prompt/use-check-in-prompt";
 import { DataProvider, useIsOnline } from "@/lib/data/data-provider";
-import { useCalmAutoLog } from "@/lib/health/calm-auto-log";
+import { useHealthConnectAutoLog } from "@/lib/health/health-connect-auto-log";
 import { useFitbitAutoLog } from "@/lib/health/fitbit-auto-log";
 import { FONTS } from "@/lib/fonts";
 import { initSentry } from "@/lib/sentry";
@@ -154,7 +154,7 @@ function RootStack() {
         <>
           <AlarmSchedule />
           <CheckInPrompt />
-          <CalmAutoLog />
+          <HealthConnectAutoLog />
           <HabitWidgets />
           <FitbitAutoLog />
         </>
@@ -218,9 +218,9 @@ function HabitWidgets() {
   return null;
 }
 
-// Signed in only: it posts Calm's new Health Connect sessions to the linked Habit.
-function CalmAutoLog() {
-  useCalmAutoLog();
+// Signed in only: it posts each linked app's new Health Connect sessions to its Habit.
+function HealthConnectAutoLog() {
+  useHealthConnectAutoLog();
 
   return null;
 }

@@ -32,9 +32,10 @@ import * as z from "zod/mini";
 
 import { apiFetch } from "@/lib/api/api-fetch";
 
-import type { LinkResult } from "@/lib/health/calm-auto-log";
 import type { FitbitAutoLog, FitbitLink, FitbitWriters } from "@/lib/health/fitbit-auto-log";
 import { useFitbitWriters } from "@/lib/health/fitbit-writers";
+
+import type { LinkResult } from "@/lib/health/health-connect-auto-log";
 
 const linkKey = (rule: FitbitRule) => `fitbit-auto-log:${rule}`;
 

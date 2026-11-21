@@ -2,7 +2,6 @@ import {
   Pillar,
   pillarBars,
   pillarReadFrom,
-  torontoDay,
   type ActivityDay,
   type BriefSleepNight,
   type InteractionDay,
@@ -39,15 +38,14 @@ async function rows<Row>(env: Env, sql: string, from: string, to: string) {
   return results;
 }
 
-// Hevy stores UTC instants; a strength Day is the Toronto Day the workout began. Garmin's `start_local` is already local.
+// Hevy workouts reach HEVY_HABIT as Duration entries on their Toronto Day. Garmin's `start_local` is already local.
 async function readStrengthDays(env: Env, from: string, to: string) {
   const [hevy, garmin] = await Promise.all([
-    rows<{ startTime: string }>(
-      env,
-      "SELECT start_time AS startTime FROM hevy_workouts WHERE start_time >= ? AND start_time < date(?, '+2 days')",
-      from,
-      to,
-    ),
+    env.DB.prepare(
+      "SELECT DISTINCT date FROM habit_durations WHERE habit = ? AND date BETWEEN ? AND ?",
+    )
+      .bind(env.HEVY_HABIT ?? null, from, to)
+      .all<{ date: string }>(),
     rows<{ date: string }>(
       env,
       "SELECT substr(start_local, 1, 10) AS date FROM workouts WHERE type_key LIKE '%strength%' AND substr(start_local, 1, 10) BETWEEN ? AND ?",
@@ -56,10 +54,7 @@ async function readStrengthDays(env: Env, from: string, to: string) {
     ),
   ]);
 
-  return [
-    ...hevy.map(({ startTime }) => torontoDay(new Date(startTime))),
-    ...garmin.map(({ date }) => date),
-  ];
+  return [...hevy.results, ...garmin].map(({ date }) => date);
 }
 
 /** The pillar bars for the 7 Days ending `?end=`, a Day; each bar compares with the 7 Days before. */

@@ -298,7 +298,7 @@ test("clearCheck clears the Day's check and Skip", async () => {
 });
 
 describe("addDurations", () => {
-  test.each(["owner", "import", "hevy"] satisfies EntrySource[])(
+  test.each(["owner", "import"] satisfies EntrySource[])(
     "a `%s` entry on a Skipped Day replaces the Skip",
     async (source) => {
       const env = await envWith(boat);

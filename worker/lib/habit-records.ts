@@ -610,7 +610,7 @@ export const clearCheck = (db: D1, { habit, date }: DayOf): RecordWrite => [
   db.prepare(`DELETE FROM habit_skips WHERE ${DAY}`).bind(habit, date),
 ];
 
-/** One new Duration entry; `id` names the calendar event or Hevy workout it logs. */
+/** One new Duration entry; `id` names the calendar event it logs. */
 export interface NewEntry {
   date: string;
   startTime: string;
@@ -618,19 +618,13 @@ export interface NewEntry {
   id?: string;
 }
 
-/**
- * `owner` adds every entry; `import` skips one whose date and start the Habit has; `calendar` logs each event once, never on a Skipped Day;
- * `hevy` gives each workout one entry that follows its edits, taking over an unlinked entry at its date and start.
- */
-export type EntrySource = "owner" | "import" | "calendar" | "hevy";
+/** `owner` adds every entry; `import` skips one whose date and start the Habit has; `calendar` logs each event once, never on a Skipped Day. */
+export type EntrySource = "owner" | "import" | "calendar";
 
 const ENTRY = "e.value ->> 'date', e.value ->> 'startTime', e.value ->> 'minutes'";
 
 const SAME_START =
   "SELECT 1 FROM habit_durations d WHERE d.habit = ?1 AND d.date = e.value ->> 'date' AND d.start_time = e.value ->> 'startTime'";
-
-const UNLINKED_WORKOUT =
-  "NOT EXISTS (SELECT 1 FROM habit_durations l WHERE l.hevy_workout_id = e.value ->> 'id')";
 
 const ADD_SQL: Record<EntrySource, string[]> = {
   owner: [
@@ -648,24 +642,6 @@ const ADD_SQL: Record<EntrySource, string[]> = {
       `SELECT ?1, ${ENTRY}, e.value ->> 'id' FROM json_each(?2) e WHERE ${IS_DURATION} ` +
       `AND NOT EXISTS (SELECT 1 FROM habit_checks c WHERE c.habit = ?1 AND c.date = e.value ->> 'date' AND c.count = ${MISSED}) ` +
       "ON CONFLICT (calendar_event_id) DO NOTHING",
-  ],
-  // Only the earliest unlinked entry is taken over, and only for a workout with no entry yet; an unchanged entry is left alone.
-  hevy: [
-    `UPDATE habit_durations SET hevy_workout_id = (
-      SELECT e.value ->> 'id' FROM json_each(?2) e
-      WHERE e.value ->> 'date' = habit_durations.date AND e.value ->> 'startTime' = habit_durations.start_time
-        AND ${UNLINKED_WORKOUT}
-      LIMIT 1)
-    WHERE id IN (
-      SELECT MIN(u.id) FROM habit_durations u JOIN json_each(?2) e
-        ON u.date = e.value ->> 'date' AND u.start_time = e.value ->> 'startTime'
-      WHERE u.habit = ?1 AND u.hevy_workout_id IS NULL AND ${UNLINKED_WORKOUT}
-      GROUP BY e.value ->> 'id')`,
-    `INSERT INTO habit_durations (habit, date, start_time, minutes, hevy_workout_id)
-      SELECT ?1, ${ENTRY}, e.value ->> 'id' FROM json_each(?2) e WHERE ${IS_DURATION}
-      ON CONFLICT (hevy_workout_id) DO UPDATE SET
-        date = excluded.date, start_time = excluded.start_time, minutes = excluded.minutes
-      WHERE date != excluded.date OR start_time != excluded.start_time OR minutes != excluded.minutes`,
   ],
 };
 
@@ -690,18 +666,12 @@ export interface EntryMatch extends DayOf {
   minutes: number;
 }
 
-/** One entry by id or by match, or every entry of a Hevy workout last seen at or before `hevySeenBy`. */
-export type EntriesToRemove = { id: number } | { entry: EntryMatch } | { hevySeenBy: string };
+/** One entry by id or by match. */
+export type EntriesToRemove = { id: number } | { entry: EntryMatch };
 
 const removeSql = (db: D1, which: EntriesToRemove) => {
   if ("id" in which) return db.prepare("DELETE FROM habit_durations WHERE id = ?").bind(which.id);
 
-  if ("hevySeenBy" in which)
-    return db
-      .prepare(
-        "DELETE FROM habit_durations WHERE hevy_workout_id IN (SELECT id FROM hevy_workouts WHERE seen_at <= ?)",
-      )
-      .bind(which.hevySeenBy);
   const { habit, date, startTime, minutes } = which.entry;
 
   return db

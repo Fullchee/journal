@@ -15,7 +15,7 @@ import { View, type TextInputProps } from "react-native";
 import { TextField } from "@/components/habits/form-fields";
 import { useLinkChange } from "@/hooks/use-link-change";
 import { useIsOnline } from "@/lib/data/data-provider";
-import type { LinkResult } from "@/lib/health/calm-auto-log";
+import type { LinkResult } from "@/lib/health/health-connect-auto-log";
 import {
   fitbitAutoLog,
   type FitbitAutoLog,
