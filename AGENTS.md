@@ -62,7 +62,8 @@ Don't create PRs. Merge a branch into `main` with a squash merge (`git merge --s
 After `/triage` or a plan, fan unblocked `ready-for-agent` issues out to parallel worktree agents without asking. Land shared setup on `main` first and name one owner per shared file in each brief.
 
 - **Issue tracker**: GitHub Issues in `Fullchee/journal`. See `docs/agents/issue-tracker.md`.
-- **Domain language**: `GLOSSARY.md`.
+- **Triage labels**: the five defaults (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+- **Domain language**: single-context, `GLOSSARY.md` and `docs/adr/`. See `docs/agents/domain.md`.
 - **Planning**: the effort is charted with `/wayfinder` as a `wayfinder:map` issue.
 - **Moving off `journal`** (the old SvelteKit repo, now `journal-2026-11-svelte`): `docs/api-migration.md` tracks what has moved and what blocks archiving it.
 - **Moving `work-log` in** (the Obsidian work vault): `docs/work-log-migration.md` holds the phased plan and its decisions.
