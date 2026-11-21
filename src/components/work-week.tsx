@@ -1,7 +1,8 @@
 import { dayLabel, formatDay } from "@/core";
-import { cn, Icon, Text } from "@/ui";
-import { Ban, Circle, CircleCheck, ExternalLink } from "lucide-react-native";
-import type { ReactNode } from "react";
+import { Button, cn, Icon, Text } from "@/ui";
+import { setStringAsync } from "expo-clipboard";
+import { Ban, Check, Circle, CircleCheck, Copy, ExternalLink } from "lucide-react-native";
+import { type ReactNode, useState } from "react";
 import { Linking, Platform, Pressable, View } from "react-native";
 
 import { NoteMarkdown } from "@/components/note-body";
@@ -102,7 +103,26 @@ function Entry({ node }: { node: EntryNode }) {
   );
 }
 
-/** A Work day's entries, nested as the note nests them, then the Code reviews I gave. */
+const COPY_LABEL = { idle: "Copy standup", copied: "Copied", failed: "Couldn't copy" } as const;
+
+/** Puts the day's standup on the clipboard for pasting into Slack; the label says whether it landed. */
+function CopyStandup({ markdown }: { markdown: string }) {
+  type CopyState = "idle" | "copied" | "failed";
+
+  const [state, setState] = useState<CopyState>("idle");
+
+  // On web the browser may refuse the clipboard, and setStringAsync then resolves false.
+  const copy = async () => setState((await setStringAsync(markdown)) ? "copied" : "failed");
+
+  return (
+    <Button variant="outline" size="sm" className="self-start" onPress={() => void copy()}>
+      <Icon as={state === "copied" ? Check : Copy} size={16} />
+      <Text>{COPY_LABEL[state]}</Text>
+    </Button>
+  );
+}
+
+/** A Work day's entries, nested as the note nests them, then the Code reviews I gave, then its standup copy. */
 export function WorkDaySection({ day }: { day: WorkWeekDay }) {
   return (
     <Section title={day.heading}>
@@ -127,6 +147,7 @@ export function WorkDaySection({ day }: { day: WorkWeekDay }) {
           ))}
         </View>
       )}
+      {day.standup === null ? null : <CopyStandup markdown={day.standup} />}
     </Section>
   );
 }

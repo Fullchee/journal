@@ -1,4 +1,4 @@
-import { formatDay } from "@/core";
+import { headingLabel, standupMarkdown } from "@/core";
 
 import type { CodeReview, PlansBody, WeeklyNote, WorkEntry } from "@/lib/data/work";
 
@@ -17,6 +17,8 @@ export interface WorkWeekDay {
   heading: string;
   entries: EntryNode[];
   reviews: (CodeReview & { url?: string })[];
+  /** The day as `/standup-obsidian-to-slack` posts it; null for the week's undated entries or a day the note never heads. */
+  standup: string | null;
 }
 
 // A row whose Ticket or PR the note never linked has no URL; it still shows, without opening anything.
@@ -56,8 +58,7 @@ function tree(entries: WorkEntry[], note: WeeklyNote, urls: Map<string, string>)
   return roots;
 }
 
-const headingOf = (day: string | null) =>
-  day === null ? "This week" : formatDay(day, { weekday: "short", month: "short", day: "numeric" });
+const headingOf = (day: string | null) => (day === null ? "This week" : headingLabel(day));
 
 /**
  * The week's entries that name no day first, under "This week", then each Work day that holds something, in order.
@@ -86,6 +87,7 @@ export function workWeekDays(note: WeeklyNote): WorkWeekDay[] {
     reviews: note.code_reviews
       .filter((review) => review.day === day)
       .map((review) => ({ ...review, ...link(urls, review.pr) })),
+    standup: day === null ? null : standupMarkdown(note.raw_md, day),
   }));
 }
 

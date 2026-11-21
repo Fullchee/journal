@@ -1,4 +1,5 @@
-import { isoWeekOf, shiftDay, torontoDay, weekDays, weekLabel } from "@/core";
+import { headingLabel, isoWeekOf, shiftDay, torontoDay, weekDays, weekLabel } from "@/core";
+import { setStringAsync } from "expo-clipboard";
 import { onlineManager, QueryClient } from "@tanstack/react-query";
 import { act, renderRouter, screen } from "expo-router/testing-library";
 import { userEvent } from "@testing-library/react-native";
@@ -28,6 +29,8 @@ jest.mock("uniwind", () =>
 
 jest.mock("@/lib/api/api-fetch", () => ({ apiFetch: jest.fn() }));
 
+jest.mock("expo-clipboard", () => ({ setStringAsync: jest.fn() }));
+
 const APP_DIR = "./src/app";
 
 beforeAll(() => preloadRoutes(APP_DIR));
@@ -40,7 +43,7 @@ afterEach(resetRouteMocks);
 
 const WEEK = isoWeekOf(torontoDay(new Date()));
 
-const [MON = "", , WED = ""] = weekDays(WEEK);
+const [MON = "", TUE = "", WED = ""] = weekDays(WEEK);
 
 const TICKET_URL = "https://jira.test/browse/DEV-1";
 
@@ -60,6 +63,18 @@ const entry = (fields: Partial<WeeklyNote["entries"][number]>): WeeklyNote["entr
 
 const NOTE: WeeklyNote = {
   week: WEEK,
+  raw_md: [
+    `#### ${headingLabel(MON)}`,
+    "",
+    "- [DEV-1](https://jira.test/browse/DEV-1): Ship the widget",
+    "    - 🟣 [app#7](https://github.com/acme/app/pull/7): Add the widget",
+    "",
+    `**Plan — ${headingLabel(TUE)}**`,
+    "",
+    "- [ ] Merge ⚪ [app#9](https://github.com/acme/app/pull/9)",
+    "",
+    `#### ${headingLabel(TUE)}`,
+  ].join("\n"),
   entries: [
     entry({ position: 0, day: null, kind: "task", text: "clean up the epic", done: false }),
     entry({ position: 1, kind: "task", ticket: "DEV-1", text: "Ship the widget", done: true }),
@@ -153,6 +168,39 @@ describe("Work week", () => {
 
     expect(open.mock.calls).toEqual([[TICKET_URL], [PR_URL]]);
     expect(screen.getByRole("link", { name: "DEV-2: Plan the next one" })).toBeDisabled();
+  });
+
+  it("copies a day as its standup, with the next day's Plan, and only for a day the note heads", async () => {
+    jest.mocked(setStringAsync).mockResolvedValue(true);
+    serve();
+    await renderWork();
+    // Wednesday's rows came from the note, but it has no heading for Wednesday, so only Monday copies.
+    const copy = await screen.findByRole("button", { name: "Copy standup" });
+
+    await userEvent.press(copy);
+
+    expect(setStringAsync).toHaveBeenCalledWith(
+      [
+        `**${headingLabel(MON)}**`,
+        "",
+        "- [DEV-1](https://jira.test/browse/DEV-1): Ship the widget",
+        "    - :merged: [app#7](https://github.com/acme/app/pull/7): Add the widget",
+        "",
+        `**Plan — ${headingLabel(TUE)}**`,
+        "",
+        "- Merge :pr-draft: [app#9](https://github.com/acme/app/pull/9)",
+      ].join("\n"),
+    );
+    expect(screen.getByRole("button", { name: "Copied" })).toBeOnTheScreen();
+  });
+
+  it("says so when the browser refuses the clipboard", async () => {
+    jest.mocked(setStringAsync).mockResolvedValue(false);
+    serve();
+    await renderWork();
+    await userEvent.press(await screen.findByRole("button", { name: "Copy standup" }));
+
+    expect(screen.getByRole("button", { name: "Couldn't copy" })).toBeOnTheScreen();
   });
 
   it("charts the latest seven scored Plans' Hit rates", async () => {

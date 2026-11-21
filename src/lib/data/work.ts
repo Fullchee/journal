@@ -32,9 +32,10 @@ const TicketLink = z.object({ key: z.string(), url: z.string(), title: z.string(
 
 const PullRequestLink = z.object({ ref: z.string(), url: z.string() });
 
-/** The parts of a weekly note the Work week shows; the API also returns the archived Markdown. */
+/** The parts of a weekly note the Work week shows; `raw_md`, the note as written, gives each day's standup. */
 const WeeklyNote = z.object({
   week: z.string(),
+  raw_md: z.string(),
   entries: z.array(WorkEntry),
   code_reviews: z.array(CodeReview),
   tickets: z.array(TicketLink),

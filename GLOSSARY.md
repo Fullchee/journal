@@ -127,6 +127,7 @@ Moved in from the `work-log` vault (`docs/work-log-migration.md`); the terms mat
 - **Hit rate** — done Plan actions over planned ones for a Day, leaving out Blocked actions and If time actions. Kept at 70–85% by sizing the next Plan.
 - **If time** — ranked Plan actions past the Plan's size. Done counts as bonus, never as a miss.
 - **Blocked action** — a Plan action whose PR is open and green with a review request pending. Out of my hands, so it leaves the Hit rate.
+- **Standup** — a Work day as I post it to the team: the day's section of the weekly note, ending with the next Work day's Plan, with Slack's PR emoji and no checkboxes.
 - **Anchor** — the one smallest open work task I'm on right now.
   _Avoid_: focus task, current todo
 - **Career note** — one note from the vault's `career/` folder (career stories, interviewing, promotions), titled by its path there. Part of the Work track: review views and search never read it.

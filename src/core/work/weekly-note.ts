@@ -242,7 +242,7 @@ function itemParser(links: Links) {
 const HEADING = /^#### ([A-Z][a-z]{2}, [A-Z][a-z]{2} \d{1,2})(?!\d)/u;
 
 /** "Tue, Nov 3", the label a `####` heading starts with. */
-const headingLabel = (day: string) =>
+export const headingLabel = (day: string) =>
   formatDay(day, { weekday: "short", month: "short", day: "numeric" });
 
 /** The Day each line sits under: its `####` heading's, until a `---` or a higher heading ends the days. */
