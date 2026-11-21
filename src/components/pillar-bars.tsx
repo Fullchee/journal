@@ -15,6 +15,7 @@ function Track({ score }: { score: number }) {
       accessibilityValue={{ min: 0, max: 100, now: score }}
       className="bg-muted border-border h-3 overflow-hidden rounded-full border"
     >
+      {/* oxlint-disable-next-line shadcn/no-inline-styles -- the fill width is the score */}
       <View className="bg-primary h-full" style={{ width: `${score}%` }} />
     </View>
   );

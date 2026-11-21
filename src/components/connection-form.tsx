@@ -74,6 +74,7 @@ function MeetupFields({
           <Button
             key={name}
             size="sm"
+            // oxlint-disable-next-line shadcn/no-restyle -- seven day toggles share one row, so each drops its side padding
             className="h-11 flex-1 px-0"
             aria-pressed={meetup.days.includes(day)}
             variant={meetup.days.includes(day) ? "default" : "outline"}

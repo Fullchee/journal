@@ -12,6 +12,7 @@ export function OfflineBar({ topInset }: OfflineBarProps) {
   return (
     <View
       className="border-border bg-foreground items-center border-b"
+      // oxlint-disable-next-line shadcn/no-inline-styles -- the top inset comes from the device at runtime
       style={{ paddingTop: topInset }}
     >
       <Text

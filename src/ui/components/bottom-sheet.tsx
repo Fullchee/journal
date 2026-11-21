@@ -67,11 +67,13 @@ export function BottomSheet({
         <Animated.View
           role="dialog"
           aria-label={label}
+          // oxlint-disable-next-line shadcn/no-inline-styles -- the sheet slides with an Animated value
           style={{ width: "100%", maxWidth: 448, transform: [{ translateY: offset }] }}
         >
           <View
             testID="sheet-panel"
             className="border-input bg-card rounded-t-lg border sm:rounded-lg"
+            // oxlint-disable-next-line shadcn/no-inline-styles -- the bottom inset comes from the device at runtime
             style={{ paddingBottom: insets.bottom }}
           >
             <View

@@ -45,9 +45,34 @@
     { "name": "regexp", "specifier": "eslint-plugin-regexp" },
     { "name": "slop", "specifier": "eslint-plugin-slop" },
     { "name": "eslint-react", "specifier": "@eslint-react/eslint-plugin" },
-    { "name": "expo", "specifier": "eslint-plugin-expo" }
+    { "name": "expo", "specifier": "eslint-plugin-expo" },
+    { "name": "shadcn", "specifier": "@shadcn/lint" }
   ],
+  "settings": {
+    "shadcn": {
+      "ui": "@/ui",
+      "note": "See DESIGN.md for the design system."
+    }
+  },
   "rules": {
+    // @shadcn/lint: pages place a `@/ui` component (layout) but leave its look to its variants.
+    // Text and Icon stand in for HTML text, so pages also set their type and color, from theme tokens only.
+    "shadcn/no-restyle": [
+      "error",
+      {
+        "allow": ["layout"],
+        "contracts": [
+          { "pattern": "^(Text|StatusText|Icon)$", "allow": ["layout", "typography", "color"] }
+        ]
+      }
+    ],
+    "shadcn/no-raw-colors": "error",
+    "shadcn/no-arbitrary-values": "error",
+    // Reanimated styles run on the UI thread, so they can't be classes.
+    "shadcn/no-inline-styles": ["error", { "allowDynamicIdentifiers": ["fadeStyle", "unfold"] }],
+    // Uniwind generates bg-border from the theme's --color-border; the linter misreads it.
+    "shadcn/no-unknown-classes": ["error", { "allow": ["bg-border"] }],
+    "shadcn/require-static-classes": "error",
     // From rex-mobile, minus namespace and no-named-as-default-member (TypeScript checks both) and no-unassigned-import (every side-effect import here is a polyfill, entry or setup).
     "import/export": "error",
     "import/first": "error",
@@ -878,6 +903,15 @@
     "valid-typeof": "error"
   },
   "overrides": [
+    {
+      // @shadcn/lint: the design system's own components define the classes pages may not override.
+      "files": ["src/ui/**"],
+      "rules": {
+        "shadcn/no-restyle": "off",
+        "shadcn/no-arbitrary-values": "off",
+        "shadcn/require-static-classes": "off"
+      }
+    },
     {
       // @eslint-react's strict set, minus the rules that need type information Oxlint's JS plugins lack:
       // no-leaked-conditional-rendering, no-unstable-default-props and no-unused-props.

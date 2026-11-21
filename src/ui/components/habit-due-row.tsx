@@ -116,6 +116,7 @@ export function HabitDurationBar({
         <View
           testID="duration-bar-fill"
           className={cn("h-full", timed.over ? "bg-destructive" : kindFill)}
+          // oxlint-disable-next-line shadcn/no-inline-styles -- the fill width is the timer's live progress
           style={{ width: `${timed.progress * 100}%` }}
         />
       </View>

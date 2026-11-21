@@ -102,6 +102,7 @@ function StrengthBar({ strength }: { strength: number }) {
     <View className="gap-1">
       <Text className="text-muted-foreground text-sm">{label}</Text>
       <View aria-label={label} className="bg-muted h-1 overflow-hidden rounded-full">
+        {/* oxlint-disable-next-line shadcn/no-inline-styles -- the fill width is the Habit's strength */}
         <View className="bg-foreground h-1" style={{ width: `${strength * 100}%` }} />
       </View>
     </View>

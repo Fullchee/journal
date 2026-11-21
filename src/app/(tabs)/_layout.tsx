@@ -62,6 +62,7 @@ function TabLabel({ color, position, children }: TabLabelProps) {
     <Text
       maxFontSizeMultiplier={TAB_LABEL_MAX_SCALE}
       numberOfLines={1}
+      // oxlint-disable-next-line shadcn/no-inline-styles -- React Navigation passes the tab's tint color
       style={[tabLabel, { color }, position === "beside-icon" && besideIcon]}
     >
       {children}

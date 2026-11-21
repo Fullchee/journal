@@ -84,6 +84,9 @@
   --font-label: AlegreyaSansSC_500Medium;
   --font-label-bold: AlegreyaSansSC_700Bold;
 
+  /* Buttons, chips and inputs: near-square corners (DESIGN.md). */
+  --radius-button: 3px;
+
   /* Alegreya Sans runs small for its size: body is 17px. */
   --text-base: 1.0625rem;
 }

@@ -19,6 +19,7 @@ export function ModalFrame({ title, children }: ModalFrameProps) {
   return (
     <View
       className="bg-background flex-1"
+      // oxlint-disable-next-line shadcn/no-inline-styles -- the insets come from the device at runtime
       style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
     >
       <ModalHeader title={title} />

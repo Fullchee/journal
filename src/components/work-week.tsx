@@ -1,4 +1,5 @@
 import { dayLabel, formatDay } from "@/core";
+import { cva } from "class-variance-authority";
 import { Button, cn, Icon, Text } from "@/ui";
 import { setStringAsync } from "expo-clipboard";
 import { Ban, Check, Circle, CircleCheck, Copy, ExternalLink } from "lucide-react-native";
@@ -23,16 +24,29 @@ function statusOf({ kind, done }: WorkEntry): Status {
 
 // Leaf green means done; a blocker and an open task stay ink, never scarlet (DESIGN.md's Single Red Rule).
 const STATUS = {
-  blocked: { label: "Blocked", icon: Ban, className: "text-foreground" },
-  open: { label: "To do", icon: Circle, className: "text-foreground" },
-  done: { label: "Done", icon: CircleCheck, className: "text-primary" },
-  meeting: { label: "Meeting", icon: null, className: "text-muted-foreground" },
-  review: { label: "Review", icon: null, className: "text-muted-foreground" },
+  blocked: { label: "Blocked", icon: Ban },
+  open: { label: "To do", icon: Circle },
+  done: { label: "Done", icon: CircleCheck },
+  meeting: { label: "Meeting", icon: null },
+  review: { label: "Review", icon: null },
 } as const;
+
+const statusTone = cva("", {
+  variants: {
+    status: {
+      blocked: "text-foreground",
+      open: "text-foreground",
+      done: "text-primary",
+      meeting: "text-muted-foreground",
+      review: "text-muted-foreground",
+    },
+  },
+});
 
 function StatusLabel({ status }: { status: Status }) {
   if (status === null) return null;
-  const { label, icon, className } = STATUS[status];
+  const { label, icon } = STATUS[status];
+  const className = statusTone({ status });
 
   return (
     <View className="flex-row items-center gap-1">
@@ -163,6 +177,7 @@ function Band({ at }: { at: number }) {
   return (
     <View
       className="border-input absolute inset-x-0 border-t border-dashed"
+      // oxlint-disable-next-line shadcn/no-inline-styles -- the band sits at its hit-rate threshold
       style={{ bottom: `${at * 100}%` }}
     />
   );
@@ -178,11 +193,12 @@ function HitRateColumn({ plan }: { plan: ScoredPlan }) {
     >
       <Text className="text-sm">{percent(plan.hitRate)}</Text>
       <View className="border-input h-16 w-full justify-end rounded-sm border">
+        {/* oxlint-disable-next-line shadcn/no-inline-styles -- the bar's height is the hit rate */}
         <View className="bg-primary w-full" style={{ height: `${plan.hitRate * 100}%` }} />
         <Band at={BAND.low} />
         <Band at={BAND.high} />
       </View>
-      <Text variant="label" className="text-muted-foreground text-[0.85rem]">
+      <Text variant="label" className="text-muted-foreground text-sm">
         {weekday(plan.day)}
       </Text>
       <Text variant="muted">{dayOfMonth(plan.day)}</Text>

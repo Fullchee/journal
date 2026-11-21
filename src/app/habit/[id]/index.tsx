@@ -418,7 +418,7 @@ export default function HabitEditorScreen() {
           reschedules={data.reschedules?.[id] ?? []}
         />
       ) : (
-        <Text variant="muted" className="p-4">
+        <Text variant="muted" className="m-4">
           {missingHabitText(data !== undefined, isError)}
         </Text>
       )}

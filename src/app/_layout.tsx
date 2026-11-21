@@ -56,6 +56,7 @@ function CrashScreen({ retry }: ErrorBoundaryProps) {
   return (
     <View
       className="bg-background flex-1 justify-center gap-4 p-4"
+      // oxlint-disable-next-line shadcn/no-inline-styles -- the insets come from the device at runtime
       style={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + 16 }}
     >
       <StatusBar style="auto" />
@@ -88,6 +89,7 @@ function RootLayout() {
 
   // The Toaster's swipe to dismiss needs the gesture root above every screen.
   return (
+    // oxlint-disable-next-line shadcn/no-inline-styles -- GestureHandlerRootView takes no className
     <GestureHandlerRootView style={styles.root}>
       <DataProvider>
         <ThemeProvider value={theme}>

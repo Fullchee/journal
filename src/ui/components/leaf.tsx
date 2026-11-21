@@ -44,6 +44,7 @@ function Leaf({ onDone }: LeafProps) {
 
   return (
     <Animated.View style={fadeStyle} testID="leaf" aria-hidden>
+      {/* oxlint-disable-next-line shadcn/no-inline-styles -- the blade unfolds from its base */}
       <Animated.View testID="leaf blade" style={[{ transformOrigin: "bottom" }, unfold]}>
         <Svg viewBox="0 0 48 64" width={96} height={128} fill="none">
           <Path

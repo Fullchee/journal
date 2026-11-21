@@ -52,6 +52,7 @@ export function TriageList({ tasks, proposals, choices, onChoose }: TriageListPr
                     role="radio"
                     aria-checked={selected}
                     variant={selected ? "default" : "ghost"}
+                    // oxlint-disable-next-line shadcn/no-restyle -- a segmented radio row joins its buttons edge to edge
                     className="h-11 rounded-none"
                     onPress={() => onChoose(task.id, value)}
                   >

@@ -7,7 +7,7 @@ Targets Android and web only. iOS is out of scope: skip iOS config, builds, test
 One `package.json` at the root; run every command from there. `PRODUCT.md` and `DESIGN.md` hold the product and the design system. Nested `AGENTS.md` files hold rules for their folder; each has a `CLAUDE.md` beside it that imports it.
 
 - **`src/app`**: Expo Router routes. `src/components`, `src/lib` and `src/hooks` are app-only.
-- **`src/ui`**: shared components, imported as `@/ui`.
+- **`src/ui`**: shared components, imported as `@/ui`. `@shadcn/lint` (in `.oxlintrc.json`) holds pages to their variants and theme tokens: follow its error's suggested fix; suppress only for a runtime value, with the reason.
 - **`src/core`**: pure logic the app and the Worker share, imported as `@/core`. Oxlint blocks React, Expo and app imports there; fallow's zones block imports from `src/ui` and the app.
 - **`worker`**: the Cloudflare Worker (API and web host). **`modules/journal-android`**: Android-only native module and widgets.
 

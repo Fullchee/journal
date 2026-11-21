@@ -17,7 +17,7 @@ export function WhoYoullSee({ habit }: { habit: Habit }) {
   if (circle === null || circle.members.length === 0) return null;
 
   return (
-    <Text variant="muted" className="pb-2 text-sm" aria-label={`Who you'll see at ${habit.name}`}>
+    <Text variant="muted" className="mb-2 text-sm" aria-label={`Who you'll see at ${habit.name}`}>
       {`Who you'll see: ${circle.members.map(({ name }) => name).join(", ")}`}
     </Text>
   );

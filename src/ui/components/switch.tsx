@@ -13,7 +13,7 @@ function Switch({ className, children, ...props }: SwitchProps) {
   return (
     <SwitchPrimitives.Root
       className={cn(
-        "min-h-12 flex-row items-center gap-3 rounded-[3px]",
+        "min-h-12 flex-row items-center gap-3 rounded-button",
         Platform.select({
           web: "focus-visible:ring-ring focus-visible:ring-offset-background outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed",
         }),

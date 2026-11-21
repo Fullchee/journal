@@ -8,6 +8,7 @@ export default function LogScreen() {
   return (
     // ModalFrame keeps the composer above the keyboard.
     <ModalFrame title="Log" variant="dialog">
+      {/* oxlint-disable-next-line shadcn/no-arbitrary-values -- the web dialog's height follows the viewport */}
       <View className="flex-1 justify-end web:h-[40vh]">
         <View className="flex-1" />
         <LogComposer autoFocus replace />

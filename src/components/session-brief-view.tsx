@@ -120,7 +120,7 @@ function DayByDay({ rows }: { rows: BriefRow[] }) {
       <View role="table">
         <View role="row" className="border-border flex-row border-b pb-1">
           {COLUMNS.map((name) => (
-            <Text key={name} role="columnheader" variant="label" className="flex-1 pr-2">
+            <Text key={name} role="columnheader" variant="label" className="mr-2 flex-1">
               {name}
             </Text>
           ))}
@@ -129,7 +129,7 @@ function DayByDay({ rows }: { rows: BriefRow[] }) {
           // eslint-disable-next-line eslint-react/no-array-index-key -- the brief is a read-only snapshot that never reorders, and rows have no id
           <View key={i} role="row" className="border-border flex-row border-b py-1">
             {cellsOf(row).map(({ column, text }) => (
-              <Text key={column} role="cell" className="flex-1 pr-2 text-sm">
+              <Text key={column} role="cell" className="mr-2 flex-1 text-sm">
                 {text}
               </Text>
             ))}

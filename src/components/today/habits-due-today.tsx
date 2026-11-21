@@ -244,7 +244,7 @@ function TinyVersionLine({ due: { habit, day }, tinyDay }: { due: DueHabit; tiny
   if (!tinyDay || day.status !== "empty" || habit.tinyVersion === "") return null;
 
   return (
-    <Text variant="muted" className="pb-2 text-sm">
+    <Text variant="muted" className="mb-2 text-sm">
       {`Tiny: ${habit.tinyVersion}`}
     </Text>
   );

@@ -195,7 +195,7 @@ export default function LogEntryScreen() {
           durations={data.durations ?? {}}
         />
       ) : (
-        <Text variant="muted" className="p-4">
+        <Text variant="muted" className="m-4">
           {isError ? "Couldn't load Habits." : "Loading…"}
         </Text>
       )}

@@ -64,6 +64,7 @@ function ContactPhoto({ contactId, name }: { contactId: string | null; name: str
       alt={`Photo of ${name}`}
       cachePolicy="memory"
       contentFit="cover"
+      // oxlint-disable-next-line shadcn/no-inline-styles -- expo-image takes no className
       style={{ width: PHOTO_SIZE, height: PHOTO_SIZE, borderRadius: PHOTO_SIZE / 2 }}
     />
   );

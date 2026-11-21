@@ -107,6 +107,7 @@ function SeriesPicker({
           key={seriesKey(s)}
           role="listitem"
           variant="outline"
+          // oxlint-disable-next-line shadcn/no-restyle -- a long series name wraps, so the row grows past one line
           className="h-auto min-h-11 justify-start py-2"
           onPress={() => link(s)}
         >

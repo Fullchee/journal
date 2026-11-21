@@ -28,7 +28,7 @@ export function ChoiceChips<T extends string | number>({
         role="button"
         aria-selected={selected}
         className={cn(
-          "min-h-12 justify-center rounded-[3px] border px-3.5",
+          "min-h-12 justify-center rounded-button border px-3.5",
           selected ? "border-primary bg-primary" : "border-input bg-background active:bg-accent",
         )}
         onPress={() => onPick(option.id)}

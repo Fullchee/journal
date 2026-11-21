@@ -42,6 +42,7 @@ export function MarkdownImage({ alt, url }: { alt: string; url: string }) {
     };
   }, [resolve, url]);
 
+  // oxlint-disable-next-line shadcn/no-inline-styles -- the placeholder keeps the image's measured size
   if (!source) return <View testID="markdown-image-loading" style={sizeStyle(size)} />;
 
   return (
@@ -52,6 +53,7 @@ export function MarkdownImage({ alt, url }: { alt: string; url: string }) {
       cachePolicy="disk"
       contentFit="contain"
       onLoad={({ source: loaded }) => setSize({ width: loaded.width, height: loaded.height })}
+      // oxlint-disable-next-line shadcn/no-inline-styles -- expo-image takes no className, and the size is the image's own
       style={[sizeStyle(size), { marginBottom: 12 }]}
     />
   );

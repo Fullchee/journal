@@ -62,9 +62,9 @@ function DetailValue({ c, row }: { c: ShownCheckIn; row: DetailRow }) {
   return (
     <View className="flex-row flex-wrap gap-1.5" aria-label="Feelings">
       {listOf(c.thought).map((feeling) => (
-        <Text key={feeling} className="border-border rounded-sm border px-2 py-0.5 text-sm">
-          {feeling}
-        </Text>
+        <View key={feeling} className="border-border rounded-sm border px-2 py-0.5">
+          <Text className="text-sm">{feeling}</Text>
+        </View>
       ))}
     </View>
   );

@@ -297,6 +297,7 @@ function Legend({
             <View
               key={swatch}
               className="size-2.5 rounded-full"
+              // oxlint-disable-next-line shadcn/no-inline-styles -- each swatch takes its series' chart color
               style={{ backgroundColor: colors[swatch] }}
             />
           ))}
@@ -342,6 +343,7 @@ function Tooltip({ checkIn, left, top }: { checkIn: CheckIn; left: number; top: 
       testID="check-in-chart-tooltip"
       pointerEvents="none"
       className="bg-popover border-border absolute gap-0.5 rounded-md border p-2"
+      // oxlint-disable-next-line shadcn/no-inline-styles -- the tooltip follows the pressed point
       style={{ left, top, width: TOOLTIP_WIDTH }}
     >
       <Text variant="label">{whenOf(checkIn.checkedInAt)}</Text>
@@ -423,6 +425,7 @@ function CheckInChart<C extends CheckIn>({ data, empty, onSelect }: CheckInChart
       <View
         testID="check-in-chart"
         onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
+        // oxlint-disable-next-line shadcn/no-inline-styles -- the chart height comes from its props
         style={{ height: height + axis }}
       >
         {width > 0 && (

@@ -19,15 +19,17 @@ export function DayTimeline({ pools, busy }: { pools: PoolPlan[]; busy: Span[] }
     <View
       accessibilityLabel="Day timeline"
       className="border-border relative ml-20 border-l"
+      // oxlint-disable-next-line shadcn/no-inline-styles -- the timeline height scales with the day's minutes
       style={{ height: (DAY_END - DAY_START) * PX_PER_MINUTE }}
     >
       {HOURS.map((hour) => (
         <View
           key={hour}
           className="border-border/50 absolute right-0 -left-20 flex-row items-start border-t"
+          // oxlint-disable-next-line shadcn/no-inline-styles -- each hour line sits at its time of day
           style={{ top: top(hour) }}
         >
-          <Text variant="muted" className="w-[4.5rem] text-xs tabular-nums">
+          <Text variant="muted" className="w-18 text-xs tabular-nums">
             {clockLabel(formatMinutes(hour))}
           </Text>
         </View>
@@ -38,6 +40,7 @@ export function DayTimeline({ pools, busy }: { pools: PoolPlan[]; busy: Span[] }
           <View
             key={`busy-${span.start}`}
             className="bg-muted absolute right-0 left-0"
+            // oxlint-disable-next-line shadcn/no-inline-styles -- each busy span sits at its time of day
             style={{ top: top(span.start), height: height(span) }}
           />
         ))}
@@ -49,6 +52,7 @@ export function DayTimeline({ pools, busy }: { pools: PoolPlan[]; busy: Span[] }
               "absolute left-1 right-1 overflow-hidden rounded-md border px-2 py-1",
               pool === "job" ? "border-primary bg-card" : "border-primary bg-primary",
             )}
+            // oxlint-disable-next-line shadcn/no-inline-styles -- each block sits at its time of day
             style={{ top: top(span.start), height: height(span) }}
           >
             <Text
