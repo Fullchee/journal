@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { firstTrigger, reschedulePlan } from "@/core/alarm-schedule";
+import { firstTrigger, reschedulePlan, type TodayRecords } from "@/core/alarm-schedule";
 import { notificationId } from "@/core/alarms";
 import { makeConnection } from "./helpers/connection";
 import { makeHabit } from "./helpers/habit";
@@ -137,7 +137,7 @@ describe("reschedulePlan during Rest mode", () => {
   const priya = makeConnection({ meetups: [{ label: "Dragon boat", days: [6], time: "18:30" }] });
 
   test("Habit alarms first ring the morning after it ends; Connection reminders keep their times", () => {
-    const triggers = reschedulePlan([wake], [priya], NOW, rest)?.notifications.map(
+    const triggers = reschedulePlan([wake], [priya], NOW, { restPeriods: rest })?.notifications.map(
       ({ trigger }) => trigger,
     );
 
@@ -154,13 +154,16 @@ describe("reschedulePlan during Rest mode", () => {
       target: { type: "once" as const, count: 1, days: [] },
     };
 
-    assert.deepEqual(reschedulePlan([portage], [], NOW, rest)?.notifications, []);
+    assert.deepEqual(reschedulePlan([portage], [], NOW, { restPeriods: rest })?.notifications, []);
   });
 
   test("a Rest period that ended or hasn't started changes nothing", () => {
     const past = [{ start: "2026-11-01", end: "2026-11-05" }];
 
-    assert.deepEqual(reschedulePlan([wake], [], NOW, past), reschedulePlan([wake], [], NOW));
+    assert.deepEqual(
+      reschedulePlan([wake], [], NOW, { restPeriods: past }),
+      reschedulePlan([wake], [], NOW),
+    );
   });
 });
 
@@ -196,12 +199,144 @@ describe("reschedulePlan with Seasons", () => {
       [{ ...wake, seasons: [{ start: "2026-11-07", end: null }] }],
       [],
       NOW,
-      [{ start: "2026-11-05", end: "2026-11-08" }],
+      { restPeriods: [{ start: "2026-11-05", end: "2026-11-08" }] },
     );
 
     assert.deepEqual(
       plan?.notifications.map(({ trigger }) => trigger),
       [{ timestamp: at(2026, 10, 9, 7, 15), repeat: "day" }],
+    );
+  });
+});
+
+const entry = (minutes: number) => ({ id: 1, startTime: "07:00", minutes });
+
+// NOW is Friday 2026-11-06 at 8:00; each alarm below rings at 9:30.
+describe("reschedulePlan when today's Day is logged or silenced", () => {
+  const later = { ...wake, alarm: { time: "09:30", kind: "alarm" as const } };
+  const TODAY = "2026-11-06";
+  const nothing: TodayRecords = { silenced: [] };
+
+  const triggersOf = (habit: typeof wake, today: Partial<TodayRecords>) =>
+    reschedulePlan([habit], [], NOW, { today: { ...nothing, ...today } })?.notifications.map(
+      ({ trigger }) => trigger,
+    );
+
+  const todayRing = { timestamp: at(2026, 10, 6, 9, 30), repeat: "day" };
+  const tomorrowRing = { timestamp: at(2026, 10, 7, 9, 30), repeat: "day" };
+
+  test("an unlogged Day rings today", () => {
+    assert.deepEqual(triggersOf(later, {}), [todayRing]);
+  });
+
+  test("a Done Day first rings tomorrow", () => {
+    assert.deepEqual(triggersOf(later, { counts: { [TODAY]: { "out-of-bed": 1 } } }), [
+      tomorrowRing,
+    ]);
+  });
+
+  test("a Not done Day first rings tomorrow", () => {
+    assert.deepEqual(triggersOf(later, { counts: { [TODAY]: { "out-of-bed": -1 } } }), [
+      tomorrowRing,
+    ]);
+  });
+
+  test("a Skip with a cause first rings tomorrow", () => {
+    const skips = { [TODAY]: { "out-of-bed": { cause: "outside" as const, note: "" } } };
+
+    assert.deepEqual(triggersOf(later, { skips }), [tomorrowRing]);
+  });
+
+  test("a Day logged on another date still rings today", () => {
+    assert.deepEqual(triggersOf(later, { counts: { "2026-11-05": { "out-of-bed": 1 } } }), [
+      todayRing,
+    ]);
+  });
+
+  test("a silenced Habit first rings tomorrow; the others ring today", () => {
+    const other = { ...later, id: "stretch", name: "Stretch" };
+
+    const plan = reschedulePlan([later, other], [], NOW, {
+      today: { ...nothing, silenced: ["out-of-bed"] },
+    });
+
+    assert.deepEqual(
+      plan?.notifications.map(({ trigger }) => trigger),
+      [tomorrowRing, todayRing],
+    );
+  });
+
+  test("a fixed-weekday Habit logged today first rings on its next weekday", () => {
+    // Friday is 5; the plugin's weekday 6.
+    const fridays = { ...later, target: { type: "days" as const, count: 1, days: [5] } };
+
+    assert.deepEqual(triggersOf(fridays, { silenced: ["out-of-bed"] }), [
+      { timestamp: at(2026, 10, 13, 9, 30), repeat: "week" },
+    ]);
+  });
+
+  test("an Every N days Habit due today skips today's ring and keeps its next due day", () => {
+    const everyThree = {
+      ...later,
+      startDate: TODAY,
+      target: { type: "interval" as const, count: 3, days: [] },
+    };
+
+    const [first] = triggersOf(everyThree, { counts: { [TODAY]: { "out-of-bed": 1 } } }) ?? [];
+
+    assert.deepEqual(first, { timestamp: at(2026, 10, 9, 9, 30), repeat: null });
+  });
+
+  test("a One-off due today and silenced doesn't ring", () => {
+    const portage = {
+      ...later,
+      startDate: TODAY,
+      target: { type: "once" as const, count: 1, days: [] },
+    };
+
+    assert.deepEqual(triggersOf(portage, { silenced: ["out-of-bed"] }), []);
+  });
+
+  describe("a count Habit", () => {
+    const water = { ...later, record: "count" as const };
+    const weekly = { ...water, target: { type: "weekly" as const, count: 5, days: [] } };
+
+    test("with a daily target counts as logged after one", () => {
+      assert.deepEqual(triggersOf(water, { counts: { [TODAY]: { "out-of-bed": 1 } } }), [
+        tomorrowRing,
+      ]);
+    });
+
+    test("with a weekly target rings while the week is below it", () => {
+      assert.deepEqual(triggersOf(weekly, { counts: { [TODAY]: { "out-of-bed": 2 } } }), [
+        todayRing,
+      ]);
+    });
+
+    test("with a weekly target first rings tomorrow once the week meets it", () => {
+      const counts = { "2026-11-05": { "out-of-bed": 3 }, [TODAY]: { "out-of-bed": 2 } };
+
+      assert.deepEqual(triggersOf(weekly, { counts }), [tomorrowRing]);
+    });
+
+    test("that is bad counts as logged after one", () => {
+      const bad = { ...weekly, kind: "bad" as const };
+
+      assert.deepEqual(triggersOf(bad, { counts: { [TODAY]: { "out-of-bed": 1 } } }), [
+        tomorrowRing,
+      ]);
+    });
+  });
+
+  test("a timed Habit rings until today's minutes reach its bar", () => {
+    const read = { ...later, record: "duration" as const, targetMinutes: 30 };
+
+    assert.deepEqual(
+      [
+        triggersOf(read, { durations: { [TODAY]: { "out-of-bed": [entry(10)] } } }),
+        triggersOf(read, { durations: { [TODAY]: { "out-of-bed": [entry(30)] } } }),
+      ],
+      [[todayRing], [tomorrowRing]],
     );
   });
 });

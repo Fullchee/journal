@@ -8,7 +8,7 @@ import {
   type TimedDay,
   type TimedHabit,
 } from "@/core";
-import { CalendarClock, Check, Minus, Plus, SkipForward, X } from "lucide-react-native";
+import { BellOff, CalendarClock, Check, Minus, Plus, SkipForward, X } from "lucide-react-native";
 import { useState } from "react";
 import { Pressable, View, type AccessibilityActionEvent } from "react-native";
 
@@ -281,6 +281,8 @@ type DueControlsProps = HabitTodayProps & {
   onReschedule?: (() => void) | undefined;
   /** Given for a recurring Habit that can be missed: its Not done is a Skip, which then asks why. */
   onSkip?: (() => void) | undefined;
+  /** Given while the Habit's alarm is still ahead today; `onSilence` silences today's ring or brings it back. */
+  alarm?: { silenced: boolean; onSilence: () => void } | undefined;
 };
 
 interface DueAction {
@@ -361,7 +363,22 @@ function TimedControls(props: DueControlsProps & { habit: TimedHabit; timed: Tim
       />
       <MissToggle {...props} />
       <MinutesField habit={habit} disabled={disabled} onAddMinutes={onAddMinutes} />
+      <SilenceToggle {...props} />
     </View>
+  );
+}
+
+// Silencing logs nothing, so it stays apart from Done and Skip; the alarm rings again on the next due day.
+function SilenceToggle({ habit, alarm }: DueControlsProps) {
+  if (!alarm) return null;
+
+  return (
+    <ToggleButton
+      label={`Silence ${habit.name}'s alarm today`}
+      icon={BellOff}
+      checked={alarm.silenced}
+      onPress={alarm.onSilence}
+    />
   );
 }
 
@@ -395,6 +412,7 @@ function DueControls(props: DueControlsProps) {
           <Icon as={CalendarClock} className="text-muted-foreground" />
         </Button>
       )}
+      <SilenceToggle {...props} />
     </View>
   );
 }

@@ -1,5 +1,11 @@
 import assert from "node:assert/strict";
-import { alarmNote, notificationId, notificationsFor, widgetAlarms } from "@/core/alarms";
+import {
+  alarmNote,
+  notificationId,
+  notificationsFor,
+  ringsLaterToday,
+  widgetAlarms,
+} from "@/core/alarms";
 import { makeHabit } from "./helpers/habit";
 
 // alarmNote takes a non-null alarm, so it sits outside the Habit fixture.
@@ -205,4 +211,12 @@ test("alarmNote names an Every N days or N× a month Habit's days", () => {
 
 test("widgetAlarms leaves out an Every N days Habit, since its days don't repeat weekly", () => {
   assert.deepEqual(widgetAlarms([everyThree]), []);
+});
+
+test.each([
+  ["before its time today", wake, new Date(2026, 10, 6, 7, 0), true],
+  ["at or after its time today", wake, new Date(2026, 10, 6, 7, 15), false],
+  ["with no alarm", makeHabit(), new Date(2026, 10, 6, 6, 0), false],
+] as const)("ringsLaterToday: a Habit %s", (_name, habit, now, expected) => {
+  assert.equal(ringsLaterToday(habit, now), expected);
 });

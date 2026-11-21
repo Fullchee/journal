@@ -56,6 +56,10 @@ export const notificationId = (habitId: string, weekday = 0) =>
 const ringsOn = (habit: Habit): habit is Habit & { alarm: Alarm } =>
   habit.alarm !== null && habit.active && habit.stage !== "tree" && habit.target.type !== "none";
 
+/** A Habit's alarm is still ahead today by the phone's clock, so the owner can silence today's ring. */
+export const ringsLaterToday = (habit: Habit, now: Date) =>
+  ringsOn(habit) && new Date(`${torontoDay(now)}T${habit.alarm.time}`) > now;
+
 // `weekday` follows the plugin's `Weekday` enum, where 1 is Sunday; a Habit's days use 0 for Sunday.
 function notificationFor(habit: Habit & { alarm: Alarm }, weekday?: number): ScheduledNotification {
   const minutes = minutesOf(habit.alarm.time);

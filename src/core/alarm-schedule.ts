@@ -6,7 +6,8 @@ import {
 } from "./alarms";
 import { connectionNotifications } from "./connection-notifications";
 import type { Connection } from "./connections-view";
-import type { Habit } from "./habits-view";
+import { habitDays } from "./habit-day";
+import type { Counts, Durations, Habit, Skips } from "./habits-view";
 import { shiftDay, torontoDay } from "./calendar";
 import { isInSeason, nextSeasonDay } from "./season";
 import { restPeriodOn, type RestPeriod } from "./rest-mode";
@@ -53,12 +54,45 @@ function quietUntil(restPeriods: RestPeriod[], now: Date) {
 }
 
 /**
- * When a Habit's alarms first ring: from its next Season day (the phone's midnight), held back by Rest mode;
- * null when no Season is ahead.
+ * The Habits' recent Days, as the Habits list carries them (absent before it loads), and the Habits whose ring the
+ * owner silenced today.
  */
-function habitRingsFrom(habit: Habit, now: Date, quiet: Date | null) {
+export interface TodayRecords {
+  counts?: Counts | undefined;
+  durations?: Durations | undefined;
+  skips?: Skips | undefined;
+  silenced: string[];
+}
+
+/**
+ * Today's Day is answered: Done, Not done, or a Skip of either cause. A good count Habit with a weekly or monthly
+ * target stays due until its period reaches the target, so its ring waits for that.
+ */
+export function isLoggedToday(
+  habit: Habit,
+  { counts = {}, durations = {}, skips = {} }: Omit<TodayRecords, "silenced">,
+  now: Date,
+) {
+  if (Object.hasOwn(skips[torontoDay(now)] ?? {}, habit.id)) return true;
+  const day = habitDays(habit, { counts, durations }).on(now);
+
+  if (day.status !== "done") return day.status === "missed";
+
+  const byPeriod =
+    habit.kind === "good" &&
+    habit.record === "count" &&
+    (habit.target.type === "weekly" || habit.target.type === "monthly");
+
+  return !byPeriod || !day.due;
+}
+
+/**
+ * When a Habit's alarms first ring: from its next Season day (the phone's midnight), held back by Rest mode;
+ * null when no Season is ahead. A Habit quiet today starts looking from tomorrow.
+ */
+function habitRingsFrom(habit: Habit, now: Date, quiet: Date | null, quietToday: boolean) {
   const today = torontoDay(now);
-  const day = nextSeasonDay(habit.seasons, today);
+  const day = nextSeasonDay(habit.seasons, quietToday ? shiftDay(today, 1) : today);
 
   if (day === null) return null;
   const from = day === today ? now : new Date(`${day}T00:00`);
@@ -72,23 +106,29 @@ const plan = (notifications: ScheduledNotification[], from: Date): PlannedNotifi
     trigger: firstTrigger(notification.schedule, from),
   }));
 
+const NOTHING_LOGGED: TodayRecords = { silenced: [] };
+
 /**
  * Everything one reschedule hands the phone. `undefined` means that list never loaded:
  * no Habits keeps the last schedule (null), so an offline launch still rings; no Connections drops only their reminders.
  * During Rest mode, Habit alarms first ring after it ends, and outside a Season after the next one starts;
- * Connection reminders keep their times.
+ * a Habit whose Day is logged or silenced today first rings on its next due day. Connection reminders keep their times.
  */
 export function reschedulePlan(
   habits: Habit[] | undefined,
   connections: Connection[] | undefined,
   now: Date,
-  restPeriods: RestPeriod[] = [],
+  {
+    restPeriods = [],
+    today = NOTHING_LOGGED,
+  }: { restPeriods?: RestPeriod[]; today?: TodayRecords } = {},
 ): AlarmSchedule | null {
   if (!habits) return null;
   const quiet = quietUntil(restPeriods, now);
 
   const habitNotifications = habits.flatMap((habit) => {
-    const from = habitRingsFrom(habit, now, quiet);
+    const quietToday = today.silenced.includes(habit.id) || isLoggedToday(habit, today, now);
+    const from = habitRingsFrom(habit, now, quiet, quietToday);
 
     return from === null ? [] : plan(notificationsFor([habit], from), from);
   });

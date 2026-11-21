@@ -8,6 +8,7 @@ import {
   torontoDay,
   isOneOff,
   isTimed,
+  isLoggedToday,
   isTinyDay,
   MISSED,
   type Counts,
@@ -18,6 +19,7 @@ import {
   formatMinutes,
   isoAt,
   minuteOfDay,
+  ringsLaterToday,
 } from "@/core";
 import {
   HabitDueRow,
@@ -40,6 +42,7 @@ import { Section } from "@/components/screen";
 import { SeasonCircleOffers, WhoYoullSee } from "@/components/today/circle-rows";
 import { RepairPrompts } from "@/components/today/repair-prompts";
 import { SeasonNudges } from "@/components/today/season-nudges";
+import { canSilence, toggleSilenced, useSilencedAlarms } from "@/lib/alarms/silenced-alarms";
 import { useCheckIns } from "@/lib/data/check-ins";
 import { useIsOnline } from "@/lib/data/data-provider";
 import {
@@ -149,6 +152,7 @@ function DueHabits({ body: fetched }: { body: HabitsBody }) {
       due={due}
       today={today}
       tinyDay={tinyDay}
+      loggedToday={isLoggedToday(due.habit, body, today)}
       onAnswer={(count) => answer(due, count)}
       onOpenDay={(habit) => setDetail({ habit, date })}
       onReschedule={() => setRescheduling(due.habit)}
@@ -250,6 +254,7 @@ function DueRow({
   due,
   today,
   tinyDay,
+  loggedToday,
   onAnswer,
   onOpenDay,
   onReschedule,
@@ -259,6 +264,8 @@ function DueRow({
   today: Date;
   /** The day's newest Check-in is Rain or Storm. */
   tinyDay: boolean;
+  /** Today's Day keeps the alarm quiet on its own, as the alarm schedule decides. */
+  loggedToday: boolean;
   onAnswer: (count: number) => void;
   onOpenDay: (habit: TimedHabit) => void;
   onReschedule: () => void;
@@ -267,6 +274,7 @@ function DueRow({
   const { habit, day } = due;
   const { mutate: addDuration } = useAddDuration();
   const isOnline = useIsOnline();
+  const silenced = useSilencedAlarms();
 
   const props: HabitDueRowProps = {
     habit,
@@ -289,6 +297,14 @@ function DueRow({
     ...(isOneOff(habit) && day.status === "empty" && { onReschedule }),
     // A recurring Habit's Not done is a Skip; a One-off keeps Not done.
     ...(!isOneOff(habit) && { onSkip }),
+    ...(canSilence() &&
+      !loggedToday &&
+      ringsLaterToday(habit, today) && {
+        alarm: {
+          silenced: silenced.includes(habit.id),
+          onSilence: () => toggleSilenced(habit.id),
+        },
+      }),
   };
 
   return (

@@ -21,6 +21,7 @@ import {
 } from "@/core";
 
 import { useAlarmSound } from "@/lib/alarms/alarm-sound";
+import { useSilencedAlarms } from "@/lib/alarms/silenced-alarms";
 import { connectionsQuery } from "@/lib/data/connections";
 import { useTodayHabits } from "@/lib/data/habits";
 import { askNotificationPermissionOnce } from "@/lib/notifications/ask-permission";
@@ -143,16 +144,15 @@ export function useAlarmSchedule() {
   const { data: connections } = useQuery(connectionsQuery);
   const restPeriods = useRestPeriods();
   const sound = useAlarmSound();
+  const silenced = useSilencedAlarms();
 
   useEffect(() => {
-    const schedule = reschedulePlan(
-      habits?.habits,
-      connections?.connections,
-      new Date(),
+    const schedule = reschedulePlan(habits?.habits, connections?.connections, new Date(), {
       restPeriods,
-    );
+      today: { ...habits, silenced },
+    });
 
     if (schedule) void reschedule(schedule);
     // A new sound means a new alarm channel, and every alarm must move onto it.
-  }, [habits, connections, restPeriods, sound]);
+  }, [habits, connections, restPeriods, sound, silenced]);
 }

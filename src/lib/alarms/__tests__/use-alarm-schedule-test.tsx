@@ -1,11 +1,12 @@
 import { QueryClientProvider, type QueryClient } from "@tanstack/react-query";
-import { renderHook, waitFor } from "@testing-library/react-native";
+import { act, renderHook, waitFor } from "@testing-library/react-native";
 import {
   CHECK_IN_PROMPT_IDS,
   notificationId,
   shiftDay,
   torontoDay,
   type Connection,
+  type Counts,
   type Habit,
   type RestPeriod,
 } from "@/core";
@@ -14,6 +15,7 @@ import notifee, { AlarmType, AuthorizationStatus, RepeatFrequency } from "react-
 
 import { NetworkError } from "@/lib/api/errors";
 import { pickAlarmSound } from "@/lib/alarms/alarm-sound.android";
+import { toggleSilenced } from "@/lib/alarms/silenced-alarms.android";
 import { useAlarmSchedule } from "@/lib/alarms/use-alarm-schedule.android";
 import { invalidateHabits } from "@/lib/data/habits";
 import { createQueryClient } from "@/lib/data/query-client";
@@ -21,6 +23,7 @@ import { createQueryClient } from "@/lib/data/query-client";
 // eslint-disable-next-line no-restricted-imports -- Expo local modules live outside src, where no @/ alias reaches
 import JournalAndroid from "../../../../modules/journal-android";
 import type * as AlarmSound from "@/lib/alarms/alarm-sound.android";
+import type * as SilencedAlarms from "@/lib/alarms/silenced-alarms.android";
 // eslint-disable-next-line no-restricted-imports -- jest/ sits outside src, so no @/ alias reaches it
 import { fakeApi, reply } from "../../../../jest/fake-api";
 // eslint-disable-next-line no-restricted-imports -- jest/ sits outside src, so no @/ alias reaches it
@@ -31,6 +34,22 @@ jest.mock("@/lib/api/api-fetch", () => ({ apiFetch: jest.fn() }));
 jest.mock("@/lib/alarms/alarm-sound", () =>
   jest.requireActual<typeof AlarmSound>("@/lib/alarms/alarm-sound.android"),
 );
+
+jest.mock("@/lib/alarms/silenced-alarms", () =>
+  jest.requireActual<typeof SilencedAlarms>("@/lib/alarms/silenced-alarms.android"),
+);
+
+jest.mock("expo-sqlite/kv-store", () => {
+  const items = new Map<string, string>();
+
+  return {
+    __esModule: true,
+    default: {
+      getItemSync: (key: string) => items.get(key) ?? null,
+      setItemSync: (key: string, value: string) => items.set(key, value),
+    },
+  };
+});
 
 const habit = (over: Partial<Habit> = {}) =>
   fixtureHabit({
@@ -53,13 +72,14 @@ const priya = connection({
 
 interface Answers {
   habits: Habit[] | Error;
+  counts?: Counts;
   connections: Connection[] | Error;
   restPeriods?: RestPeriod[];
 }
 
-function serve({ habits, connections, restPeriods = [] }: Answers) {
+function serve({ habits, counts = {}, connections, restPeriods = [] }: Answers) {
   fakeApi({
-    "/api/habits": reply(habits instanceof Error ? habits : { habits }),
+    "/api/habits": reply(habits instanceof Error ? habits : { habits, counts }),
     "/api/connections": reply(connections instanceof Error ? connections : { connections }),
     "/api/streaks": reply({ counts: {}, durations: {}, skips: {}, restPeriods }),
   });
@@ -279,4 +299,42 @@ test("Rest mode keeps Habit alarms quiet until the morning after it ends; meetup
   expect(
     scheduled().some(([notification]) => notification.title === "Seeing Priya at Dragon boat"),
   ).toBe(true);
+});
+
+const ringAt = () => scheduled().at(-1)?.[1];
+
+describe("today's ring", () => {
+  // Local noon is the same Day in Toronto and in UTC, where CI runs.
+  beforeEach(() => jest.setSystemTime(new Date(2026, 10, 6, 12, 0)));
+
+  const evening = habit({ alarm: { time: "18:00", kind: "alarm" } });
+  const today = { timestamp: new Date(2026, 10, 6, 18, 0).getTime() };
+  const tomorrow = { timestamp: new Date(2026, 10, 7, 18, 0).getTime() };
+
+  test("rings later today while the Day is open", async () => {
+    await mount({ habits: [evening], connections: [] });
+
+    await waitFor(() => expect(ringAt()).toMatchObject(today));
+  });
+
+  test("waits for tomorrow once today's Day is logged", async () => {
+    await mount({
+      habits: [evening],
+      counts: { "2026-11-06": { "out-of-bed": 1 } },
+      connections: [],
+    });
+
+    await waitFor(() => expect(ringAt()).toMatchObject(tomorrow));
+  });
+
+  test("silenced by hand waits for tomorrow, and comes back when unsilenced", async () => {
+    await mount({ habits: [evening], connections: [] });
+    await waitFor(() => expect(ringAt()).toMatchObject(today));
+
+    await act(() => toggleSilenced("out-of-bed"));
+    await waitFor(() => expect(ringAt()).toMatchObject(tomorrow));
+
+    await act(() => toggleSilenced("out-of-bed"));
+    await waitFor(() => expect(ringAt()).toMatchObject(today));
+  });
 });
