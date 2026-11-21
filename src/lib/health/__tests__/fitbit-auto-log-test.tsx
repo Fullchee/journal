@@ -9,6 +9,7 @@ import {
   requestPermission,
 } from "react-native-health-connect";
 
+import { apiFetch } from "@/lib/api/api-fetch";
 import { fitbitAutoLog, useFitbitAutoLog } from "@/lib/health/fitbit-auto-log.android";
 import type { FitbitWriters } from "@/lib/health/fitbit-auto-log";
 
@@ -48,6 +49,8 @@ interface WritersState {
 
 const mockWriters: WritersState = { current: null };
 
+jest.mock("@/lib/api/api-fetch", () => ({ apiFetch: jest.fn(() => Promise.resolve()) }));
+
 jest.mock("@/lib/health/fitbit-writers", () => ({
   useFitbitWriters: () => mockWriters.current,
 }));
@@ -77,6 +80,19 @@ const WORKOUT = {
   startTime: "2026-11-12T07:00:00-05:00",
   endTime: "2026-11-12T07:40:00-05:00",
   exerciseType: 56,
+  metadata: fitbit,
+};
+
+const DISTANCE_READ = { accessType: "read", recordType: "Distance" } as const;
+
+const RUN = { ...WORKOUT, metadata: { ...fitbit, id: "run-1" } };
+
+// Fitbit's Distance for the run, as Health Connect reads it back.
+const RUN_DISTANCE = {
+  recordType: "Distance",
+  startTime: RUN.startTime,
+  endTime: RUN.endTime,
+  distance: { inMeters: 6100, inKilometers: 6.1 },
   metadata: fitbit,
 };
 
@@ -177,6 +193,10 @@ describe("fitbitAutoLog.link", () => {
     );
 
     expect(result).toEqual({ status: "linked", added: 1 });
+    expect(requestPermission).toHaveBeenCalledWith([
+      { accessType: "read", recordType: "ExerciseSession" },
+      DISTANCE_READ,
+    ]);
     expect(jest.mocked(readRecords).mock.calls[1]?.[1]).toMatchObject({ pageToken: "next" });
     expect(importDurations).toHaveBeenCalledWith({
       habit: "lift",
@@ -283,11 +303,78 @@ describe("useFitbitAutoLog", () => {
     expect(check).toHaveBeenCalledWith([]);
   });
 
-  it("reads nothing until a Habit is linked", async () => {
+  it("reads no records with no Habit linked and no Distance access", async () => {
     await mountAutoLog();
-    await act(() => Promise.resolve());
 
-    expect(getSdkStatus).not.toHaveBeenCalled();
+    await waitFor(() => expect(getGrantedPermissions).toHaveBeenCalled());
+    await act(() => Promise.resolve());
+    expect(readRecords).not.toHaveBeenCalled();
+    expect(apiFetch).not.toHaveBeenCalled();
+  });
+
+  it("reads nothing when Health Connect is missing", async () => {
+    jest.mocked(getSdkStatus).mockResolvedValue(SdkAvailabilityStatus.SDK_UNAVAILABLE);
+
+    await mountAutoLog();
+
+    await waitFor(() => expect(getSdkStatus).toHaveBeenCalled());
+    await act(() => Promise.resolve());
+    expect(getGrantedPermissions).not.toHaveBeenCalled();
+  });
+
+  it("uploads the last 14 Days of Fitbit sessions, each with the Distance read inside it", async () => {
+    jest.mocked(getGrantedPermissions).mockResolvedValue([...ALL_READS, DISTANCE_READ]);
+    jest
+      .mocked(readRecords)
+      .mockImplementation((type) =>
+        Promise.resolve({ records: [type === "Distance" ? RUN_DISTANCE : RUN] }),
+      );
+
+    await mountAutoLog();
+
+    await waitFor(() => expect(apiFetch).toHaveBeenCalled());
+    expect(readRecords).toHaveBeenCalledWith("ExerciseSession", {
+      timeRangeFilter: { operator: "after", startTime: "2026-10-29T04:00:00.000Z" },
+      dataOriginFilter: [FITBIT_PACKAGE],
+    });
+    expect(readRecords).toHaveBeenCalledWith("Distance", {
+      timeRangeFilter: { operator: "between", startTime: RUN.startTime, endTime: RUN.endTime },
+      dataOriginFilter: [FITBIT_PACKAGE],
+    });
+    expect(apiFetch).toHaveBeenCalledWith("/api/fitbit-sessions", {
+      method: "POST",
+      body: {
+        from: "2026-10-29",
+        sessions: [
+          {
+            id: "run-1",
+            exerciseType: 56,
+            title: null,
+            startDate: "2026-11-12",
+            startTime: RUN.startTime,
+            endTime: RUN.endTime,
+            durationS: 2400,
+            distanceM: 6100,
+          },
+        ],
+      },
+    });
+  });
+
+  it("lets a failed upload go, so the next open sends the sessions again", async () => {
+    jest.mocked(getGrantedPermissions).mockResolvedValue([...ALL_READS, DISTANCE_READ]);
+    jest.mocked(readRecords).mockResolvedValue({ records: [] });
+    jest.mocked(apiFetch).mockRejectedValueOnce(new Error("offline"));
+
+    const { rerender } = await mountAutoLog();
+
+    await waitFor(() => expect(apiFetch).toHaveBeenCalledTimes(1));
+    mockWriters.current = null;
+    await rerender({});
+    mockWriters.current = writers();
+    await rerender({});
+
+    await waitFor(() => expect(apiFetch).toHaveBeenCalledTimes(2));
   });
 
   it("reads nothing before the history loads, then reads once it does", async () => {

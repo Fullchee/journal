@@ -3,6 +3,8 @@
 Research for moving the Garmin sync to a Fitbit. Researched 2026-11-12.
 
 > **Update 2026-11-17**: the Garmin push is gone ([#135](https://github.com/Fullchee/journal-native/issues/135)). Fitbit data now reaches the app through Health Connect, filtered by `FITBIT_PACKAGE` in `src/core/fitbit-auto-complete.ts`. To switch back to Garmin, set that filter to Garmin Connect's package, `com.garmin.android.apps.connectmobile`. The Garmin parts below describe the removed push.
+>
+> **Update 2026-11-20**: the owner chose Option 4 over the Google Health API ([#17](https://github.com/Fullchee/journal/issues/17)): no OAuth token to expire and no Worker secrets. The app uploads Fitbit sessions, with km from Health Connect `Distance` records, to `fitbit_sessions` through `POST /api/fitbit-sessions`. The Google Health sync and its setup wizard are gone; the plan below is not followed.
 
 ## Answer
 

@@ -3,10 +3,15 @@ import {
   FITBIT_RECORD_TYPES,
   FITBIT_RULES,
   FITBIT_RULES_BY_RECORD,
+  FITBIT_SESSION_DAYS,
   fitbitDoneDays,
   fitbitExerciseEntries,
+  fitbitExerciseSessions,
   fitbitFirstDay,
   fitbitReadFrom,
+  fitbitSession,
+  isoAt,
+  shiftDay,
   torontoDay,
   type FitbitRule,
 } from "@/core";
@@ -20,8 +25,12 @@ import {
   readRecords,
   requestPermission,
   type Permission,
+  type ReadRecordsOptions,
+  type RecordType,
 } from "react-native-health-connect";
 import * as z from "zod/mini";
+
+import { apiFetch } from "@/lib/api/api-fetch";
 
 import type { LinkResult } from "@/lib/health/calm-auto-log";
 import type { FitbitAutoLog, FitbitLink, FitbitWriters } from "@/lib/health/fitbit-auto-log";
@@ -56,31 +65,41 @@ async function storedLink(rule: FitbitRule) {
 const storeLink = (rule: FitbitRule, link: StoredLink) =>
   storage.setItem(linkKey(rule), JSON.stringify(link));
 
-const readPermission = (rule: FitbitRule): Permission => ({
-  accessType: "read",
-  recordType: FITBIT_RECORD_TYPES[rule],
-});
+/** The records Fitbit sessions are uploaded from: each session, and the Distance that gives its km. */
+const SESSION_READS: readonly RecordType[] = [FITBIT_RECORD_TYPES.exercise, "Distance"];
+
+// Linking the exercise rule also asks for Distance, so the same tap lets the app upload Fitbit sessions.
+const LINK_READS: Record<FitbitRule, readonly RecordType[]> = {
+  steps: [FITBIT_RECORD_TYPES.steps],
+  sleep: [FITBIT_RECORD_TYPES.sleep],
+  exercise: SESSION_READS,
+};
+
+const readPermissions = (rule: FitbitRule) =>
+  LINK_READS[rule].map((recordType): Permission => ({ accessType: "read", recordType }));
 
 // Health Connect ships with Android 14+, and is a Play Store app before that, so it may be missing or outdated.
 const isHealthConnectReady = async () =>
   (await getSdkStatus()) === SdkAvailabilityStatus.SDK_AVAILABLE && initialize();
 
-const canRead = (
-  rule: FitbitRule,
-  granted: readonly { accessType: string; recordType: string }[],
-) =>
-  granted.some(
-    ({ accessType, recordType }) =>
-      accessType === "read" && recordType === FITBIT_RECORD_TYPES[rule],
-  );
+type Granted = readonly { accessType: string; recordType: string }[];
 
-async function fitbitRecords(rule: FitbitRule, from: string) {
+const canReadType = (type: RecordType, granted: Granted) =>
+  granted.some(({ accessType, recordType }) => accessType === "read" && recordType === type);
+
+const canRead = (rule: FitbitRule, granted: Granted) =>
+  canReadType(FITBIT_RECORD_TYPES[rule], granted);
+
+async function fitbitRecords(
+  recordType: RecordType,
+  timeRangeFilter: ReadRecordsOptions["timeRangeFilter"],
+) {
   const records: unknown[] = [];
   let pageToken: string | undefined;
 
   do {
-    const page = await readRecords(FITBIT_RECORD_TYPES[rule], {
-      timeRangeFilter: { operator: "after", startTime: from },
+    const page = await readRecords(recordType, {
+      timeRangeFilter,
       dataOriginFilter: [FITBIT_PACKAGE],
       ...(pageToken !== undefined && { pageToken }),
     });
@@ -90,6 +109,32 @@ async function fitbitRecords(rule: FitbitRule, from: string) {
   } while (pageToken !== undefined);
 
   return records;
+}
+
+// Each upload re-sends whole Days, so the Worker can drop the sessions Fitbit no longer has.
+async function uploadFitbitSessions() {
+  const from = shiftDay(torontoDay(new Date()), -FITBIT_SESSION_DAYS);
+
+  const records = await fitbitRecords(FITBIT_RECORD_TYPES.exercise, {
+    operator: "after",
+    startTime: isoAt(from),
+  });
+
+  const sessions = await Promise.all(
+    fitbitExerciseSessions(records).map(async (session) => {
+      const { startTime, endTime } = session;
+
+      const distances = await fitbitRecords("Distance", {
+        operator: "between",
+        startTime,
+        endTime,
+      });
+
+      return fitbitSession(session, distances);
+    }),
+  );
+
+  await apiFetch("/api/fitbit-sessions", { method: "POST", body: { from, sessions } });
 }
 
 interface Read {
@@ -124,7 +169,12 @@ async function readNew(rule: FitbitRule, link: StoredLink, writers: FitbitWriter
 
   const now = new Date();
   const from = fitbitFirstDay(link.since, link.readAt);
-  const records = await fitbitRecords(rule, fitbitReadFrom(from));
+
+  const records = await fitbitRecords(FITBIT_RECORD_TYPES[rule], {
+    operator: "after",
+    startTime: fitbitReadFrom(from),
+  });
+
   const write = record === "duration" ? logMinutes : completeDays;
   const added = await write({ rule, link, records, from, writers });
   // The owner may unlink, relink or change the threshold mid-read; their change wins.
@@ -143,7 +193,7 @@ async function link(
 ): Promise<LinkResult> {
   if (!(await isHealthConnectReady())) return { status: "unavailable" };
 
-  if (!canRead(rule, await requestPermission([readPermission(rule)]))) return { status: "denied" };
+  if (!canRead(rule, await requestPermission(readPermissions(rule)))) return { status: "denied" };
 
   const fresh = { ...chosen, since: torontoDay(new Date()), readAt: null };
 
@@ -188,19 +238,20 @@ interface InFlightRead {
 
 const reading: InFlightRead = { current: null };
 
-async function readLinked(writers: FitbitWriters) {
-  const linked = await storedLinks();
-
-  if (linked.length === 0 || !(await isHealthConnectReady())) return;
+async function readFitbit(writers: FitbitWriters) {
+  if (!(await isHealthConnectReady())) return;
   const granted = await getGrantedPermissions();
+  const linked = await storedLinks();
 
   for (const { rule, link: found } of linked)
     if (canRead(rule, granted)) await readNew(rule, found, writers);
+
+  if (SESSION_READS.every((type) => canReadType(type, granted))) await uploadFitbitSessions();
 }
 
 async function readSettled(writers: FitbitWriters) {
   try {
-    await readLinked(writers);
+    await readFitbit(writers);
   } catch {
     // Offline or a Health Connect hiccup: the kept read time makes the next open try again.
   } finally {
@@ -215,8 +266,8 @@ function readOnce(writers: FitbitWriters) {
 }
 
 /**
- * Mount once inside the signed-in app: completes the linked Habits from Fitbit when the app opens or returns to the
- * front. Coming to the front refetches the Habits, which hides the writers until the fresh answers arrive.
+ * Mount once inside the signed-in app: completes the linked Habits from Fitbit and uploads its sessions when the app
+ * opens or returns to the front. Coming to the front refetches the Habits, which hides the writers until the fresh answers arrive.
  */
 export function useFitbitAutoLog() {
   const writers = useFitbitWriters();

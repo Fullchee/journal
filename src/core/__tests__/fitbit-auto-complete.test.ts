@@ -5,8 +5,11 @@ import {
   fitbitDoneDays,
   fitbitExerciseEntries,
   fitbitFirstDay,
+  fitbitExerciseSessions,
   fitbitReadFrom,
+  fitbitSession,
   fitbitThreshold,
+  FitbitSessionUpload,
 } from "@/core/fitbit-auto-complete";
 
 const GARMIN = "com.garmin.android.apps.connectmobile";
@@ -129,4 +132,84 @@ test("fitbitThreshold takes a number above zero", () => {
 
   for (const text of ["", "  ", "0", "-3", "abc", "Infinity"])
     assert.equal(fitbitThreshold(text), null);
+});
+
+// A 30-minute run on 2026-11-10 from 07:00 Toronto time.
+const RUN_START = "2026-11-10T12:00:00.000Z";
+const RUN_END = "2026-11-10T12:30:00.000Z";
+
+const exercise = (id: string, dataOrigin = FITBIT_PACKAGE, title?: string) => ({
+  ...session(RUN_START, RUN_END),
+  exerciseType: 56,
+  metadata: { id, dataOrigin },
+  ...(title !== undefined && { title }),
+});
+
+const distance = (
+  startTime: string,
+  endTime: string,
+  inMeters: number,
+  dataOrigin = FITBIT_PACKAGE,
+) => ({
+  ...session(startTime, endTime, dataOrigin),
+  distance: { inMeters, inKilometers: inMeters / 1000 },
+});
+
+test("fitbitExerciseSessions keeps Fitbit's readable ExerciseSession records", () => {
+  const run = exercise("run", FITBIT_PACKAGE, "Morning run");
+
+  assert.deepEqual(
+    fitbitExerciseSessions([run, exercise("garmin", GARMIN), { ...run, exerciseType: "RUN" }]),
+    [run],
+  );
+});
+
+test("fitbitSession sums Fitbit's Distance inside the session, prorating records that straddle it", () => {
+  const distances = [
+    distance(RUN_START, "2026-11-10T12:10:00.000Z", 2000),
+    // Half of this record falls before the run starts.
+    distance("2026-11-10T11:55:00.000Z", "2026-11-10T12:05:00.000Z", 1000),
+    // An instant record inside counts whole; one at the end, or another app's, counts nothing.
+    distance("2026-11-10T12:20:00.000Z", "2026-11-10T12:20:00.000Z", 300),
+    distance(RUN_END, RUN_END, 999),
+    distance(RUN_START, RUN_END, 5000, GARMIN),
+  ];
+
+  const [run] = fitbitExerciseSessions([exercise("run", FITBIT_PACKAGE, "Morning run")]);
+
+  assert.ok(run);
+  assert.deepEqual(fitbitSession(run, distances), {
+    id: "run",
+    exerciseType: 56,
+    title: "Morning run",
+    startDate: "2026-11-10",
+    startTime: RUN_START,
+    endTime: RUN_END,
+    durationS: 1800,
+    distanceM: 2800,
+  });
+});
+
+test("fitbitSession gives a null distance when no Fitbit Distance falls inside, never 0", () => {
+  const outside = [
+    distance("2026-11-10T11:00:00.000Z", RUN_START, 500),
+    distance(RUN_END, "2026-11-10T13:00:00.000Z", 500),
+  ];
+
+  const [walk] = fitbitExerciseSessions([exercise("walk")]);
+
+  assert.ok(walk);
+  assert.equal(fitbitSession(walk, outside).distanceM, null);
+  assert.equal(fitbitSession(walk, []).title, null);
+  assert.equal(fitbitSession(walk, [distance(RUN_START, RUN_END, 0)]).distanceM, 0);
+});
+
+test("FitbitSessionUpload takes the sessions fitbitSession builds", () => {
+  const [run] = fitbitExerciseSessions([exercise("run")]);
+
+  assert.ok(run);
+  const upload = { from: "2026-11-01", sessions: [fitbitSession(run, [])] };
+
+  assert.deepEqual(FitbitSessionUpload.parse(upload), upload);
+  assert.equal(FitbitSessionUpload.safeParse({ ...upload, from: "Nov 1" }).success, false);
 });

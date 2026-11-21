@@ -62,10 +62,6 @@ export interface Env {
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
   GOOGLE_REFRESH_TOKEN?: string;
-  /** Google Health secrets, in their own Cloud project (#17); see lib/google-health.ts. */
-  GOOGLE_HEALTH_CLIENT_ID?: string;
-  GOOGLE_HEALTH_CLIENT_SECRET?: string;
-  GOOGLE_HEALTH_REFRESH_TOKEN?: string;
 }
 
 /** `Param` names the route's dynamic segments, e.g. "path" for [[path]]. */

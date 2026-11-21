@@ -173,3 +173,83 @@ export function fitbitThreshold(text: string) {
 
   return text.trim() !== "" && Number.isFinite(value) && value > 0 ? value : null;
 }
+
+/** Days of Fitbit sessions each upload re-sends, so a session the watch syncs late, or the owner edits or deletes, still lands. */
+export const FITBIT_SESSION_DAYS = 14;
+
+const ExerciseRecord = z.extend(Session, {
+  exerciseType: z.int(),
+  title: z.optional(z.string()),
+  metadata: z.object({ id: z.string(), dataOrigin: z.string() }),
+});
+
+export type FitbitExerciseRecord = z.infer<typeof ExerciseRecord>;
+
+const DistanceRecord = z.extend(Session, { distance: z.object({ inMeters: z.number() }) });
+
+type DistanceRecord = z.infer<typeof DistanceRecord>;
+
+const IsoDay = z.string().check(z.regex(/^\d{4}-\d{2}-\d{2}$/));
+
+const NonNegative = z.number().check(z.gte(0));
+
+/** A Fitbit session as the app uploads it and `fitbit_sessions` stores it; `distanceM` is null when Fitbit wrote no Distance during it. */
+const FitbitSession = z.object({
+  id: z.string().check(z.minLength(1)),
+  exerciseType: z.int(),
+  title: z.nullable(z.string()),
+  startDate: IsoDay,
+  startTime: Instant,
+  endTime: Instant,
+  durationS: NonNegative,
+  distanceM: z.nullable(NonNegative),
+});
+
+export type FitbitSession = z.infer<typeof FitbitSession>;
+
+/** One upload: every Fitbit session starting on `from` or later, so a stored one from `from` on that it leaves out is gone. */
+export const FitbitSessionUpload = z.object({ from: IsoDay, sessions: z.array(FitbitSession) });
+
+/** Fitbit's ExerciseSession records; other apps' are left out. */
+export const fitbitExerciseSessions = (records: readonly unknown[]) =>
+  fitbitRecords(ExerciseRecord, records);
+
+// Like Health Connect's own aggregates, a record that straddles the session's start or end counts only for its part inside.
+function shareInside(record: DistanceRecord, start: number, end: number) {
+  const recordStart = Date.parse(record.startTime);
+  const recordEnd = Date.parse(record.endTime);
+
+  if (recordEnd === recordStart) return recordStart >= start && recordStart < end ? 1 : 0;
+
+  return (
+    Math.max(0, Math.min(recordEnd, end) - Math.max(recordStart, start)) / (recordEnd - recordStart)
+  );
+}
+
+/** The session with the Fitbit Distance recorded during it; `distances` may hold other apps' records and ones around it. */
+export function fitbitSession(
+  session: FitbitExerciseRecord,
+  distances: readonly unknown[],
+): FitbitSession {
+  const start = Date.parse(session.startTime);
+  const end = Date.parse(session.endTime);
+
+  let distanceM: number | null = null;
+
+  for (const record of fitbitRecords(DistanceRecord, distances)) {
+    const share = shareInside(record, start, end);
+
+    if (share > 0) distanceM = (distanceM ?? 0) + record.distance.inMeters * share;
+  }
+
+  return {
+    id: session.metadata.id,
+    exerciseType: session.exerciseType,
+    title: session.title ?? null,
+    startDate: torontoDay(session.startTime),
+    startTime: session.startTime,
+    endTime: session.endTime,
+    durationS: (end - start) / 1000,
+    distanceM,
+  };
+}
