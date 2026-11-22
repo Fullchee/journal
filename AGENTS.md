@@ -72,41 +72,61 @@ After `/triage` or a plan, fan unblocked `ready-for-agent` issues out to paralle
 
 Put a lesson that only applies to one folder (`worker`, `modules/journal-android`) in that folder's `AGENTS.md`.
 
-- On the wayfinder map, decide grilling and prototype tickets yourself and record the reasons; the owner gives feedback by installing the app, not per ticket.
-- Expo's typed-route types (`.expo/types`, `expo-env.d.ts`) come from the `postinstall`; never write `expo-env.d.ts` by hand, or `Href` is `string` on one machine and a route union on another.
+### Product and issues
+
 - Design features for zero routine input: a default plus one optional tap, never a weekly entry. The owner rejected a weekly attendance entry (#126, 2026-11-11).
-- Find a package's files with `require.resolve`, never a hard-coded `node_modules` path: the linker decides where packages live (the pnpm-to-bun switch broke `jest/lucide-react-native.cjs`).
-- The owner is the only user, so telemetry keeps every debugging detail (breadcrumbs, console logs, PII) instead of scrubbing it (#129, 2026-11-11).
-- When `oxfmt --check` passes on the Mac but fails in CI on a `className`, put the theme color classes (`bg-background`, `border-input`) first, as the rest of `src` does: CI's Tailwind sort treats them as unknown, the Mac run doesn't (2026-11-22).
-- Set TanStack Query `gcTime` to `Infinity`, never a long finite value: above about 24.8 days it overflows `setTimeout` and garbage-collects queries at once.
-- Close an issue once its work ships to `main`; never leave it open or label it `ready-for-human` for the owner to verify. The owner opens a new ticket for changes (2026-11-10).
-- Route tests that render `src/app` must mock `DataProvider` with a real `QueryClientProvider`: the root layout calls `useQueryClient()`.
-- Read the whole CI log, not the last error: the `fallow` step runs after a failed `test` step, so "Missing coverage/…json" means a Jest suite failed on the line above (2026-11-11).
-- Keep `metro.config.cjs`, `babel.config.cjs` and `fingerprint.config.cjs` as CommonJS, named `.cjs` because `package.json` sets `"type": "module"`: Expo pins Metro 0.87.1 while Sentry pulls in 0.87.3, so a typed Metro config needs casts at each wrapper; fingerprint loads only `.js` and `.cjs` (2026-11-13). `jest/lucide-react-native.cjs` stays CommonJS too: it defines one lazy getter per icon on `exports`, which ESM can't declare. Config plugins are TypeScript: Expo loads `.ts` plugins directly.
-- Oxlint is the only linter. It runs unicorn, sonarjs, regexp, jest, slop, `@eslint-react` and expo (built-in rules, or the ESLint plugin via `jsPlugins`; `unicorn-js/*` and `jest-js/*` because Oxlint reserves those names), and typescript-eslint's type-aware rules through `oxlint-tsgolint`. JS plugins get no type information: a plugin rule that needs it either throws ("Error running JS plugin", which hides every other plugin finding in that file) or misfires, so leave it out. The recommended sets are copied, so a plugin update adds no rules on its own (2026-11-14).
-- Clear a tab screen's params with `useNavigation().setParams`; `router.setParams` targets the root route, so the tab keeps them.
-- Bun runs a dependency's install scripts only if `package.json` `trustedDependencies` lists it, and that list replaces bun's default one. After adding a dependency, run `bun pm untrusted` and trust each blocked script the package needs.
-- Mock `expo-crypto` in Jest tests that queue a Check-in: jest-expo's `randomUUID` returns `undefined`, which hides the queued row.
-- After a rebase through the `weave` merge driver, scan `git diff origin/main` for repeated lines: its auto-merges copy unchanged `interface` declarations and comments several times (#120). For a conflicted file both sides rewrote, take `origin/main`'s copy and re-apply your edits.
-- Read Access's OAuth endpoints from `https://fullchee.cloudflareaccess.com/.well-known/oauth-authorization-server`; the authorize path is `/oauth/authorization`, not `/oauth/authorize`.
+- On the wayfinder map, decide grilling and prototype tickets yourself and record the reasons; the owner gives feedback by installing the app, not per ticket.
+- Close an issue once its work ships to `main`; the owner opens a new ticket for changes, so skip `ready-for-human` for verification (2026-11-10).
+- The owner is the only user, so telemetry keeps every debugging detail (breadcrumbs, console logs, PII) (#129, 2026-11-11).
+
+### Git, worktrees and pushing
+
+- `git worktree add` runs `bun install --frozen-lockfile` through the `post-checkout` hook; its postinstall writes the gitignored `expo-env.d.ts`. If Jest says `Preset jest-expo not found` or typecheck fails on `global.css` imports, run that install.
+- For a docs or CI-only change, create the worktree with `LEFTHOOK=0 git worktree add …`: the install takes about 20s and makes `git worktree remove` take minutes. Before pushing it with `--no-verify`, run the main checkout's `node_modules/.bin/oxfmt` on the changed files: CI's `oxfmt --check` fails on unformatted Markdown and skips the deploy and its migrations (2026-11-16).
+- When a push is rejected after a green pre-push hook, another session pushed meanwhile: fetch, rebase your own commits, and push with `--no-verify` only if upstream's new commits touch none of your files.
+- The pre-push hook's `oxlint {push_files}` reports bogus `no-unsafe-*` errors on `scripts/*.ts`; when full `bunx oxlint` passes, push with `--no-verify` (2026-11-14).
+- After a rebase through the `weave` merge driver, scan `git diff origin/main` for repeated lines: its auto-merges copy unchanged `interface` declarations and comments (#120). For a conflicted file both sides rewrote, take `origin/main`'s copy and re-apply your edits.
 - After parallel agents push to `main`, run `bun run lint` and `bun run test` on the merged `main` before calling the work done: each agent checked only its own tree (2026-11-12).
-- Never add `--forceExit` to Jest: `MutationCache.clear()` leaves each mutation's 5-minute gc timer running, so `jest/setup.ts` gives TanStack unref'd timers; a hanging file means a new open handle (find it with `--detectOpenHandles`).
-- `tsc` is TypeScript 7 (`scripts/repo-config.test.ts` guards the `typescript` package's TS 6 alias).
-- Hermes here (260318099.0.5) has ES2023's `toReversed`, `toSpliced` and `with` but lacks `toSorted`; `src/lib/array-copy-methods.ts` adds it. Polyfill any other missing method there, or the native app crashes while Jest and web pass. Check a method with `grep -a <name>` on `libhermesvm.so` from the `hermes-android` AAR in `~/.gradle/caches` (2026-11-19).
-- Other sessions push while the pre-push hook runs; when the push is rejected after a green hook, fetch, rebase your own commits, and push with `--no-verify` only if upstream's new commits touch none of your files.
-- `git worktree add` runs `bun install --frozen-lockfile` through the `post-checkout` hook, and its postinstall writes the gitignored `expo-env.d.ts`. If Jest says `Preset jest-expo not found` or typecheck fails on `global.css` imports, run that install.
-- Link Cloudflare Zero Trust pages under `https://dash.cloudflare.com/<account>/one/…` (Access apps: `/one/access-controls/apps`); the old `one.dash.cloudflare.com/<account>/access/apps` URL is an invalid page.
-- In a suite that calls `renderRouter(APP_DIR)`, add `beforeAll(() => preloadRoutes(APP_DIR))`: requiring every route inside the first test outlasts the 30s timeout on a loaded machine, and the suite's later tests then fail on overlapping `act()` calls.
-- For a docs or CI-only change, create the worktree with `LEFTHOOK=0 git worktree add …`: the post-checkout `bun install` takes about 20s and makes `git worktree remove` take minutes. That worktree has no `node_modules`, so before pushing it with `--no-verify`, run the main checkout's `node_modules/.bin/oxfmt` on the changed files: CI's `oxfmt --check` fails on unformatted Markdown and skips the deploy and its migrations (2026-11-16).
-- Map `lucide-react-native` in Jest to `jest/lucide-react-native.cjs`, never its CJS entry: the entry requires all ~4,600 icon files, a third of a run's file reads, and each read is slow under on-access antivirus scanning.
-- Jest measures a never-imported file only if it sits under the config's `roots`; the old `packages/core` set `roots` to its tests, so an untested file there passed the 100% gate unseen (2026-11-13).
-- On the emulator, the debug build loads its bundle from the host's port 8081 (`10.0.2.2`) and ignores `adb reverse`, so a second Metro must take 8081 itself; `bun run e2e` refuses to start if 8081 is busy.
-- In tests, build "N days ago" as `shiftDay(torontoDay(new Date()), -N)` and an instant as `isoAt(day, minutes)` or with a `-05:00` offset, never from local Date fields: app Jest runs in the machine's zone (UTC in CI), so a local date lands on another Toronto Day for five hours a day (calendar module, 2026-11-10).
-- Managed OAuth is set per Access app: before pointing Android at a new origin, request the authorize URL with `resource=<origin>`; `invalid_target` means that app has it off (the workers.dev app did, 2026-11-08).
-- The pre-push hook's `oxlint {push_files}` reports bogus `no-unsafe-*` errors on `scripts/*.ts` that full `bunx oxlint` does not; when the full run passes, push with `--no-verify` (2026-11-14).
-- Run the app on Android with `bunx expo run:android`; `expo start` opens the installed dev build, which throws "Cannot find native module" for native code added since that build (2026-11-13).
-- Start Metro without `CI=1` when you will edit code: CI mode turns off its file watcher, so it serves the old bundle until restarted (verified 2026-11-09; watchman is not needed).
-- An `eas update` keeps `expo.version`, so `cacheVersion` also keys the persisted cache on `Updates.updateId`; without it, a field added to an API row reaches the app while the restored cache still lacks it (2026-11-09).
+- Read the whole CI log, not the last error: `fallow` runs after a failed `test` step, so "Missing coverage/…json" means a Jest suite failed on the line above (2026-11-11).
+
+### Tooling and config
+
+- Oxlint is the only linter: unicorn, sonarjs, regexp, jest, slop, `@eslint-react` and expo, plus typescript-eslint's type-aware rules through `oxlint-tsgolint`. Name ESLint-plugin copies `unicorn-js/*` and `jest-js/*`, since Oxlint reserves those names. Leave out JS-plugin rules that need type information: they throw ("Error running JS plugin", hiding every other finding in that file) or misfire. The recommended sets are copied, so a plugin update adds no rules (2026-11-14).
+- When `oxfmt --check` passes on the Mac but fails in CI on a `className`, put the theme color classes (`bg-background`, `border-input`) first: CI's Tailwind sort treats them as unknown (2026-11-22).
+- `tsc` is TypeScript 7 from `@typescript/native`; the `typescript` package stays the TS 6 alias typescript-eslint needs (`scripts/repo-config.test.ts` guards it).
+- Expo's typed-route types (`.expo/types`, `expo-env.d.ts`) come from the `postinstall`; never write `expo-env.d.ts` by hand, or `Href` is `string` on one machine and a route union on another.
+- Keep `metro.config.cjs`, `babel.config.cjs` and `fingerprint.config.cjs` as CommonJS: a typed Metro config needs casts (Expo pins Metro 0.87.1, Sentry pulls 0.87.3), and fingerprint loads only `.js` and `.cjs` (2026-11-13). `jest/lucide-react-native.cjs` stays CommonJS for its lazy per-icon getters on `exports`. Write config plugins in TypeScript.
+- Bun runs a dependency's install scripts only if `trustedDependencies` lists it, and that list replaces bun's default. After adding a dependency, run `bun pm untrusted` and trust each blocked script the package needs.
+- Find a package's files with `require.resolve`, never a hard-coded `node_modules` path: the linker decides where packages live (the pnpm-to-bun switch broke `jest/lucide-react-native.cjs`).
 - Set `compatibility_date` in `wrangler.jsonc` no later than the installed workerd supports, or `wrangler dev` refuses to start; bun's `minimumReleaseAge` can block the newest wrangler.
-- In component tests, mock a data hook with a `mock`-prefixed state object read inside `jest.mock`, never `jest.mocked(…).mockReturnValue(… as unknown as …)`: anti-slop rejects chained casts.
+
+### Jest
+
+- Never add `--forceExit`: `jest/setup.ts` gives TanStack unref'd timers, so a hanging file means a new open handle (find it with `--detectOpenHandles`).
+- Jest measures a never-imported file only under the config's `roots`; keep `roots` wide enough to hold every source file, or an untested file passes the 100% gate unseen (2026-11-13).
+- Map `lucide-react-native` to `jest/lucide-react-native.cjs`, never its CJS entry: the entry requires all ~4,600 icon files, slow under on-access antivirus scanning.
+- In a suite that calls `renderRouter(APP_DIR)`, add `beforeAll(() => preloadRoutes(APP_DIR))`: loading every route in the first test outlasts the 30s timeout, and later tests fail on overlapping `act()` calls.
+- Route tests that render `src/app` must mock `DataProvider` with a real `QueryClientProvider`: the root layout calls `useQueryClient()`.
 - To cover a screen's offline, error and loading branches, give the test a fresh `QueryClient` with `retry: false`, hold loading with `pendingApi()` or `Promise.withResolvers`, and drop the connection with `act(() => setOnline(false))`.
+- Mock a data hook with a `mock`-prefixed state object read inside `jest.mock`, not `jest.mocked(…).mockReturnValue(… as unknown as …)`: anti-slop rejects chained casts.
+- Mock `expo-crypto` in tests that queue a Check-in: jest-expo's `randomUUID` returns `undefined`, which hides the queued row.
+- Build "N days ago" as `shiftDay(torontoDay(new Date()), -N)` and an instant as `isoAt(day, minutes)` or with a `-05:00` offset, never from local Date fields: Jest runs in the machine's zone (UTC in CI), so a local date lands on another Toronto Day five hours a day (2026-11-10).
+
+### App runtime
+
+- Set TanStack Query `gcTime` to `Infinity`, never a long finite value: above about 24.8 days it overflows `setTimeout` and garbage-collects queries at once.
+- `cacheVersion` keys the persisted cache on `Updates.updateId` too: an `eas update` keeps `expo.version`, so a new API field would otherwise meet a restored cache that lacks it (2026-11-09).
+- Hermes here (260318099.0.5) lacks `toSorted`; `src/lib/array-copy-methods.ts` adds it. Polyfill any other missing method there, or the native app crashes while Jest and web pass. Check a method with `grep -a <name>` on `libhermesvm.so` from the `hermes-android` AAR in `~/.gradle/caches` (2026-11-19).
+- Clear a tab screen's params with `useNavigation().setParams`; `router.setParams` targets the root route, so the tab keeps them.
+
+### Running on Android
+
+- Run the app with `bunx expo run:android`; `expo start` opens the installed dev build, which throws "Cannot find native module" for native code added since that build (2026-11-13).
+- Start Metro without `CI=1` when you will edit code: CI mode turns off its file watcher (2026-11-09).
+- On the emulator, the debug build loads its bundle from the host's port 8081 (`10.0.2.2`) and ignores `adb reverse`, so a second Metro must take 8081 itself; `bun run e2e` refuses to start if 8081 is busy.
+
+### Cloudflare Access
+
+- Read Access's OAuth endpoints from `https://fullchee.cloudflareaccess.com/.well-known/oauth-authorization-server`; the authorize path is `/oauth/authorization`.
+- Managed OAuth is set per Access app: before pointing Android at a new origin, request the authorize URL with `resource=<origin>`; `invalid_target` means that app has it off (2026-11-08).
+- Link Zero Trust pages under `https://dash.cloudflare.com/<account>/one/…` (Access apps: `/one/access-controls/apps`); the old `one.dash.cloudflare.com` URLs are invalid.
