@@ -19,7 +19,7 @@
     "fallow:changed": "fallow --quiet --fail-on-issues --changed-since origin/main",
     "secrets:scan": "uv tool run --from detect-secrets==1.5.0 detect-secrets scan --baseline .secrets.baseline",
     "start": "expo start",
-    "web": "expo start --web",
+    "web": "scripts/web-preview.sh",
     "android:emulator": "expo run:android",
     "android:phone": "expo run:android --device",
     "android:apk": "scripts/build-apk.sh",

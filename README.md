@@ -32,7 +32,7 @@ Steps only the owner can do (Cloudflare Access, tokens, secrets, Google Calendar
 
 | Target           | Script                      | Does                                                                                                  |
 | ---------------- | --------------------------- | ----------------------------------------------------------------------------------------------------- |
-| Web              | `bun run web`               | Start Metro and open the website in the browser                                                       |
+| Web              | `bun run web`               | Serve the website on seeded local data (a local Worker and SQLite); prints the URL                    |
 | Start emulator   | `bun run emulator`          | Start the `android-36-with-play-store` emulator in the background (`scripts/setup.sh` creates it)     |
 | Android emulator | `bun run android:emulator`  | Build and install the dev build on the running emulator or a plugged-in phone, then start Metro       |
 | Android phone    | `bun run android:phone`     | Pick a connected phone, build and install the dev build                                               |

@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import type { Json } from "@worker/lib/env";
 import { REQUEST_BUDGET, SCAN_EVERY_MS, syncHevy } from "@worker/lib/hevy-sync";
-import worker, { HEVY_SYNC_CRON } from "@worker/index";
+import { HEVY_SYNC_CRON } from "@worker/lib/crons";
+import worker from "@worker/index";
 import { makeD1 } from "./helpers/d1";
 import { makeEnv } from "./helpers/env";
 import { sentText, urlOf } from "./helpers/fetch";
