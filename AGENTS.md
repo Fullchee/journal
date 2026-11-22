@@ -77,6 +77,7 @@ Put a lesson that only applies to one folder (`worker`, `modules/journal-android
 - Design features for zero routine input: a default plus one optional tap, never a weekly entry. The owner rejected a weekly attendance entry (#126, 2026-11-11).
 - Find a package's files with `require.resolve`, never a hard-coded `node_modules` path: the linker decides where packages live (the pnpm-to-bun switch broke `jest/lucide-react-native.cjs`).
 - The owner is the only user, so telemetry keeps every debugging detail (breadcrumbs, console logs, PII) instead of scrubbing it (#129, 2026-11-11).
+- When `oxfmt --check` passes on the Mac but fails in CI on a `className`, put the theme color classes (`bg-background`, `border-input`) first, as the rest of `src` does: CI's Tailwind sort treats them as unknown, the Mac run doesn't (2026-11-22).
 - Set TanStack Query `gcTime` to `Infinity`, never a long finite value: above about 24.8 days it overflows `setTimeout` and garbage-collects queries at once.
 - Close an issue once its work ships to `main`; never leave it open or label it `ready-for-human` for the owner to verify. The owner opens a new ticket for changes (2026-11-10).
 - Route tests that render `src/app` must mock `DataProvider` with a real `QueryClientProvider`: the root layout calls `useQueryClient()`.
