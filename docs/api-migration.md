@@ -1,6 +1,6 @@
 # API migration (#38)
 
-The API from `journal/functions` now lives in `worker/`, with its tests and D1 migrations. The `journal` Worker (`journal.fullchee.workers.dev`) serves `/api/*` for web and Android. Both it and `journal`'s Pages API (`fullchee-dashboard.pages.dev`) share one D1 database.
+The API from `journal/functions` now lives in `worker/`, with its tests and D1 migrations. The `journal` Worker (`journal.fullchee.workers.dev`) serves `/api/*` for web and Android. `journal`'s Pages API (`fullchee-dashboard.pages.dev`) is deleted.
 
 Source: `journal@077ddae`. Android has moved over, so this repo owns the API and its migrations.
 
@@ -55,16 +55,14 @@ Once Android loads Today from the Worker:
 2. Done: the backups moved (step 7).
 3. Done: the Maestro API (`.maestro/api/start.sh`) serves `worker` with `wrangler dev`.
 4. Done: Google OAuth Branding links `journal.fullchee.workers.dev` for the home page, privacy and terms.
-5. Delete `journal`'s `functions/` and migrations, then the `fullchee-dashboard` Pages project. Remove the pages.dev hostname from the `fullchee-dashboard` Access app; keep the app, which guards the Worker.
+5. Done (2026-11-22): `journal`'s `functions/` and migrations and the `fullchee-dashboard` Pages project are deleted. Left: remove the pages.dev hostname from the `fullchee-dashboard` Access app; keep the app, which guards the Worker.
 
 ## Archiving `journal`
 
-`journal` is now the GitHub repo `Fullchee/journal-2026-11-svelte`. Archive it only when every row below is done: archiving stops all of its workflows.
+`journal` is now the GitHub repo `Fullchee/journal-2026-11-svelte`, archived on 2026-11-22 with every workflow below off.
 
 | `journal` workflow     | Status                                           |
 | ---------------------- | ------------------------------------------------ |
 | `backup-d1.yml`        | Done: moved to a private repo, old copy disabled |
 | `garmin-sleep.yml`     | Dropped (#135): disabled                         |
 | `cleanup-branches.yml` | Dropped: disabled                                |
-
-Before archiving, run `gh workflow list -R Fullchee/journal-2026-11-svelte` and check that the table has a row for every workflow it lists.
