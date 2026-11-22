@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Build a standalone release APK (JS bundled in, no Metro) from the current code.
-# --install puts it on the USB-connected phone; otherwise it opens the Drive upload folder and reveals the APK in Finder.
+# --install puts it on the USB-connected phone; otherwise it publishes the APK as the latest GitHub release.
 set -euo pipefail
 
 install_on_phone=false
@@ -11,7 +11,20 @@ fi
 
 cd "$(dirname "$0")/.."
 
-DRIVE_URL="https://drive.google.com/drive/u/0/folders/1uIDzHTp9rQKAxHKFArRUaK1xQXI7RNLO"
+# Without the owner's key, Gradle falls back to the public debug key, which anyone could use to sign an APK that installs over this one.
+if [[ -z "${JOURNAL_KEYSTORE_PATH:-}" || -z "${JOURNAL_KEYSTORE_PASSWORD:-}" ]]; then
+	echo "JOURNAL_KEYSTORE_PATH and JOURNAL_KEYSTORE_PASSWORD are unset: run scripts/setup-release-keystore.sh." >&2
+	exit 1
+fi
+
+# The release tags HEAD, so GitHub must have the commit; check before the long build.
+commit="$(git rev-parse HEAD)"
+if [[ $install_on_phone == false && -z "$(git branch -r --contains "$commit")" ]]; then
+	echo "Push $commit before building: the GitHub release tags it." >&2
+	exit 1
+fi
+
+REPO="Fullchee/journal"
 BUILT="android/app/build/outputs/apk/release/app-release.apk"
 APK="android/app/build/outputs/apk/release/journal.apk"
 
@@ -54,7 +67,10 @@ cp "$BUILT" "$APK"
 if [[ $install_on_phone == true ]]; then
 	adb -d install -r "$APK"
 else
-	open "$DRIVE_URL"
-	open -R "$APK"
-	echo "Built $APK. Upload it to the Drive folder, then install it from Drive on the phone."
+	tag="apk-$(date +%Y%m%d-%H%M)-$(git rev-parse --short HEAD)"
+	# The active gh account is the work one; the repo belongs to the personal account.
+	GH_TOKEN="$(gh auth token --user Fullchee)" gh release create "$tag" "$APK" \
+		--repo "$REPO" --target "$commit" --title "$tag" --latest \
+		--notes "Release APK for $commit. Later JS changes arrive as EAS updates."
+	echo "Published $tag. On the phone, open https://github.com/$REPO/releases/latest/download/journal.apk"
 fi

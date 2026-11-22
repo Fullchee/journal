@@ -87,6 +87,7 @@
           ]
         }
       ],
+      "./plugins/release-signing.ts",
       "react-native-notify-kit",
       "./modules/journal-android/app.plugin.ts",
       "expo-image",
