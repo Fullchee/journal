@@ -55,7 +55,7 @@ Once Android loads Today from the Worker:
 2. Done: the backups moved (step 7).
 3. Done: the Maestro API (`.maestro/api/start.sh`) serves `worker` with `wrangler dev`.
 4. Done: Google OAuth Branding links `journal.fullchee.workers.dev` for the home page, privacy and terms.
-5. Done (2026-11-22): `journal`'s `functions/` and migrations and the `fullchee-dashboard` Pages project are deleted. Left: remove the pages.dev hostname from the `fullchee-dashboard` Access app; keep the app, which guards the Worker.
+5. Done (2026-11-22): `journal`'s `functions/` and migrations and the `fullchee-dashboard` Pages project are deleted, and the pages.dev hostname is off the `fullchee-dashboard` Access app, which still guards the Worker.
 
 ## Archiving `journal`
 
