@@ -8,7 +8,6 @@ import {
   signalPeriods,
   sleepRows,
   sleepSummary,
-  workoutRows,
   isoAt,
   type CheckIn,
 } from "@/core";
@@ -39,7 +38,6 @@ import {
   useCheckIns,
   useSleep,
   useUpdateCheckIn,
-  useWorkouts,
   type ShownCheckIn,
 } from "@/lib/data/check-ins";
 import { useHabitNames } from "@/lib/data/habits";
@@ -237,13 +235,11 @@ interface SignalSummariesProps {
 function SignalSummaries({ range, end, chart, inRange }: SignalSummariesProps) {
   const { data: sleep = [] } = useSleep();
   const { data: activity = [] } = useActivity();
-  const { data: workouts = [] } = useWorkouts();
   const nights = signalPeriods(sleep, range.days, chart);
   const sleepShown = sleepSummary(nights.current, nights.previous);
   const activityDays = signalPeriods(activity, range.days, chart);
   const before = range.before ?? "";
   const activityShown = activityRows(activityDays.current, activityDays.previous, before);
-  const workoutsDone = signalPeriods(workouts, range.days, chart).current;
   const period = periodName(range, end);
   // A Day's Check-ins share one night, so the Day range never fills two buckets and hides the card.
   const zoneRows = sleepZoneRows(inRange, sleep);
@@ -266,12 +262,6 @@ function SignalSummaries({ range, end, chart, inRange }: SignalSummariesProps) {
         <SignalSummary
           title={`Activity, ${period} (${activityDays.current.length} days)`}
           rows={activityShown}
-        />
-      )}
-      {workoutsDone.length > 0 && (
-        <SignalSummary
-          title={`Workouts, ${period} (${workoutsDone.length})`}
-          rows={workoutRows(workoutsDone)}
         />
       )}
     </>

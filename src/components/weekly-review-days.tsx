@@ -1,11 +1,4 @@
-import {
-  dayLabel,
-  hasEntries,
-  workoutDuration,
-  workoutType,
-  type BriefRow,
-  type WeekDay,
-} from "@/core";
+import { dayLabel, hasEntries, type BriefRow, type WeekDay } from "@/core";
 import { Text } from "@/ui";
 import { View } from "react-native";
 
@@ -35,18 +28,11 @@ const activityText = ({ steps, avgStress }: NonNullable<WeekDay["activity"]>) =>
     avgStress === null ? "" : `, stress ${avgStress}`,
   ].join("");
 
-const workoutText = ({ typeKey, durationS }: WeekDay["workouts"][number]) =>
-  [workoutType(typeKey), workoutDuration(durationS)].join(" ");
-
-const workoutsText = (workouts: WeekDay["workouts"]) =>
-  `Workouts: ${workouts.map((w) => workoutText(w)).join(", ")}`;
-
 function DayLines({ day }: { day: WeekDay }) {
   const lines = [
     ...day.checkIns.map((row) => checkInLine(row)),
     ...(day.sleep ? [sleepText(day.sleep)] : []),
     ...(day.activity ? [activityText(day.activity)] : []),
-    ...(day.workouts.length > 0 ? [workoutsText(day.workouts)] : []),
     ...(day.habits.length > 0 ? [`Habits: ${day.habits.join(", ")}`] : []),
   ];
 

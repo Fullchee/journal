@@ -35,7 +35,7 @@ Done: token, bindings, secrets, router, migrations in deploy, proxy removal, the
 5. **Migrations in deploy**: the `deploy` job runs `wrangler d1 migrations apply fullchee-dashboard --remote` before `wrangler deploy`. A migration `journal` already applied is skipped.
 6. **Proxy**: removed. `run_worker_first: ["/api/*"]` stays.
 7. **Backups**: a private repo runs the weekly backup and keeps the age-encrypted dumps; this public repo holds none. `journal`'s copy is off.
-   **Garmin**: removed (#135). The sleep, activity and workouts tables keep their past rows; nothing pushes new ones.
+   **Garmin**: removed (#135). The sleep and activity tables keep their past rows; nothing pushes new ones. It never sent a workout, so the `workouts` table is dropped.
 8. **Web check**: done; web signs in and loads from the Worker.
 9. **Android**: see below.
 

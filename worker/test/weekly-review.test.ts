@@ -49,10 +49,6 @@ async function seedWeek(env: Env) {
   );
   await seed(
     env,
-    "INSERT INTO workouts (activity_id, type_key, name, start_local, duration_s) VALUES (1, 'cycling', 'Ride', '2026-11-06 07:00:00', 2700), (2, 'running', 'Run', '2026-11-09 07:00:00', 1800)",
-  );
-  await seed(
-    env,
     "INSERT INTO habit_checks (date, habit, count) VALUES ('2026-11-05', 'sit', 1), ('2026-11-06', 'sit', -1), ('2026-11-09', 'sit', 1)",
   );
 }
@@ -62,16 +58,14 @@ interface FlatDay {
   checkIns: { note: string }[];
   sleep: unknown;
   activity: unknown;
-  workouts: { typeKey: string }[];
   habits: string[];
 }
 
 const flat = (days: FlatDay[]) =>
-  days.flatMap(({ day, checkIns, sleep, activity, workouts, habits }) => [
+  days.flatMap(({ day, checkIns, sleep, activity, habits }) => [
     ...checkIns.map((c) => `${day} check-in ${c.note}`),
     ...(sleep === null ? [] : [`${day} sleep`]),
     ...(activity === null ? [] : [`${day} activity`]),
-    ...workouts.map((w) => `${day} workout ${w.typeKey}`),
     ...habits.map((h) => `${day} habit ${h}`),
   ]);
 
@@ -101,7 +95,6 @@ test("it returns only that week's rows, by Toronto day, and the saved retro", as
     "2026-11-03 sleep",
     "2026-11-04 activity",
     "2026-11-05 habit Bedtime meditation (15 min)",
-    "2026-11-06 workout cycling",
     "2026-11-08 check-in late Sunday",
   ]);
   assert.equal(body.days.length, 7);
@@ -163,7 +156,7 @@ for (const [name, reply] of [
 
     assert.equal(res.status, 200);
     assert.equal(body.drafted, false);
-    assert.equal(flat(body.days).length, 5);
+    assert.equal(flat(body.days).length, 4);
     assert.match(
       body.draft,
       /## Directions[\s\S]*Anything this week the Check-ins didn't capture\?\n$/,

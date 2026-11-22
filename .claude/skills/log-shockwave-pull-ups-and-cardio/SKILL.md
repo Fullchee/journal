@@ -1,9 +1,9 @@
 ---
-name: log-workout
+name: log-shockwave-pull-ups-and-cardio
 description: Log the owner's pull-ups or cardio (run, walk, row, swim, bike, erg, stairs) as rows in the dragon boat Team challenge Google Sheet, typed in or synced from Fitbit and Hevy. Use when the owner reports a workout to record, e.g. "log 40 pullups", "ran 6.2k yesterday", or asks to sync Fitbit or Hevy to the sheet.
 ---
 
-# log-workout
+# log-shockwave-pull-ups-and-cardio
 
 Writes rows to the Team challenge sheet (see `GLOSSARY.md`) through the claude.ai Google Sheets connector (`mcp__claude_ai_Google_Sheets__*`). If its tools are missing, ask the owner to run `/mcp` and sign in to **claude.ai Google Sheets**.
 

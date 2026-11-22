@@ -1,4 +1,4 @@
-import type { ActivityRow, BriefSleepNight, CloseGoal, WorkoutRow } from "@/core";
+import type { ActivityRow, BriefSleepNight, CloseGoal } from "@/core";
 import { readCheckIns } from "@worker/lib/check-in-store";
 import type { Env } from "@worker/lib/env";
 import { readHabitsDone } from "@worker/lib/habits-done";
@@ -36,7 +36,7 @@ const isoAt = (day: string, plusMs: number) => new Date(Date.parse(day) + plusMs
 
 /** The signal rows from `from` to `to`, inclusive, read fresh from their own tables. */
 export async function readSignals(env: Env, from: string, to: string) {
-  const [checkIns, sleep, activity, workouts, habitsDone] = await Promise.all([
+  const [checkIns, sleep, activity, habitsDone] = await Promise.all([
     readCheckIns(
       env,
       "WHERE checked_in_at >= ? AND checked_in_at < ?",
@@ -53,13 +53,6 @@ export async function readSignals(env: Env, from: string, to: string) {
     )
       .bind(from, to)
       .all<ActivityRow>(),
-    env.DB.prepare(
-      `SELECT activity_id AS activityId, substr(start_local, 1, 10) AS date, start_local AS startLocal, type_key AS typeKey,
-        name, duration_s AS durationS, distance_m AS distanceM, avg_hr AS avgHr, calories
-      FROM workouts WHERE substr(start_local, 1, 10) BETWEEN ? AND ? ORDER BY start_local`,
-    )
-      .bind(from, to)
-      .all<WorkoutRow>(),
     readHabitsDone(env, from, to),
   ]);
 
@@ -67,7 +60,6 @@ export async function readSignals(env: Env, from: string, to: string) {
     checkIns,
     sleep: sleep.results,
     activity: activity.results,
-    workouts: workouts.results,
     habitsDone,
   };
 }

@@ -9,7 +9,6 @@ import { ZONES, type CheckIn } from "./check-in-view";
 import type { HabitDone } from "./habit-day";
 import { BriefRow, BriefSleepNight, briefRowOf, parseModelReply } from "./session-brief";
 import { habitLine } from "./session-brief-markdown";
-import { WorkoutRow } from "./workout-summary";
 
 const DAYS_PER_WEEK = 7;
 const THURSDAY = 3;
@@ -65,7 +64,6 @@ const WeekDay = z.object({
   checkIns: z.array(BriefRow),
   sleep: z.nullable(BriefSleepNight),
   activity: z.nullable(ActivityRow),
-  workouts: z.array(WorkoutRow),
   habits: z.array(z.string()),
 });
 
@@ -73,24 +71,19 @@ export type WeekDay = z.infer<typeof WeekDay>;
 
 /** Whether anything was logged on the day. */
 export const hasEntries = (day: WeekDay) =>
-  day.checkIns.length > 0 ||
-  day.sleep !== null ||
-  day.activity !== null ||
-  day.workouts.length > 0 ||
-  day.habits.length > 0;
+  day.checkIns.length > 0 || day.sleep !== null || day.activity !== null || day.habits.length > 0;
 
 export interface WeekInput {
   checkIns: CheckIn[];
   sleep: BriefSleepNight[];
   habitsDone: HabitDone[];
   activity: ActivityRow[];
-  workouts: WorkoutRow[];
 }
 
 /** Every day of the week, each with what happened on it in Toronto time; the caller may pass rows from either side. */
 export function groupByDay(
   week: string,
-  { checkIns, sleep, habitsDone, activity, workouts }: WeekInput,
+  { checkIns, sleep, habitsDone, activity }: WeekInput,
 ): WeekDay[] {
   const rows = checkIns
     .toSorted((a, b) => a.checkedInAt.localeCompare(b.checkedInAt))
@@ -101,7 +94,6 @@ export function groupByDay(
     checkIns: rows.filter((r) => r.day === day),
     sleep: sleep.find((n) => n.date === day) ?? null,
     activity: activity.find((a) => a.date === day) ?? null,
-    workouts: workouts.filter((w) => w.date === day),
     habits: habitsDone.filter((h) => h.date === day).map((h) => h.name),
   }));
 }

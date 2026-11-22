@@ -52,11 +52,7 @@ async function seedPillars(env: Env) {
   );
   await seed(
     env,
-    "INSERT INTO habit_durations (habit, date, start_time, minutes) VALUES ('lift', '2026-11-10', '07:00', 60), ('lift', '2026-11-10', '18:00', 30), ('walk', '2026-11-11', '07:00', 30)",
-  );
-  await seed(
-    env,
-    "INSERT INTO workouts (activity_id, type_key, name, start_local, duration_s) VALUES (1, 'strength_training', 'Lift', '2026-11-13 07:00:00', 2700), (2, 'cycling', 'Ride', '2026-11-14 07:00:00', 2700)",
+    "INSERT INTO habit_durations (habit, date, start_time, minutes) VALUES ('lift', '2026-11-10', '07:00', 60), ('lift', '2026-11-10', '18:00', 30), ('lift', '2026-11-13', '07:00', 45), ('walk', '2026-11-11', '07:00', 30)",
   );
   await seed(env, "INSERT INTO interactions (day, kind) VALUES ('2026-11-12', 'in-person')");
 }
@@ -82,7 +78,7 @@ test("GET scores each pillar Goal from the window's rows", async () => {
   );
 });
 
-test("GET counts only the watch's strength Days when no Habit logs Hevy", async () => {
+test("GET counts no strength Days when no Habit logs Hevy", async () => {
   const env = makeEnv();
   await seedPillars(env);
 
@@ -90,7 +86,7 @@ test("GET counts only the watch's strength Days when no Habit logs Hevy", async 
 
   assert.match(
     bars.find(({ pillar }) => pillar === "activity")?.value ?? "",
-    /1 of 2 strength days/,
+    /0 of 2 strength days/,
   );
 });
 

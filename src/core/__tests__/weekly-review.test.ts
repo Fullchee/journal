@@ -16,7 +16,6 @@ import {
   type WeekDay,
   type WeeklyGoal,
 } from "@/core/weekly-review";
-import type { WorkoutRow } from "@/core/workout-summary";
 
 const checkIn = (checkedInAt: string, extra: Partial<CheckIn> = {}): CheckIn => ({
   ...blankCheckIn(3, checkedInAt),
@@ -24,19 +23,7 @@ const checkIn = (checkedInAt: string, extra: Partial<CheckIn> = {}): CheckIn => 
   ...extra,
 });
 
-const EMPTY = { checkIns: [], sleep: [], habitsDone: [], activity: [], workouts: [] };
-
-const workout = (activityId: number, date: string): WorkoutRow => ({
-  activityId,
-  date,
-  startLocal: `${date} 07:00:00`,
-  typeKey: "cycling",
-  name: "Ride",
-  durationS: 2700,
-  distanceM: null,
-  avgHr: null,
-  calories: null,
-});
+const EMPTY = { checkIns: [], sleep: [], habitsDone: [], activity: [] };
 
 const GOALS: WeeklyGoal[] = [
   { title: "Move every day", why: "Energy for the kids", habits: ["Walk"] },
@@ -148,7 +135,6 @@ describe("groupByDay", () => {
   it("puts sleep, activity and habits under their day and drops other weeks", () => {
     const days = groupByDay("2026-W45", {
       checkIns: [],
-      workouts: [],
       sleep: [
         { date: "2026-11-03", durationMin: 420, sleepScore: 80 },
         { date: "2026-11-10", durationMin: 300, sleepScore: 50 },
@@ -177,21 +163,6 @@ describe("groupByDay", () => {
     assert.deepEqual(tuesday.habits, ["Walk"]);
     assert.equal(days.filter((d) => d.sleep !== null).length, 1);
     assert.equal(days.flatMap((d) => d.habits).length, 1);
-  });
-
-  it("puts each workout under the day it started", () => {
-    const days = groupByDay("2026-W45", {
-      ...EMPTY,
-      workouts: [workout(1, "2026-11-03"), workout(2, "2026-11-03"), workout(3, "2026-11-10")],
-    });
-
-    assert.deepEqual(
-      days.flatMap((d) => d.workouts.map((w) => [d.day, w.activityId])),
-      [
-        ["2026-11-03", 1],
-        ["2026-11-03", 2],
-      ],
-    );
   });
 
   it("lists Check-ins oldest first", () => {
@@ -237,12 +208,6 @@ describe("hasEntries", () => {
 
   it("is true for a day with only a Habit done", () => {
     assert.equal(hasEntries(monday({ habitsDone: [{ date: "2026-11-02", name: "Walk" }] })), true);
-  });
-
-  it("is true for a day with only a workout", () => {
-    const workouts = [workout(1, "2026-11-02")];
-
-    assert.equal(hasEntries(monday({ workouts })), true);
   });
 
   it("is true for a day with only sleep", () => {

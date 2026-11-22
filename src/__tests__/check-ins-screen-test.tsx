@@ -72,25 +72,13 @@ const activityDay = (days: number) => ({
   avgStress: null,
 });
 
-const workout = (activityId: number, days: number) => ({
-  activityId,
-  date: dayAgo(days),
-  startLocal: `${dayAgo(days)} 07:00:00`,
-  typeKey: "cycling",
-  name: "Ride",
-  durationS: 2700,
-  distanceM: null,
-  avgHr: null,
-  calories: null,
-});
-
 const CHECK_INS = [
   checkInDaysAgo(1, 0, { note: "Good walk" }),
   checkInDaysAgo(2, 3, { score: 2, zone: "Storm" }),
   checkInDaysAgo(3, 20, { place: "Gym" }),
 ];
 
-const checkInRoutes = (found: CheckIn[] = [], workouts = [workout(1, 2), workout(2, 40)]) => ({
+const checkInRoutes = (found: CheckIn[] = []) => ({
   // SAFETY: an edit is the only PATCH these tests make, and its body is a partial CheckIn.
   "PATCH /api/check-ins": ({ body }: ApiRequest) => ({
     ...CHECK_INS[0],
@@ -99,7 +87,6 @@ const checkInRoutes = (found: CheckIn[] = [], workouts = [workout(1, 2), workout
   "/api/check-ins": () => ({ checkIns: CHECK_INS }),
   "/api/sleep": () => ({ sleep: [night(1), night(2)] }),
   "/api/activity": () => ({ activity: [activityDay(1)] }),
-  "/api/workouts": () => ({ workouts }),
   "/api/search": () => ({ checkIns: found }),
 });
 
@@ -160,8 +147,6 @@ it("summarizes the sleep and activity Signals for the range", async () => {
 
   expect(await screen.findByText("Sleep, month (2 nights)")).toBeOnTheScreen();
   expect(screen.getByText("Activity, month (1 days)")).toBeOnTheScreen();
-  expect(screen.getByText("Workouts, month (1)")).toBeOnTheScreen();
-  expect(screen.getByText("1 workout, 45 min", { exact: false })).toBeOnTheScreen();
 });
 
 const shortNight = (days: number) => ({ ...night(days), durationMin: 300 });
@@ -213,14 +198,6 @@ describe("Sleep and the next day", () => {
     expect(await screen.findByText("Sleep, month (5 nights)")).toBeOnTheScreen();
     expect(screen.queryByText("Sleep and the next day", { exact: false })).not.toBeOnTheScreen();
   });
-});
-
-it("leaves out the Workouts summary when the period has none", async () => {
-  fakeApi(checkInRoutes([], [workout(2, 40)]));
-  await openCheckIns();
-
-  expect(await screen.findByText("Activity, month (1 days)")).toBeOnTheScreen();
-  expect(screen.queryByText("Workouts", { exact: false })).not.toBeOnTheScreen();
 });
 
 it("edits a detail in place", async () => {

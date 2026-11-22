@@ -76,8 +76,6 @@ export * from "./weekly-review";
 
 export * from "./period-close";
 
-export * from "./workout-summary";
-
 export * from "./doing-chips";
 
 export * from "./parts";

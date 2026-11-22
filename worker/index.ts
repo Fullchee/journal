@@ -42,7 +42,6 @@ import * as workRetros from "@worker/api/work/retros";
 import * as workTickets from "@worker/api/work/tickets";
 import * as workWeeklyNotes from "@worker/api/work/weekly-notes";
 import * as workWeeks from "@worker/api/work/weeks";
-import * as workouts from "@worker/api/workouts";
 import type { Env, PagesContext } from "@worker/lib/env";
 import { HEVY_SYNC_CRON } from "@worker/lib/crons";
 import { confirmYesterday } from "@worker/lib/evening-review";
@@ -147,7 +146,6 @@ const ROUTES: Route[] = [
   { pattern: /^\/api\/work\/tickets$/, module: workTickets },
   { pattern: /^\/api\/work\/weekly-notes$/, module: workWeeklyNotes },
   { pattern: /^\/api\/work\/weeks$/, module: workWeeks },
-  { pattern: /^\/api\/workouts$/, module: workouts },
 ];
 
 const handlerName = (method: string) =>

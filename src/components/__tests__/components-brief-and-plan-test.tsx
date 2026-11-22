@@ -97,7 +97,6 @@ const weekDay = (over: Partial<WeekDay>): WeekDay => ({
   checkIns: [],
   sleep: null,
   activity: null,
-  workouts: [],
   habits: [],
   ...over,
 });

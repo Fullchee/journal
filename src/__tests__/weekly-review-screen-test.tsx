@@ -49,7 +49,6 @@ const day = (date: string, fields: Partial<WeekDay> = {}): WeekDay => ({
   checkIns: [],
   sleep: null,
   activity: null,
-  workouts: [],
   habits: [],
   ...fields,
 });
@@ -70,19 +69,6 @@ const DAYS: WeekDay[] = [
       restingHr: null,
       avgStress: 30,
     },
-    workouts: [
-      {
-        activityId: 1,
-        date: "2026-11-05",
-        startLocal: "2026-11-05 07:00:00",
-        typeKey: "road_biking",
-        name: "Ride",
-        durationS: 2700,
-        distanceM: null,
-        avgHr: null,
-        calories: null,
-      },
-    ],
   }),
   day("2026-11-06"),
   day("2026-11-07"),
@@ -154,7 +140,6 @@ it("lists the week by Toronto day, hiding empty days", async () => {
   expect(screen.getByText("23:30 Rain (3) · Home, Reading · “tired”")).toBeOnTheScreen();
   expect(screen.getByText("Sleep: 7.0h, sleep score 80")).toBeOnTheScreen();
   expect(screen.getByText("Activity: 9,000 steps, stress 30")).toBeOnTheScreen();
-  expect(screen.getByText("Workouts: Road biking 45 min")).toBeOnTheScreen();
   expect(screen.getByText("Habits: Walk")).toBeOnTheScreen();
   expect(screen.queryByText("Mon Nov 2")).toBeNull();
   expect(screen.getByLabelText("Retro")).toHaveDisplayValue(DRAFT);

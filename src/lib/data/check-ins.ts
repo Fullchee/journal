@@ -16,7 +16,6 @@ import {
   inControlName,
   torontoTime,
   zoneOf,
-  WorkoutRow,
 } from "@/core";
 
 import { apiFetch } from "@/lib/api/api-fetch";
@@ -336,22 +335,6 @@ const activityQuery = queryOptions({
 export const useSleep = () => useQuery(sleepQuery);
 
 export const useActivity = () => useQuery(activityQuery);
-
-const workoutsQuery = queryOptions({
-  queryKey: ["workouts"],
-  queryFn: async ({ signal }) => {
-    const { workouts } = await apiFetch(
-      "/api/workouts",
-      { signal },
-      z.object({ workouts: z.array(WorkoutRow) }),
-    );
-
-    return workouts;
-  },
-  meta: { persist: true },
-});
-
-export const useWorkouts = () => useQuery(workoutsQuery);
 
 /** Online only: searching cached Check-ins would miss text the server matches. */
 export const useCheckInSearch = (q: string) =>
