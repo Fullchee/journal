@@ -87,18 +87,21 @@ export function HistorySummary({
   );
 }
 
-const periodLines = (history: HabitHistory) =>
-  history.kind === "bad"
-    ? history.periods.map(({ start, label, logged }) => ({
-        start,
-        label,
-        value: loggedLabel(logged),
-      }))
-    : history.periods.map(({ start, label, mark }) => ({
-        start,
-        label,
-        value: HISTORY_MARK_LABELS[mark],
-      }));
+function periodLines(history: HabitHistory) {
+  if (history.kind === "bad") {
+    return history.periods.map(({ start, label, logged }) => ({
+      start,
+      label,
+      value: loggedLabel(logged),
+    }));
+  }
+
+  return history.periods.map(({ start, label, mark }) => ({
+    start,
+    label,
+    value: HISTORY_MARK_LABELS[mark],
+  }));
+}
 
 /** Every period since the start date, newest first. */
 export function HistoryList({ history, limit }: { history: HabitHistory; limit: number }) {
