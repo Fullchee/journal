@@ -26,6 +26,8 @@ jest.mock("@tanstack/react-query-persist-client", () => ({
 const mockOnForegroundEvent = jest.spyOn(notifee, "onForegroundEvent");
 const mockOnBackgroundEvent = jest.spyOn(notifee, "onBackgroundEvent");
 const mockCancelDisplayed = jest.spyOn(notifee, "cancelDisplayedNotification");
+const mockCancelTrigger = jest.spyOn(notifee, "cancelTriggerNotification");
+const mockCreateTrigger = jest.spyOn(notifee, "createTriggerNotification");
 
 const press = (action: string, type = EventType.ACTION_PRESS): Event => ({
   type,
@@ -80,6 +82,54 @@ test("Done on a notification marks today done and clears the notification", asyn
     ]),
   );
   expect(mockCancelDisplayed).toHaveBeenCalledWith("42");
+});
+
+test.each(["done", "skip"])(
+  "%s on a notification stops a postponed reminder of that Habit",
+  async (action) => {
+    fakeApi();
+    await mountIn(createQueryClient());
+
+    await act(() => foregroundHandler()(press(action)));
+
+    expect(mockCancelTrigger).toHaveBeenCalledWith("postponed-walk");
+  },
+);
+
+const ringing = {
+  id: "42",
+  title: "Walk",
+  data: { habit: "walk", habitId: "walk" },
+  android: { channelId: "alarms-sound", loopSound: true },
+};
+
+const postpone = (): Event => ({
+  type: EventType.ACTION_PRESS,
+  detail: { pressAction: { id: "postpone" }, notification: ringing },
+});
+
+test("Postpone shows the same reminder again in 10 minutes and logs nothing", async () => {
+  const api = fakeApi();
+  await mountIn(createQueryClient());
+  const now = Date.now();
+
+  await act(() => foregroundHandler()(postpone()));
+
+  expect(mockCreateTrigger).toHaveBeenCalledWith(
+    { ...ringing, id: "postponed-walk" },
+    expect.objectContaining({ timestamp: now + 10 * 60_000 }),
+  );
+  expect(mockCancelDisplayed).toHaveBeenCalledWith("42");
+  expect(api.writes).toEqual([]);
+});
+
+test("with the app closed, Postpone needs no stored queue", async () => {
+  fakeApi();
+
+  await backgroundHandler()(postpone());
+
+  expect(mockCreateTrigger).toHaveBeenCalledTimes(1);
+  expect(persistQueryClientRestore).not.toHaveBeenCalled();
 });
 
 test("Skip records an outside Skip for today", async () => {

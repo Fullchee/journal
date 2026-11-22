@@ -14,13 +14,17 @@ import notifee, {
 import {
   CHANNEL,
   CHECK_IN_PROMPT_IDS,
+  isLoggedToday,
   reschedulePlan,
   type AlarmAction,
   type AlarmSchedule,
+  type Habit,
   type PlannedNotification,
+  type TodayRecords,
 } from "@/core";
 
 import { useAlarmSound } from "@/lib/alarms/alarm-sound";
+import { POSTPONE_ACTION, postponedId } from "@/lib/alarms/postponed";
 import { useSilencedAlarms } from "@/lib/alarms/silenced-alarms";
 import { connectionsQuery } from "@/lib/data/connections";
 import { useTodayHabits } from "@/lib/data/habits";
@@ -59,7 +63,9 @@ const ringing = (habitId: string): Partial<Notification> => ({
 // No launchActivity: a button runs in the background (`alarm-actions`) without opening the app.
 const buttons = (habitId: string, actions: AlarmAction[]): Partial<Notification> => ({
   data: { habit: habitId },
-  android: { actions: actions.map(({ id, title }) => ({ title, pressAction: { id } })) },
+  android: {
+    actions: [...actions.map(({ id, title }) => ({ title, pressAction: { id } })), POSTPONE_ACTION],
+  },
 });
 
 function toNotifyKit({ notification, trigger }: PlannedNotification, alarmChannel: string) {
@@ -100,7 +106,15 @@ function toNotifyKit({ notification, trigger }: PlannedNotification, alarmChanne
   return [shown, timestamp] as const;
 }
 
-async function applySchedule({ notifications, widgetAlarms }: AlarmSchedule) {
+/** A postponed reminder rings only while its Habit's Day is open: not logged, not silenced. */
+const postponedToKeep = (habits: Habit[], today: TodayRecords, now: Date) =>
+  habits.flatMap((habit) =>
+    today.silenced.includes(habit.id) || isLoggedToday(habit, today, now)
+      ? []
+      : [postponedId(habit.id)],
+  );
+
+async function applySchedule({ notifications, widgetAlarms }: AlarmSchedule, keep: string[]) {
   // The ask comes with the first Alarm or reminder the owner sets, when the reason is plain, not at first launch.
   // Inside the queue, so a Connections load landing mid-ask waits for the answer instead of asking again.
   if (notifications.length > 0) await askNotificationPermissionOnce();
@@ -110,7 +124,7 @@ async function applySchedule({ notifications, widgetAlarms }: AlarmSchedule) {
   // The Check-in prompt plans its own triggers from the Check-ins, so they stay.
   const triggerIds = await notifee.getTriggerNotificationIds();
   await notifee.cancelTriggerNotifications(
-    triggerIds.filter((id) => !CHECK_IN_PROMPT_IDS.includes(Number(id))),
+    triggerIds.filter((id) => !CHECK_IN_PROMPT_IDS.includes(Number(id)) && !keep.includes(id)),
   );
   await Promise.all(
     notifications.map((planned) =>
@@ -123,13 +137,13 @@ async function applySchedule({ notifications, widgetAlarms }: AlarmSchedule) {
 // One reschedule at a time, so a Connections load landing mid-way can't interleave with a Habits one.
 const queue = { latest: Promise.resolve() };
 
-async function applyAfter(previous: Promise<void>, schedule: AlarmSchedule) {
+async function applyAfter(previous: Promise<void>, schedule: AlarmSchedule, keep: string[]) {
   await Promise.allSettled([previous]);
-  await applySchedule(schedule);
+  await applySchedule(schedule, keep);
 }
 
-function reschedule(schedule: AlarmSchedule) {
-  queue.latest = applyAfter(queue.latest, schedule);
+function reschedule(schedule: AlarmSchedule, keep: string[]) {
+  queue.latest = applyAfter(queue.latest, schedule, keep);
 
   return queue.latest;
 }
@@ -147,12 +161,15 @@ export function useAlarmSchedule() {
   const silenced = useSilencedAlarms();
 
   useEffect(() => {
-    const schedule = reschedulePlan(habits?.habits, connections?.connections, new Date(), {
+    const now = new Date();
+    const today = { ...habits, silenced };
+
+    const schedule = reschedulePlan(habits?.habits, connections?.connections, now, {
       restPeriods,
-      today: { ...habits, silenced },
+      today,
     });
 
-    if (schedule) void reschedule(schedule);
+    if (schedule && habits) void reschedule(schedule, postponedToKeep(habits.habits, today, now));
     // A new sound means a new alarm channel, and every alarm must move onto it.
   }, [habits, connections, restPeriods, sound, silenced]);
 }

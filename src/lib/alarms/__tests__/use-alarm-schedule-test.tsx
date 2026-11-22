@@ -148,7 +148,7 @@ test("a persistent Habit stays on screen quietly, without looping or a ring scre
   expect(notification?.android).not.toHaveProperty("fullScreenAction");
 });
 
-test("a Habit's notification carries Done and Skip buttons that run in the background", async () => {
+test("a Habit's notification carries Done, Skip and Postpone buttons that run in the background", async () => {
   await mount({ habits: [habit()], connections: [priya] });
 
   await waitFor(() => expect(scheduled()).toHaveLength(2));
@@ -159,6 +159,7 @@ test("a Habit's notification carries Done and Skip buttons that run in the backg
   expect(alarm?.android?.actions).toEqual([
     { title: "Done", pressAction: { id: "done" } },
     { title: "Skip", pressAction: { id: "skip" } },
+    { title: "Postpone", pressAction: { id: "postpone" } },
   ]);
   expect(meetup?.android).not.toHaveProperty("actions");
 });
@@ -190,6 +191,43 @@ test("a reschedule keeps the Check-in prompt's triggers", async () => {
   await mount({ habits: [habit()], connections: [] });
 
   await waitFor(() => expect(mockCancelTriggerNotifications).toHaveBeenCalledWith(["7"]));
+});
+
+test("a reschedule keeps a postponed reminder while its Habit's Day is open", async () => {
+  jest
+    .spyOn(notifee, "getTriggerNotificationIds")
+    .mockResolvedValueOnce(["7", "postponed-out-of-bed", "postponed-gone"]);
+  await mount({ habits: [habit()], connections: [] });
+
+  await waitFor(() =>
+    expect(mockCancelTriggerNotifications).toHaveBeenCalledWith(["7", "postponed-gone"]),
+  );
+});
+
+test("a reschedule drops a postponed reminder once its Habit's Day is logged", async () => {
+  jest.spyOn(notifee, "getTriggerNotificationIds").mockResolvedValueOnce(["postponed-out-of-bed"]);
+  await mount({
+    habits: [habit()],
+    counts: { [torontoDay(new Date())]: { "out-of-bed": 1 } },
+    connections: [],
+  });
+
+  await waitFor(() =>
+    expect(mockCancelTriggerNotifications).toHaveBeenCalledWith(["postponed-out-of-bed"]),
+  );
+});
+
+test("silencing a Habit drops its postponed reminder", async () => {
+  await mount({ habits: [habit()], connections: [] });
+  await waitFor(() => expect(JournalAndroid.setAlarms).toHaveBeenCalled());
+  jest.spyOn(notifee, "getTriggerNotificationIds").mockResolvedValueOnce(["postponed-out-of-bed"]);
+
+  await act(() => toggleSilenced("out-of-bed"));
+
+  await waitFor(() =>
+    expect(mockCancelTriggerNotifications).toHaveBeenLastCalledWith(["postponed-out-of-bed"]),
+  );
+  await act(() => toggleSilenced("out-of-bed"));
 });
 
 test("a failed Habits load keeps the last schedule", async () => {

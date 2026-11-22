@@ -4,7 +4,13 @@ import {
   persistQueryClientSave,
 } from "@tanstack/react-query-persist-client";
 import { useEffect } from "react";
-import notifee, { EventType, type Event } from "react-native-notify-kit";
+import notifee, {
+  AlarmType,
+  EventType,
+  TriggerType,
+  type Event,
+  type Notification,
+} from "react-native-notify-kit";
 import * as z from "zod/mini";
 
 import { ALARM_ACTION_IDS, alarmActionCheck, torontoDay } from "@/core";
@@ -13,6 +19,7 @@ import { WRITE_DELAY_MS } from "@/lib/data/cache-persister";
 import { persistOptions } from "@/lib/data/data-provider";
 import { queueHabitCheck, storedCount } from "@/lib/data/habits";
 import { createQueryClient, resumeQueuedMutations } from "@/lib/data/query-client";
+import { POSTPONE_ACTION, POSTPONE_MS, postponedId } from "@/lib/alarms/postponed";
 
 /** A Done or Skip tap on a Habit notification; `use-alarm-schedule` puts the Habit's id in its `data`. */
 const HabitData = z.object({ habit: z.string() });
@@ -28,6 +35,43 @@ function pressedAction({ type, detail }: Event): PressedAction | null {
   if (type !== EventType.ACTION_PRESS) return null;
 
   return PressedAction.safeParse(detail).data ?? null;
+}
+
+const PostponePress = z.object({
+  pressAction: z.object({ id: z.literal(POSTPONE_ACTION.pressAction.id) }),
+  notification: z.object({ id: z.string(), data: HabitData }),
+});
+
+interface Postponed {
+  shown: Notification;
+  id: string;
+  habit: string;
+}
+
+function postponePress({ type, detail }: Event): Postponed | null {
+  if (type !== EventType.ACTION_PRESS || detail.notification === undefined) return null;
+  const pressed = PostponePress.safeParse(detail).data;
+
+  return pressed === undefined
+    ? null
+    : {
+        shown: detail.notification,
+        id: pressed.notification.id,
+        habit: pressed.notification.data.habit,
+      };
+}
+
+// The shown notification goes only once its copy is scheduled, so a failed schedule leaves the reminder up.
+async function postpone({ shown, id, habit }: Postponed) {
+  await notifee.createTriggerNotification(
+    { ...shown, id: postponedId(habit) },
+    {
+      type: TriggerType.TIMESTAMP,
+      timestamp: Date.now() + POSTPONE_MS,
+      alarmManager: { type: AlarmType.SET_ALARM_CLOCK },
+    },
+  );
+  await notifee.cancelDisplayedNotification(id);
 }
 
 // Offline, a check waits in the queue and its promise never settles, so a background task stops waiting after this.
@@ -74,6 +118,7 @@ async function runAction(client: QueryClient, { pressAction, notification }: Pre
   // Only the shown notification goes, once the check is queued: its trigger still rings on the next due day.
   // Cancelling stops a looping alarm.
   await notifee.cancelDisplayedNotification(notification.id);
+  await notifee.cancelTriggerNotification(postponedId(habit));
   await saved;
 }
 
@@ -108,15 +153,22 @@ async function runWithoutApp(pressed: PressedAction) {
   }
 }
 
-async function onBackgroundEvent(event: Event) {
+// Postpone logs nothing, so it needs no client.
+async function answer(event: Event, check: (pressed: PressedAction) => Promise<void>) {
+  const postponed = postponePress(event);
+
+  if (postponed !== null) return postpone(postponed);
   const pressed = pressedAction(event);
 
-  if (pressed === null) return;
-
-  await (app.client === null
-    ? runWithoutApp(pressed)
-    : settleWithinSaveWait(runAction(app.client, pressed)));
+  if (pressed !== null) await check(pressed);
 }
+
+const onBackgroundEvent = (event: Event) =>
+  answer(event, (pressed) =>
+    app.client === null
+      ? runWithoutApp(pressed)
+      : settleWithinSaveWait(runAction(app.client, pressed)),
+  );
 
 /** Call once at app start, outside React: Android runs a button tap with the app closed as a headless task. */
 export function registerAlarmActions() {
@@ -131,9 +183,7 @@ export function useAlarmActions() {
     app.client = client;
 
     const unsubscribe = notifee.onForegroundEvent((event) => {
-      const pressed = pressedAction(event);
-
-      if (pressed !== null) void runAction(client, pressed);
+      void answer(event, (pressed) => runAction(client, pressed));
     });
 
     return () => {
