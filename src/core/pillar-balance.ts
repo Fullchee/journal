@@ -133,8 +133,8 @@ export interface ActivityDay {
   vigorousMin: number | null;
 }
 
-// WHO counts a vigorous minute as two moderate ones. A day the watch measured neither is left out, not zero.
-const intensityOf = ({ moderateMin, vigorousMin }: ActivityDay) =>
+/** WHO counts a vigorous minute as two moderate ones. A day the watch measured neither is left out, not zero. */
+export const intensityOf = ({ moderateMin, vigorousMin }: ActivityDay) =>
   moderateMin === null && vigorousMin === null ? [] : [(moderateMin ?? 0) + 2 * (vigorousMin ?? 0)];
 
 function activityResult(activity: ActivityDay[], strengthDays: string[], { days }: Window): Result {

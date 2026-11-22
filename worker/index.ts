@@ -20,6 +20,9 @@ import * as me from "@worker/api/me";
 import * as notes from "@worker/api/notes";
 import * as parts from "@worker/api/parts";
 import * as pillars from "@worker/api/pillars";
+import * as targets from "@worker/api/targets";
+import * as goalTarget from "@worker/api/targets/goal";
+import * as targetReview from "@worker/api/targets/review";
 import * as planBlocks from "@worker/api/plan/blocks";
 import * as planBusy from "@worker/api/plan/busy";
 import * as planTasks from "@worker/api/plan/tasks";
@@ -130,6 +133,9 @@ const ROUTES: Route[] = [
   { pattern: /^\/api\/sleep$/, module: sleep },
   { pattern: /^\/api\/streaks$/, module: streaks },
   { pattern: /^\/api\/team-challenge$/, module: teamChallenge },
+  { pattern: /^\/api\/targets$/, module: targets },
+  { pattern: /^\/api\/targets\/(?<goalId>\d+)$/, module: goalTarget, params: named },
+  { pattern: /^\/api\/targets\/(?<goalId>\d+)\/review$/, module: targetReview, params: named },
   { pattern: /^\/api\/health-plan$/, module: healthPlan },
   { pattern: /^\/api\/weekly-review$/, module: weeklyReview },
   { pattern: /^\/api\/work\/days$/, module: workDays },

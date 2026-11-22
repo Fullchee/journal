@@ -16,6 +16,7 @@ import { useState } from "react";
 import { CountDaySheet } from "@/components/habits/count-day-sheet";
 import { HabitCalendar } from "@/components/habits/habit-calendar";
 import { HabitDayDetail, type DayDetail } from "@/components/habits/habit-day-detail";
+import { HabitTargets } from "@/components/goal-target";
 import { HistoryList, HistorySummary } from "@/components/habits/habit-history";
 import { Screen } from "@/components/screen";
 import {
@@ -126,6 +127,7 @@ function HistoryBody({ habit, body }: { habit: Habit; body: HabitsBody }) {
   return (
     <>
       <HistorySummary history={history} strength={habitStrength(habit, records, now)} />
+      <HabitTargets habitId={habit.id} />
       <BackfillCalendar habit={habit} records={records} today={torontoDay(now)} />
       <HistoryList history={history} limit={limit} />
       {history.periods.length > limit && (

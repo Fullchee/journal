@@ -5,6 +5,7 @@ import { useState } from "react";
 import { View } from "react-native";
 
 import { GoalForm } from "@/components/goal-form";
+import { GoalTargetSection } from "@/components/goal-target";
 import { EditButton, NoteBody, QueryView, SaveStatus } from "@/components/note-body";
 import { Screen, Section } from "@/components/screen";
 import { NavRow } from "@/components/nav-row";
@@ -62,7 +63,7 @@ function GoalFamily({ goal, goals }: { goal: Note; goals: NoteRow[] }) {
   );
 }
 
-// A Goal's body holds "what movement looks like" and its optional Signal, as prose.
+// A Goal's body holds "what movement looks like" as prose; its number lives in its Target.
 function GoalHeader({ goal, goals }: { goal: Note; goals: NoteRow[] }) {
   const save = useSaveGoal(String(goal.id));
   const [editing, setEditing] = useState(false);
@@ -114,6 +115,7 @@ function GoalSections({ goal }: { goal: Note }) {
     <>
       <GoalHeader goal={goal} goals={goals} />
       <GoalFamily goal={goal} goals={goals} />
+      <GoalTargetSection goalId={goal.id} />
       <LinkedHabits goalId={goal.id} />
     </>
   );

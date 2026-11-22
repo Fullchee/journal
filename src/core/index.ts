@@ -84,6 +84,8 @@ export * from "./parts";
 
 export * from "./pillar-balance";
 
+export * from "./goal-target";
+
 export * from "./celebration";
 
 export * from "./streak";

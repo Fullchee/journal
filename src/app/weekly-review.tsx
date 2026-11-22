@@ -20,6 +20,7 @@ import { PillarBars } from "@/components/pillar-bars";
 import { INPUT_CLASS } from "@/components/note-body";
 import { Screen, Section } from "@/components/screen";
 import { StatusText } from "@/components/status-text";
+import { WeekTargets } from "@/components/target-review";
 import { WeeklyReviewDays } from "@/components/weekly-review-days";
 import { useDiscardGuard } from "@/hooks/use-discard-guard";
 import { useKeyedDrafts } from "@/hooks/use-keyed-drafts";
@@ -190,6 +191,7 @@ function RetroForm({ review, refetch, typed, onType, onSaved }: RetroFormProps) 
         <WeeklyReviewDays days={review.days} />
       </Section>
       <PillarBars end={shiftDay(mondayOfWeek(week), 6)} />
+      <WeekTargets end={shiftDay(mondayOfWeek(week), 6)} />
       <Section title="Retro">
         {!review.drafted && (
           <Text variant="muted">The AI draft failed; write it yourself below.</Text>

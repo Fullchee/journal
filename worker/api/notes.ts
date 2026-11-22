@@ -316,6 +316,7 @@ export async function onRequestPut(context: NoteContext) {
 const DELETES: Record<keyof typeof TYPES, string[]> = {
   goals: [
     "DELETE FROM goal_habits WHERE goal_id = ?",
+    "DELETE FROM goal_targets WHERE goal_id = ?",
     "UPDATE goals SET parent_id = NULL WHERE parent_id = ?",
     "DELETE FROM goals WHERE id = ?",
   ],
