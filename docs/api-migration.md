@@ -2,7 +2,7 @@
 
 The API from `journal/functions` now lives in `worker/`, with its tests and D1 migrations. The `journal` Worker (`journal.fullchee.workers.dev`) serves `/api/*` for web and Android. Both it and `journal`'s Pages API (`fullchee-dashboard.pages.dev`) share one D1 database.
 
-Source: `journal@077ddae`. Until Android moves over, copy every `journal` API change or migration across.
+Source: `journal@077ddae`. Android has moved over, so this repo owns the API and its migrations.
 
 ## Layout
 
@@ -26,7 +26,7 @@ Pages Functions' bracketed file names became plain ones: `log/[id]/undo.ts` → 
 
 ## Switch-over steps
 
-Done: token, bindings, secrets, router, migrations in deploy, proxy removal, the web check and backups. Left: Android (9).
+Done: token, bindings, secrets, router, migrations in deploy, proxy removal, the web check, backups and Android.
 
 1. **Token**: `CLOUDFLARE_API_TOKEN` has "D1 Edit" and "Workers R2 Storage Edit" (the deploy job applies migrations).
 2. **Bindings**: `wrangler.jsonc` holds the D1, R2 and AI bindings and the vars copied from `journal/wrangler.toml`.
@@ -37,7 +37,7 @@ Done: token, bindings, secrets, router, migrations in deploy, proxy removal, the
 7. **Backups**: a private repo runs the weekly backup and keeps the age-encrypted dumps; this public repo holds none. `journal`'s copy is off.
    **Garmin**: removed (#135). The sleep and activity tables keep their past rows; nothing pushes new ones. It never sent a workout, so the `workouts` table is dropped.
 8. **Web check**: done; web signs in and loads from the Worker.
-9. **Android**: see below.
+9. **Android**: done; the phone signs in and loads Today from the Worker.
 
 ## Android
 
@@ -45,7 +45,7 @@ Done: token, bindings, secrets, router, migrations in deploy, proxy removal, the
 
 - **App side**: `PRODUCTION_ORIGIN` is the Worker. The refresh token is stored per API host, so a phone holding a pages.dev grant shows the sign-in screen once instead of retrying a refresh Access will never accept. JS-only: it ships as an EAS update, no new APK.
 - **Access check** (2026-11-08): the authorize URL with `resource=https://journal.fullchee.workers.dev` and the existing client id redirects to the login page, so no new client is needed.
-- **Phone check**: open the app twice (an update applies on the second launch), sign in, and load Today.
+- **Phone check** (2026-11-22): done; the app signs in and loads Today from the Worker.
 
 ## Retiring `journal`'s API
 
