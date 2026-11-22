@@ -61,10 +61,10 @@ Once Android loads Today from the Worker:
 
 `journal` is now the GitHub repo `Fullchee/journal-2026-11-svelte`. Archive it only when every row below is done: archiving stops all of its workflows.
 
-| `journal` workflow     | Status                                                  |
-| ---------------------- | ------------------------------------------------------- |
-| `backup-d1.yml`        | Done: moved to a private repo, old copy disabled        |
-| `garmin-sleep.yml`     | Dropped (#135): disable it                              |
-| `cleanup-branches.yml` | Not moved: the owner decides whether to move or drop it |
+| `journal` workflow     | Status                                           |
+| ---------------------- | ------------------------------------------------ |
+| `backup-d1.yml`        | Done: moved to a private repo, old copy disabled |
+| `garmin-sleep.yml`     | Dropped (#135): disabled                         |
+| `cleanup-branches.yml` | Dropped: disabled                                |
 
 Before archiving, run `gh workflow list -R Fullchee/journal-2026-11-svelte` and check that the table has a row for every workflow it lists.
