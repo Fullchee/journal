@@ -30,6 +30,7 @@ import * as sessionBriefWindow from "@worker/api/session-brief-window";
 import * as sleep from "@worker/api/sleep";
 import * as streaks from "@worker/api/streaks";
 import * as healthPlan from "@worker/api/health-plan";
+import * as teamChallenge from "@worker/api/team-challenge";
 import * as weeklyReview from "@worker/api/weekly-review";
 import * as workDays from "@worker/api/work/days";
 import * as workEstimates from "@worker/api/work/estimates";
@@ -128,6 +129,7 @@ const ROUTES: Route[] = [
   { pattern: /^\/api\/session-brief-window$/, module: sessionBriefWindow },
   { pattern: /^\/api\/sleep$/, module: sleep },
   { pattern: /^\/api\/streaks$/, module: streaks },
+  { pattern: /^\/api\/team-challenge$/, module: teamChallenge },
   { pattern: /^\/api\/health-plan$/, module: healthPlan },
   { pattern: /^\/api\/weekly-review$/, module: weeklyReview },
   { pattern: /^\/api\/work\/days$/, module: workDays },

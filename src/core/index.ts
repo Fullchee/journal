@@ -115,3 +115,5 @@ export * from "./work/weekly-note";
 export * from "./work/standup";
 
 export * from "./work/note-diff";
+
+export * from "./team-challenge";
