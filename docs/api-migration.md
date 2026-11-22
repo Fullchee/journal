@@ -54,7 +54,7 @@ Once Android loads Today from the Worker:
 1. Stop copying `journal` API changes and migrations here; this repo owns both.
 2. Done: the backups moved (step 7).
 3. Done: the Maestro API (`.maestro/api/start.sh`) serves `worker` with `wrangler dev`.
-4. Google OAuth Branding: replace the `fullchee-dashboard.pages.dev` home page and privacy links with `journal.fullchee.workers.dev` (`scripts/owner-gate.sh` flags this).
+4. Done: Google OAuth Branding links `journal.fullchee.workers.dev` for the home page, privacy and terms.
 5. Delete `journal`'s `functions/` and migrations, then the `fullchee-dashboard` Pages project. Remove the pages.dev hostname from the `fullchee-dashboard` Access app; keep the app, which guards the Worker.
 
 ## Archiving `journal`
