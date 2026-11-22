@@ -184,12 +184,18 @@ export function fitbitCardio(rows: FitbitSessionRow[]) {
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-// Hevy writes start_time in local time, e.g. "5 Nov 2026, 17:48".
-const HEVY_START = /^(\d{1,2}) ([A-Z][a-z]{2}) (\d{4}), \d{2}:\d{2}$/;
+// Hevy writes start_time in local time, in the phone's locale: "5 Nov 2026, 17:48" or "Nov 5, 2026, 5:48 PM".
+const HEVY_START_DAY_FIRST =
+  /^(?<day>\d{1,2}) (?<month>[A-Z][a-z]{2}) (?<year>\d{4}), \d{2}:\d{2}$/;
+
+const HEVY_START_MONTH_FIRST =
+  /^(?<month>[A-Z][a-z]{2}) (?<day>\d{1,2}), (?<year>\d{4}), \d{1,2}:\d{2} [AP]M$/;
 
 /** The Day of a Hevy start_time, or null when it isn't one. */
 function hevyDay(startTime: string) {
-  const [, day = "", month = "", year = ""] = HEVY_START.exec(startTime) ?? [];
+  const match = HEVY_START_DAY_FIRST.exec(startTime) ?? HEVY_START_MONTH_FIRST.exec(startTime);
+  const { day = "", month = "", year = "" } = match?.groups ?? {};
+
   const monthIndex = MONTHS.indexOf(month);
 
   return monthIndex === -1

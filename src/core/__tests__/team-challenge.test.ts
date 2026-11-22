@@ -336,6 +336,12 @@ describe("hevySets", () => {
     );
   });
 
+  test("reads a US-locale start_time", () => {
+    const [set] = sets(hevySet("Pull Up", { reps: "9", start: "Nov 19, 2026, 5:48 PM" }));
+
+    assert.equal(set?.day, "2026-11-19");
+  });
+
   test("an empty export has no sets", () => {
     assert.deepEqual(hevySets(""), []);
   });
