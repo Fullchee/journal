@@ -68,9 +68,10 @@ if [[ $install_on_phone == true ]]; then
 	adb -d install -r "$APK"
 else
 	tag="apk-$(date +%Y%m%d-%H%M)-$(git rev-parse --short HEAD)"
+	title="Journal for Android, $(date '+%B %-d, %Y at %-I:%M %p')"
 	# The active gh account is the work one; the repo belongs to the personal account.
 	GH_TOKEN="$(gh auth token --user Fullchee)" gh release create "$tag" "$APK" \
-		--repo "$REPO" --target "$commit" --title "$tag" --latest \
+		--repo "$REPO" --target "$commit" --title "$title" --latest \
 		--notes "Release APK for $commit. Later JS changes arrive as EAS updates."
 	echo "Published $tag. On the phone, open https://github.com/$REPO/releases/latest/download/journal.apk"
 fi
