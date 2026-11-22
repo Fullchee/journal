@@ -52,6 +52,9 @@ export function sentryOptions(
 
 /** The caller passes the DSN because the build inlines ENV.*, so a test can't set it. */
 export function initSentry(dsn: string | undefined) {
+  // Fast Refresh re-runs the root layout, and a second web replay instance throws.
+  if (Sentry.getClient() !== undefined) return;
+
   const options = sentryOptions(dsn, {
     platform: Platform.OS,
     isDev: __DEV__,

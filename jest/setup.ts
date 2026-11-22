@@ -14,6 +14,7 @@ jest.mock("react-native-notify-kit", () =>
 // Loading the real SDK starts a cleanup interval that keeps Jest from exiting; tests never send events anyway.
 jest.mock("@sentry/react-native", () => ({
   init: jest.fn(),
+  getClient: jest.fn(),
   wrap: <T>(component: T) => component,
   wrapExpoRouterErrorBoundary: <T>(boundary: T) => boundary,
   expoRouterIntegration: jest.fn(() => ({ name: "ExpoRouter" })),
