@@ -113,3 +113,5 @@ export * from "./work/vault-note";
 export * from "./work/weekly-note";
 
 export * from "./work/standup";
+
+export * from "./work/note-diff";

@@ -294,7 +294,7 @@ function namedNotes(root: string, folder: string, pattern: RegExp, skip: (file: 
 }
 
 /** Each weekly note, named by the ISO week in its file name (2024's sit in a subfolder), with its extraction. */
-function readWeeklyNotes(root: string, skip: (file: string) => void): WeeklyNoteFile[] {
+export function readWeeklyNotes(root: string, skip: (file: string) => void): WeeklyNoteFile[] {
   return namedNotes(root, "weekly", WEEKLY_FILE, skip).map(({ name, text }) => {
     const file = path.join(root, "data/extracted/weekly", `${name}.json`);
 
@@ -350,7 +350,7 @@ type StoredNote = z.infer<typeof StoredNote>;
 
 const StoredNotes = z.object({ notes: z.array(StoredNote) });
 
-const fetchNotes = (api: Api) => {
+export const fetchNotes = (api: Api) => {
   const body = api("GET", "/api/work/weekly-notes");
 
   return StoredNotes.parse(JSON.parse(body)).notes;
@@ -523,7 +523,7 @@ const API_SCRIPT = path.join(
 );
 
 /** Calls the live API through the journal skill's script, which logs in through Cloudflare Access. */
-const journalApi: Api = (method, route, body) => {
+export const journalApi: Api = (method, route, body) => {
   const result = spawnSync(
     API_SCRIPT,
     [method, route, ...(body === undefined ? [] : [JSON.stringify(body)])],

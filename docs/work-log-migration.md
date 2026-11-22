@@ -118,6 +118,12 @@ The first pass stored most of the text as Markdown. Migration 0063 replaces `wor
 4. Run both for two weeks: the skills write D1, and a nightly diff renders D1 to Markdown and compares it with the vault.
 5. Archive the vault: make the repo read-only and keep its git history.
 
+**The nightly diff (step 4, #15)** is `scripts/vault-diff.ts`. Decided here:
+
+- **What it compares**: each week's `work_weeks.raw_md` against the vault note, line by line after whitespace normalising. The typed rows can't rebuild a note (#13), so `raw_md` is D1's rendering of the week.
+- **How it runs**: a launchd agent on the owner's Mac at 22:30, after `/close-day`; launchd runs a missed night when the Mac wakes. The vault lives only on that Mac, so CI can't run it. `node scripts/vault-diff.ts <work-log path> --install` writes the agent, so the vault path stays in `~/Library/LaunchAgents`.
+- **How it reports**: every run writes the full diff to `~/Library/Logs/journal-vault-diff/<day>.txt` and its result to `runs.log`. A difference or a failure shows a macOS notification. A difference also comments its weeks and line numbers on #15, never the lines' text, as the repo is public. The fourteenth empty run in a row comments that the parallel run passed.
+
 **Done when** two weeks of diffs are empty and the work-log repo is archived.
 
 ## Risks
