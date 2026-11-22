@@ -5,7 +5,7 @@ import * as z from "zod/mini";
 import { daysFrom, formatDay, mondayOf, shiftDay } from "./calendar";
 import { buildGoalTree, goalSubtreeIds } from "./goal-tree";
 import type { Counts, Durations, Habit } from "./habits-view";
-import { intensityOf, type ActivityDay } from "./pillar-balance";
+import { intensityOf, Pillar, type ActivityDay } from "./pillar-balance";
 
 /** Times sum check and count Habits, minutes sum Duration entries; the other two are Signals. */
 const TARGET_MEASURES = ["times", "minutes", "intensity-minutes", "sleep"] as const;
@@ -14,7 +14,6 @@ const TARGET_DIRECTIONS = ["minimum", "limit"] as const;
 
 const Day = z.string().check(z.regex(/^\d{4}-\d{2}-\d{2}$/));
 
-/** What the Goal page edits. No number makes an open Target, shown as a trend. */
 /** A Target's number: whole and above 0. */
 export const TargetNumber = z.int().check(z.positive());
 
@@ -24,6 +23,7 @@ const Measure = {
   direction: z.enum(TARGET_DIRECTIONS),
 };
 
+/** What the Goal page edits. No number makes an open Target, shown as a trend. */
 export const GoalTargetDraft = z.discriminatedUnion("period", [
   z.object({ ...Measure, period: z.enum(["week", "month"]) }),
   z.object({ ...Measure, period: z.literal("deadline"), deadline: Day }),
@@ -90,6 +90,7 @@ export interface TargetGoal {
   title: string;
   parentId: number | null;
   state: string;
+  pillar: Pillar | null;
 }
 
 export interface TargetSources {
@@ -152,6 +153,8 @@ const TargetView = z.object({
   goalId: z.number(),
   title: z.string(),
   state: z.string(),
+  /** Set on a Pillar Goal, whose bar already shows its Signal in the Weekly review. */
+  pillar: z.nullable(Pillar),
   target: GoalTarget,
   /** The Habits it sums, empty for a Signal. */
   habits: z.array(z.string()),
@@ -191,6 +194,7 @@ export function targetViews({ goals, targets, habits, sources }: TargetInputs, d
       goalId: goal.id,
       title: goal.title,
       state: goal.state,
+      pillar: goal.pillar,
       target,
       habits: measured,
       current: valued(current),

@@ -48,6 +48,7 @@ const CARDIO: TargetView = {
   goalId: 20,
   title: "Cardio",
   state: "active",
+  pillar: null,
   target: {
     measure: "minutes",
     number: 150,
@@ -269,6 +270,48 @@ describe("WeekTargets", () => {
     await waitFor(() =>
       expect(writes[0]?.body).toEqual({ answer: "achieved", through: LAST_SUNDAY }),
     );
+  });
+
+  it("asks beneath the progress line without repeating it", async () => {
+    serve(LAST_SUNDAY, [ENDED]);
+
+    await show(<WeekTargets end={LAST_SUNDAY} />);
+
+    expect(await screen.findByText("Keep the number, adjust it or let it go?")).toBeOnTheScreen();
+    expect(screen.getAllByText(/120 \/ 150 min/)).toHaveLength(1);
+  });
+
+  it("names a month that closed early in the week", async () => {
+    // October ends on the Saturday; the week's last Day already sits in November.
+    serve("2026-11-01", [
+      {
+        ...ENDED,
+        target: { ...CARDIO.target, period: "month" },
+        current: { from: "2026-11-01", to: "2026-11-30", value: 0 },
+        closing: { from: "2026-10-01", to: "2026-10-31", value: 90 },
+      },
+    ]);
+
+    await show(<WeekTargets end="2026-11-01" />);
+
+    expect(
+      await screen.findByText(
+        "Ended at 90 / 150 min last month. Keep the number, adjust it or let it go?",
+      ),
+    ).toBeOnTheScreen();
+  });
+
+  it("leaves out a Pillar Goal's Target: its bar already shows the week", async () => {
+    serve(LAST_SUNDAY, [
+      { ...ENDED, goalId: 30, title: "Sleep well", pillar: "sleep" },
+      { ...ENDED, previous: null, closing: null },
+    ]);
+
+    await show(<WeekTargets end={LAST_SUNDAY} />);
+
+    expect(await screen.findByText("Cardio")).toBeOnTheScreen();
+    expect(screen.queryByText("Sleep well")).toBeNull();
+    expect(screen.queryByText("Keep")).toBeNull();
   });
 
   it("shows nothing without an active Target", async () => {

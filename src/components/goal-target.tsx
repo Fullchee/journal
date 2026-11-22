@@ -92,7 +92,9 @@ function TargetForm({ initial, saving, onSave, onCancel }: TargetFormProps) {
         onPick={(measure) => setDraft({ ...draft, measure })}
       />
       <View className="gap-1">
-        <Text nativeID="target-number">Number of {NUMBER_UNITS[draft.measure]} (optional)</Text>
+        <Text nativeID="target-number" variant="muted">
+          Number of {NUMBER_UNITS[draft.measure]} (optional)
+        </Text>
         <TextInput
           aria-labelledby="target-number"
           className={INPUT_CLASS}
@@ -115,12 +117,15 @@ function TargetForm({ initial, saving, onSave, onCancel }: TargetFormProps) {
         onPick={(period) => setDraft({ ...draft, period })}
       />
       {draft.period === "deadline" && (
-        <DateField
-          label="Deadline"
-          value={draft.deadline}
-          min={today}
-          onChange={(deadline) => setDraft({ ...draft, deadline })}
-        />
+        <View className="gap-1">
+          <Text variant="muted">Deadline</Text>
+          <DateField
+            label="Deadline"
+            value={draft.deadline}
+            min={today}
+            onChange={(deadline) => setDraft({ ...draft, deadline })}
+          />
+        </View>
       )}
       <SaveButtons
         disabled={saving || target === null}

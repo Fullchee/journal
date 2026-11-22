@@ -1,4 +1,4 @@
-import { GoalTarget, targetReadFrom, targetViews, type TargetsBody } from "@/core";
+import { GoalTarget, Pillar, targetReadFrom, targetViews, type TargetsBody } from "@/core";
 import { authorizedDay } from "@worker/lib/day";
 import type { Env, PagesContext } from "@worker/lib/env";
 import { readHabits, readRecords } from "@worker/lib/habit-records";
@@ -10,6 +10,7 @@ const GoalRow = z.object({
   title: z.string(),
   parentId: z.nullable(z.number()),
   state: z.string(),
+  pillar: z.nullable(Pillar),
 });
 
 // A Target row joined with its Goal; GoalTarget drops the Goal's columns and a repeating Target's null deadline.
@@ -17,9 +18,11 @@ const TargetRow = z.intersection(GoalRow, GoalTarget);
 
 async function readTargets(env: Env) {
   const [goals, targets] = await Promise.all([
-    env.DB.prepare("SELECT id, title, parent_id AS parentId, state FROM goals").bind().all(),
+    env.DB.prepare("SELECT id, title, parent_id AS parentId, state, pillar FROM goals")
+      .bind()
+      .all(),
     env.DB.prepare(
-      `SELECT g.id, g.title, g.parent_id AS parentId, g.state, t.measure, t.number,
+      `SELECT g.id, g.title, g.parent_id AS parentId, g.state, g.pillar, t.measure, t.number,
          t.direction, t.period, t.deadline, t.start, t.reviewed_through AS reviewedThrough
        FROM goal_targets t JOIN goals g ON g.id = t.goal_id`,
     )
@@ -32,8 +35,8 @@ async function readTargets(env: Env) {
     targets: z
       .array(TargetRow)
       .parse(targets.results)
-      .map(({ id, title, parentId, state, ...target }) => ({
-        goal: { id, title, parentId, state },
+      .map(({ id, title, parentId, state, pillar, ...target }) => ({
+        goal: { id, title, parentId, state, pillar },
         target,
       })),
   };

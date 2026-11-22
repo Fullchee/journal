@@ -44,9 +44,16 @@ describe("targetPeriod", () => {
   });
 });
 
-const MOVE: TargetGoal = { id: 1, title: "Move more", parentId: null, state: "active" };
-const READ: TargetGoal = { id: 3, title: "Read", parentId: null, state: "active" };
-const GOALS = [MOVE, { id: 2, title: "Cardio", parentId: 1, state: "active" }, READ];
+const MOVE: TargetGoal = {
+  id: 1,
+  title: "Move more",
+  parentId: null,
+  state: "active",
+  pillar: null,
+};
+
+const READ: TargetGoal = { id: 3, title: "Read", parentId: null, state: "active", pillar: null };
+const GOALS = [MOVE, { id: 2, title: "Cardio", parentId: 1, state: "active", pillar: null }, READ];
 
 const HABITS = [
   makeHabit({ id: "run", record: "duration", targetMinutes: 30, goals: [2] }),

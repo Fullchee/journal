@@ -64,6 +64,7 @@ interface Body {
   targets: {
     goalId: number;
     title: string;
+    pillar: string | null;
     habits: string[];
     target: { number: number | null; start: string; reviewedThrough: string | null };
     current: { from: string; value: number | null };
@@ -100,6 +101,26 @@ test("PUT sets a Goal's Target and GET shows its progress", async () => {
       previous?.value,
     ]),
     [["Cardio", ["run"], 45, 30]],
+  );
+});
+
+test("GET marks a Pillar Goal's Target with its pillar", async () => {
+  const env = makeEnv();
+  await seed(
+    env,
+    "INSERT INTO goals (id, title, pillar) VALUES (21, 'Sleep', 'sleep'), (22, 'Move', NULL)",
+  );
+  await put(env, "21", { ...WEEKLY, measure: "sleep", number: 420 });
+  await put(env, "22", WEEKLY);
+
+  const { targets } = await readJson<Body>(await get(env, "2026-11-12"));
+
+  assert.deepEqual(
+    targets.map(({ title, pillar }) => [title, pillar]),
+    [
+      ["Sleep", "sleep"],
+      ["Move", null],
+    ],
   );
 });
 
