@@ -10,7 +10,7 @@ export function DateField({ label, value, min, max, onChange }: DateFieldProps) 
       min={min}
       max={max}
       onChange={(event) => onChange(event.target.value)}
-      className="h-11 rounded-md border border-input bg-background px-3 text-foreground scheme-light dark:scheme-dark"
+      className="border-input bg-background text-foreground h-11 rounded-md border px-3 scheme-light dark:scheme-dark"
     />
   );
 }
