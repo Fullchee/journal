@@ -45,6 +45,7 @@ import * as workWeeks from "@worker/api/work/weeks";
 import * as workouts from "@worker/api/workouts";
 import type { Env, PagesContext } from "@worker/lib/env";
 import { confirmYesterday } from "@worker/lib/evening-review";
+import { syncHevy } from "@worker/lib/hevy-sync";
 import { json } from "@worker/lib/json";
 
 type Handler = (context: PagesContext<string>) => Promise<Response>;
@@ -179,11 +180,18 @@ interface ExecutionContext {
   waitUntil: (promise: Promise<unknown>) => void;
 }
 
-/** wrangler.jsonc's only cron: the Evening review's next-morning pass. */
+/** wrangler.jsonc's cron for the Evening review's next-morning pass; it runs alone because the Hevy sync spends most of a run's subrequests. */
 export const EVENING_REVIEW_CRON = "47 8 * * *";
 
+/** wrangler.jsonc's daily Hevy sync, off the hour as Hevy asks. */
+export const HEVY_SYNC_CRON = "23 7 * * *";
+
 function scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext) {
-  ctx.waitUntil(confirmYesterday(env, new Date(controller.scheduledTime)));
+  const now = new Date(controller.scheduledTime);
+
+  ctx.waitUntil(
+    controller.cron === HEVY_SYNC_CRON ? syncHevy(env.DB, now, fetch) : confirmYesterday(env, now),
+  );
 }
 
 export default { fetch: route, scheduled };

@@ -27,6 +27,38 @@ const HEVY_HEADER = "exercise_title,start_time,exercise_notes,reps,weight_lbs,di
 
 const hevyCsv = (...rows: string[]) => [HEVY_HEADER, ...rows].join("\n");
 
+/** Signs the Hevy sync in, as the owner's seed step does. */
+const seedHevyAuth = (env: Env) =>
+  env.DB.prepare("INSERT INTO hevy_auth (id, refresh_token) VALUES (1, 'refresh')").bind().run();
+
+interface SyncedSet {
+  workout: string;
+  start: string;
+  title: string;
+  notes?: string | null;
+  reps?: number | null;
+  kg?: number | null;
+  meters?: number | null;
+}
+
+/** One synced set; `start` is the workout's UTC instant. */
+async function addSynced(env: Env, set: SyncedSet) {
+  const { workout, start, title, notes = null, reps = null, kg = null, meters = null } = set;
+
+  await env.DB.prepare(
+    `INSERT INTO hevy_workouts (id, "index", title, start_time, end_time, seen_at)
+      VALUES (?1, 0, 'Pull day', ?2, ?2, ?2) ON CONFLICT (id) DO NOTHING`,
+  )
+    .bind(workout, start)
+    .run();
+  await env.DB.prepare(
+    `INSERT INTO hevy_sets (workout_id, exercise_index, set_index, exercise_title, exercise_notes, set_type, weight_kg, reps, distance_m)
+      VALUES (?, 0, (SELECT COUNT(*) FROM hevy_sets WHERE workout_id = ?), ?, ?, 'normal', ?, ?, ?)`,
+  )
+    .bind(workout, workout, title, notes, kg, reps, meters)
+    .run();
+}
+
 const RUNNING = 56;
 const WALKING = 79;
 const ROWING_MACHINE = 54;
@@ -80,8 +112,9 @@ test("cardio logs new Fitbit and Hevy sessions, and sorts out what the sheet alr
 
 const run = (date: string, quantity: number) => ({ date, activity: "Running", quantity });
 
-test("cardio without a Hevy export reads Fitbit alone, from the challenge start through today", async () => {
+test("cardio without a Hevy export reads Fitbit, from the challenge start through today", async () => {
   const env = makeEnv();
+  await seedHevyAuth(env);
   const today = torontoDay(new Date());
 
   await addFitbit(env, { id: "start", day: "2026-10-25", exerciseType: RUNNING, distanceM: 6000 });
@@ -154,6 +187,121 @@ test("pull-ups come from the Hevy export", async () => {
   } satisfies Json);
 });
 
+test("without a Hevy export, pull-ups and Hevy cardio come from the synced sets on their Toronto Day", async () => {
+  const env = makeEnv();
+  await seedHevyAuth(env);
+  // 01:30 UTC on Nov 6 is the evening of Nov 5 in Toronto.
+  await addSynced(env, {
+    workout: "w-1",
+    start: "2026-11-06T01:30:00.000Z",
+    title: "Pull Up",
+    reps: 8,
+  });
+  await addSynced(env, {
+    workout: "w-1",
+    start: "2026-11-06T01:30:00.000Z",
+    title: "Pull Up",
+    reps: 4,
+  });
+  await addSynced(env, {
+    workout: "w-2",
+    start: "2026-11-06T12:00:00.000Z",
+    title: "Pull Up (Weighted)",
+    reps: 5,
+    kg: 10,
+  });
+  await addSynced(env, {
+    workout: "w-2",
+    start: "2026-11-06T12:00:00.000Z",
+    title: "Rowing Machine",
+    meters: 2000,
+  });
+  await addSynced(env, {
+    workout: "w-0",
+    start: "2026-10-31T12:00:00.000Z",
+    title: "Pull Up",
+    reps: 9,
+  });
+  // Nov 9 01:30 UTC is still Nov 8 in Toronto, so it counts; Nov 9 12:00 UTC does not.
+  await addSynced(env, {
+    workout: "w-3",
+    start: "2026-11-09T01:30:00.000Z",
+    title: "Chin Up",
+    reps: 6,
+  });
+  await addSynced(env, {
+    workout: "w-4",
+    start: "2026-11-09T12:00:00.000Z",
+    title: "Pull Up",
+    reps: 7,
+  });
+
+  const range = { since: "2026-11-01", until: "2026-11-08", sheet: [] };
+  const pullUps = await post(env, { kind: "pullups", ...range });
+  const cardio = await post(env, { kind: "cardio", ...range });
+
+  const bodyweight = { variation: "Bodyweight pull-up", assistance_kg: 0, added_kg: 0 };
+
+  assert.deepEqual(await pullUps.json(), {
+    to_log: [
+      { date: "2026-11-05", ...bodyweight, reps: 12, date_serial: 46_331 },
+      {
+        date: "2026-11-06",
+        variation: "Weighted pull-up",
+        reps: 5,
+        assistance_kg: 0,
+        added_kg: 10,
+        date_serial: 46_332,
+      },
+      { date: "2026-11-08", ...bodyweight, reps: 6, date_serial: 46_334 },
+    ],
+    already_logged: [],
+    ask: [],
+    skipped: [],
+  } satisfies Json);
+  assert.deepEqual(await cardio.json(), {
+    to_log: [{ date: "2026-11-06", activity: "Indoor rowing", quantity: 2, date_serial: 46_332 }],
+    already_logged: [],
+    ask: [],
+    skipped: [],
+  } satisfies Json);
+});
+
+test("a sent Hevy export wins over the synced sets", async () => {
+  const env = makeEnv();
+  await seedHevyAuth(env);
+  await addSynced(env, {
+    workout: "w-1",
+    start: "2026-11-05T12:00:00.000Z",
+    title: "Pull Up",
+    reps: 8,
+  });
+
+  const res = await post(env, {
+    kind: "pullups",
+    since: "2026-11-01",
+    until: "2026-11-08",
+    sheet: [],
+    hevy_csv: hevyCsv('Pull Up,"5 Nov 2026, 07:30",,3,,'),
+  });
+
+  assert.deepEqual(await res.json(), {
+    to_log: [
+      {
+        date: "2026-11-05",
+        variation: "Bodyweight pull-up",
+        reps: 3,
+        assistance_kg: 0,
+        added_kg: 0,
+        date_serial: 46_331,
+      },
+    ],
+    already_logged: [],
+    ask: [],
+    skipped: [],
+  } satisfies Json);
+});
+
 test.each([
   [{ kind: "cardio", sheet: [], since: "2026-13-01" }, "since must be YYYY-MM-DD, got 2026-13-01"],
   [{ kind: "cardio", sheet: [], until: "Nov 5" }, "until must be YYYY-MM-DD, got Nov 5"],
@@ -161,7 +309,14 @@ test.each([
     { kind: "cardio", sheet: [], since: "2026-11-05", until: "2026-11-01" },
     "since 2026-11-05 is after until 2026-11-01",
   ],
-  [{ kind: "pullups", sheet: [] }, "pull-ups need hevy_csv, Hevy's workout export"],
+  [
+    { kind: "pullups", sheet: [] },
+    "Hevy sync has no sign-in (hevy_auth is empty): send hevy_csv, Hevy's workout export, or seed it per docs/research/hevy-data.md",
+  ],
+  [
+    { kind: "cardio", sheet: [] },
+    "Hevy sync has no sign-in (hevy_auth is empty): send hevy_csv, Hevy's workout export, or seed it per docs/research/hevy-data.md",
+  ],
   [
     { kind: "cardio", sheet: [], hevy_csv: "Date,Km\n2026-11-05,5" },
     "hevy_csv is not Hevy's workout export",

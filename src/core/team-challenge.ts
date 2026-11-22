@@ -1,6 +1,6 @@
 import * as z from "zod/mini";
 
-import { shiftDay, daysBetween } from "./calendar";
+import { shiftDay, daysBetween, torontoDay } from "./calendar";
 import { csvRows } from "./csv-import";
 
 /** The team's Pull up and Cardio Challenge sheet has one tab per kind. */
@@ -209,7 +209,7 @@ const HevyStart = z.pipe(
 );
 
 /** One set from Hevy's workout CSV export (Profile → Settings → Export & Import Data), with weights in lb. */
-const HevySet = z.object({
+const HevyCsvSet = z.object({
   exercise_title: z.string(),
   start_time: HevyStart,
   exercise_notes: z.string(),
@@ -218,7 +218,18 @@ const HevySet = z.object({
   distance_km: z.string(),
 });
 
-export type HevySet = z.infer<typeof HevySet>;
+/** One Hevy set, from the CSV export or the synced `hevy_sets`; `workout` tells one workout from another. */
+export interface HevySet {
+  workout: string;
+  day: string;
+  exercise_title: string;
+  exercise_notes: string;
+  reps: number;
+  weight_kg: number;
+  distance_km: number | null;
+}
+
+const csvNumber = (cell: string) => (cell === "" ? null : Number(cell));
 
 /** The sets in Hevy's workout CSV export, or null when the text isn't one. */
 export function hevySets(csv: string): HevySet[] | null {
@@ -228,8 +239,44 @@ export function hevySets(csv: string): HevySet[] | null {
     Object.fromEntries(header.map((name, column) => [name, cells[column]])),
   );
 
-  return z.array(HevySet).safeParse(records).data ?? null;
+  return (
+    z
+      .array(HevyCsvSet)
+      .safeParse(records)
+      .data?.map((set) => ({
+        workout: set.start_time.text,
+        day: set.start_time.day,
+        exercise_title: set.exercise_title,
+        exercise_notes: set.exercise_notes,
+        reps: Number(set.reps),
+        weight_kg: Number(set.weight_lbs) * LB_TO_KG,
+        distance_km: csvNumber(set.distance_km),
+      })) ?? null
+  );
 }
+
+/** A `hevy_sets` row joined to its workout's `start_time`, an ISO instant. */
+export interface HevySetRow {
+  workout_id: string;
+  start_time: string;
+  exercise_title: string;
+  exercise_notes: string | null;
+  reps: number | null;
+  weight_kg: number | null;
+  distance_m: number | null;
+}
+
+/** Synced sets on their workout's Toronto Day. */
+export const storedHevySets = (rows: HevySetRow[]): HevySet[] =>
+  rows.map((row) => ({
+    workout: row.workout_id,
+    day: torontoDay(row.start_time),
+    exercise_title: row.exercise_title,
+    exercise_notes: row.exercise_notes ?? "",
+    reps: row.reps ?? 0,
+    weight_kg: row.weight_kg ?? 0,
+    distance_km: row.distance_m === null ? null : row.distance_m / 1000,
+  }));
 
 export interface ChallengeRange {
   since: string;
@@ -290,10 +337,10 @@ export function hevyPullUps(sets: HevySet[], range: ChallengeRange): SheetRows<P
 
   for (const set of sets) {
     const title = set.exercise_title;
-    const date = set.start_time.day;
+    const date = set.day;
 
     if (!PULL_UP_TITLE.test(title) || !inRange(date, range)) continue;
-    const reps = Number(set.reps);
+    const { reps } = set;
     const match = variationOf(title, set.exercise_notes);
 
     if ("reason" in match) {
@@ -302,7 +349,7 @@ export function hevyPullUps(sets: HevySet[], range: ChallengeRange): SheetRows<P
     }
 
     const { variation } = match;
-    const kg = roundTo(Number(set.weight_lbs) * LB_TO_KG, 2);
+    const kg = roundTo(set.weight_kg, 2);
     const assistanceKg = variation === MACHINE_ASSISTED ? kg : 0;
     const addedKg = variation === WEIGHTED ? kg : 0;
     const key = JSON.stringify([date, variation, assistanceKg, addedKg]);
@@ -326,7 +373,7 @@ const HEVY_ACTIVITY = new Map([
 const NOTES_KM = /\b(\d+(?:\.\d+)?) ?km?\b/i;
 
 function setKm({ distance_km: distanceKm, exercise_notes: notes }: HevySet) {
-  if (distanceKm !== "") return Number(distanceKm);
+  if (distanceKm !== null) return distanceKm;
   const [, km] = NOTES_KM.exec(notes) ?? [];
 
   return km === undefined ? null : Number(km);
@@ -340,7 +387,7 @@ export function hevyCardio(sets: HevySet[], range: ChallengeRange): CardioSessio
   for (const set of sets) {
     const exercise = set.exercise_title;
     const activity = HEVY_ACTIVITY.get(exercise);
-    const date = set.start_time.day;
+    const date = set.day;
 
     if (activity === undefined || !inRange(date, range)) continue;
     const km = setKm(set);
@@ -350,7 +397,7 @@ export function hevyCardio(sets: HevySet[], range: ChallengeRange): CardioSessio
       continue;
     }
 
-    const key = JSON.stringify([set.start_time.text, exercise]);
+    const key = JSON.stringify([set.workout, exercise]);
     const workout = workouts.get(key);
 
     if (workout === undefined) workouts.set(key, { date, exercise, activity, km, minutes: null });

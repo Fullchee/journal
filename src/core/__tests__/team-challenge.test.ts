@@ -11,11 +11,13 @@ import {
   hevyPullUps,
   hevySets,
   sheetDay,
+  storedHevySets,
   skippedByDate,
   type CardioRow,
   type CardioSession,
   type FitbitSessionRow,
   type HevySet,
+  type HevySetRow,
   type PullUpRow,
 } from "@/core/team-challenge";
 
@@ -305,17 +307,33 @@ function sets(...lines: string[]): HevySet[] {
 const RANGE = { since: "2026-10-25", until: "2026-11-08" };
 
 describe("hevySets", () => {
-  test("reads each set with its start Day", () => {
-    assert.deepEqual(sets(hevySet("Pull Up", { reps: "9", start: "28 Oct 2026, 07:05" })), [
-      {
-        exercise_title: "Pull Up",
-        start_time: { text: "28 Oct 2026, 07:05", day: "2026-10-28" },
-        exercise_notes: "",
-        reps: "9",
-        weight_lbs: "",
-        distance_km: "",
-      },
-    ]);
+  test("reads each set with its start Day, in kg and km", () => {
+    assert.deepEqual(
+      sets(
+        hevySet("Pull Up", { reps: "9", start: "28 Oct 2026, 07:05", lbs: "10" }),
+        hevySet("Rowing Machine", { km: "2.5", notes: "easy" }),
+      ),
+      [
+        {
+          workout: "28 Oct 2026, 07:05",
+          day: "2026-10-28",
+          exercise_title: "Pull Up",
+          exercise_notes: "",
+          reps: 9,
+          weight_kg: 4.536,
+          distance_km: null,
+        },
+        {
+          workout: "5 Nov 2026, 17:48",
+          day: "2026-11-05",
+          exercise_title: "Rowing Machine",
+          exercise_notes: "easy",
+          reps: 0,
+          weight_kg: 0,
+          distance_km: 2.5,
+        },
+      ],
+    );
   });
 
   test("an empty export has no sets", () => {
@@ -328,6 +346,56 @@ describe("hevySets", () => {
     assert.equal(
       hevySets([HEADER, hevySet("Pull Up", { start: "5 Foo 2026, 17:48" })].join("\n")),
       null,
+    );
+  });
+});
+
+const storedRow = (fields: Partial<HevySetRow> = {}): HevySetRow => ({
+  workout_id: "w-1",
+  start_time: "2026-11-06T02:30:00.000Z",
+  exercise_title: "Pull Up",
+  exercise_notes: null,
+  reps: null,
+  weight_kg: null,
+  distance_m: null,
+  ...fields,
+});
+
+describe("storedHevySets", () => {
+  test("puts each synced set on its workout's Toronto Day, in kg and km", () => {
+    assert.deepEqual(
+      storedHevySets([
+        storedRow(),
+        storedRow({
+          workout_id: "w-2",
+          start_time: "2026-11-06T15:00:00.000Z",
+          exercise_title: "Rowing Machine",
+          exercise_notes: "steady",
+          reps: 3,
+          weight_kg: 5,
+          distance_m: 2100,
+        }),
+      ]),
+      [
+        {
+          workout: "w-1",
+          day: "2026-11-05",
+          exercise_title: "Pull Up",
+          exercise_notes: "",
+          reps: 0,
+          weight_kg: 0,
+          distance_km: null,
+        },
+        {
+          workout: "w-2",
+          day: "2026-11-06",
+          exercise_title: "Rowing Machine",
+          exercise_notes: "steady",
+          reps: 3,
+          weight_kg: 5,
+          distance_km: 2.1,
+        },
+      ],
     );
   });
 });

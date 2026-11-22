@@ -18,8 +18,8 @@
   ],
   "r2_buckets": [{ "binding": "ATTACHMENTS", "bucket_name": "fullchee-dashboard-attachments" }],
   "ai": { "binding": "AI" },
-  // The Evening review's next-morning pass (EVENING_REVIEW_CRON in worker/index.ts).
-  "triggers": { "crons": ["47 8 * * *"] },
+  // HEVY_SYNC_CRON and EVENING_REVIEW_CRON in worker/index.ts; the free plan allows 5 crons per account.
+  "triggers": { "crons": ["23 7 * * *", "47 8 * * *"] },
   "vars": {
     "TEAM_DOMAIN": "fullchee.cloudflareaccess.com",
     // AUD tags of the Access apps that may guard journal.fullchee.workers.dev: fullchee-dashboard, then the workers.dev app.

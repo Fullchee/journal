@@ -9,11 +9,14 @@ import {
   hevyCardio,
   hevyPullUps,
   hevySets,
+  shiftDay,
   skippedByDate,
+  storedHevySets,
   torontoDay,
   type ChallengeRange,
   type FitbitSessionRow,
   type HevySet,
+  type HevySetRow,
   type TeamChallengeKind,
 } from "@/core";
 import { authorizedBody } from "@worker/lib/auth";
@@ -22,7 +25,7 @@ import type { Env, PagesContext } from "@worker/lib/env";
 import { json } from "@worker/lib/json";
 import * as z from "zod/mini";
 
-/** `sheet` is the `values` of a `get_values` read of the tab (A:D for cardio, A:G for pull-ups); `hevy_csv` is Hevy's workout CSV export. */
+/** `sheet` is the `values` of a `get_values` read of the tab (A:D for cardio, A:G for pull-ups); `hevy_csv` is Hevy's workout CSV export, read instead of the synced sets. */
 const SheetCell = z.union([z.string(), z.number()]);
 
 const TeamChallengeRequest = z.object({
@@ -62,6 +65,36 @@ async function fitbitSessions(env: Env, { since, until }: ChallengeRange) {
   return results;
 }
 
+const NOT_SYNCED =
+  "Hevy sync has no sign-in (hevy_auth is empty): send hevy_csv, Hevy's workout export, or seed it per docs/research/hevy-data.md";
+
+/** The range's sets the daily sync stored, or null when the sync was never seeded. */
+async function syncedHevySets(env: Env, { since, until }: ChallengeRange) {
+  const { results: auth } = await env.DB.prepare("SELECT 1 FROM hevy_auth").bind().all();
+
+  if (auth.length === 0) return null;
+
+  // start_time is UTC, and a Toronto Day ends on the next UTC date; the core's Day filter trims the extra.
+  const { results } = await env.DB.prepare(
+    `SELECT s.workout_id, w.start_time, s.exercise_title, s.exercise_notes, s.reps, s.weight_kg, s.distance_m
+      FROM hevy_sets s JOIN hevy_workouts w ON w.id = s.workout_id
+      WHERE w.start_time >= ?1 AND w.start_time < ?2
+      ORDER BY w.start_time, s.exercise_index, s.set_index`,
+  )
+    .bind(since, shiftDay(until, 2))
+    .all<HevySetRow>();
+
+  return storedHevySets(results);
+}
+
+/** A sent CSV export wins; without one, the synced sets; a Response when neither can be read. */
+async function hevySource(env: Env, csv: string | undefined, range: ChallengeRange) {
+  if (csv !== undefined)
+    return hevySets(csv) ?? json({ error: "hevy_csv is not Hevy's workout export" }, 400);
+
+  return (await syncedHevySets(env, range)) ?? json({ error: NOT_SYNCED }, 400);
+}
+
 type Report = (
   body: TeamChallengeRequest,
   range: ChallengeRange,
@@ -69,7 +102,7 @@ type Report = (
   env: Env,
 ) => Response | Promise<Response>;
 
-// Hevy's free tier has no API and Health Connect carries no sets, so its rows come from the CSV export the caller sends.
+// Health Connect carries no sets, so Hevy's rows come from the caller's CSV export or the Worker's private-API sync.
 const REPORTS: Record<TeamChallengeKind, Report> = {
   cardio: async (body, range, hevy, env) => {
     const fitbit = fitbitCardio(await fitbitSessions(env, range));
@@ -81,8 +114,6 @@ const REPORTS: Record<TeamChallengeKind, Report> = {
     });
   },
   pullups: (body, range, hevy) => {
-    if (body.hevy_csv === undefined)
-      return json({ error: "pull-ups need hevy_csv, Hevy's workout export" }, 400);
     const { rows, skipped } = hevyPullUps(hevy, range);
 
     return json({
@@ -105,9 +136,9 @@ export async function onRequestPost(context: PagesContext) {
 
   if ("error" in checked) return json(checked, 400);
   const { range } = checked;
-  const hevy = body.hevy_csv === undefined ? [] : hevySets(body.hevy_csv);
+  const hevy = await hevySource(context.env, body.hevy_csv, range);
 
-  if (hevy === null) return json({ error: "hevy_csv is not Hevy's workout export" }, 400);
+  if (hevy instanceof Response) return hevy;
 
   return REPORTS[body.kind](body, range, hevy, context.env);
 }

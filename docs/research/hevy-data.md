@@ -4,7 +4,9 @@ Research for syncing Hevy strength workouts hands-off, as `scripts/garmin/` does
 
 > **Update 2026-11-17**: the Garmin push is gone ([#135](https://github.com/Fullchee/journal-native/issues/135)). Fitbit data now reaches the app through Health Connect, filtered by `FITBIT_PACKAGE` in `src/core/fitbit-auto-complete.ts`. To switch back to Garmin, set that filter to Garmin Connect's package, `com.garmin.android.apps.connectmobile`. The Garmin parts below describe the removed push.
 
-> **Update 2026-11-20**: route 2 replaced route 1. With no link to tap, the phone logs each Health Connect session from `com.hevy` as a Duration entry on the Habit the Worker's `HEVY_HABIT` secret names, which `GET /api/habits` sends (`src/lib/health/health-connect-auto-log.android.ts`). It asks for Exercise access once; after a denial, grant it in Health Connect's settings. The Worker's private-API sync and its `hevy_*` tables are gone (migration `0005_drop_hevy_sync.sql`). The history before Health Connect came from a one-off load of Hevy's CSV export into `habit_durations`. Route 1 below describes the removed sync.
+> **Update 2026-11-20**: route 2 replaced route 1. With no link to tap, the phone logs each Health Connect session from `com.hevy` as a Duration entry on the Habit the Worker's `HEVY_HABIT` secret names, which `GET /api/habits` sends (`src/lib/health/health-connect-auto-log.android.ts`). It asks for Exercise access once; after a denial, grant it in Health Connect's settings. The Worker's private-API sync and its `hevy_*` tables are gone (migration `0005_drop_hevy_sync.sql`). The history before Health Connect came from a one-off load of Hevy's CSV export into `habit_durations`.
+
+> **Update 2026-11-22**: route 1 is back beside route 2 ([#28](https://github.com/Fullchee/journal/issues/28)), for the team challenge's pull-ups and Hevy cardio. Migration `0007_hevy_sync.sql` recreates `hevy_auth`, `hevy_workouts`, `hevy_sets` and `hevy_scan`; `worker/lib/hevy-sync.ts` runs daily at 07:23 UTC. It stores sets only: Health Connect still logs "Lift weights", so the sync writes no `habit_durations`. `POST /api/team-challenge` reads a sent `hevy_csv` first, then the synced sets, and answers 400 asking for the CSV while `hevy_auth` has no row. Seed it with the steps under "What the owner does by hand".
 
 ## Answer
 
@@ -114,7 +116,7 @@ scheduled(), daily at 07:23 UTC (not xx:00):
 
 ### What the owner does by hand
 
-Built in #136: `worker/lib/hevy-sync.ts`, run daily at 07:23 UTC by the Worker's cron.
+Built in #136, restored in #28: `worker/lib/hevy-sync.ts`, run daily at 07:23 UTC by the Worker's cron. Until step 2 runs, the team challenge endpoint needs `hevy_csv`.
 
 1. **Log in** at hevy.com in a desktop browser. Open dev tools → Application → Cookies → `https://hevy.com` → `auth2.0-token`, tick "Show URL-decoded", and copy `refresh_token` from the JSON.
 2. **Seed it** once:
@@ -123,7 +125,7 @@ Built in #136: `worker/lib/hevy-sync.ts`, run daily at 07:23 UTC by the Worker's
    bunx wrangler d1 execute fullchee-dashboard --remote --command "INSERT INTO hevy_auth (id, refresh_token) VALUES (1, '<refresh_token>') ON CONFLICT (id) DO UPDATE SET refresh_token = excluded.refresh_token, access_token = NULL, expires_at = NULL"
    ```
 
-3. **Wait for the cron**, or watch the first run with `bunx wrangler tail journal`. The first runs backfill up to 44 batches each until the whole history is in.
+3. **Wait for the cron**, or watch the first run with `bunx wrangler tail journal`. The first runs backfill up to 44 batches each until the whole history is in. Check progress with `bunx wrangler d1 execute fullchee-dashboard --remote --command "SELECT COUNT(*), MAX(start_time) FROM hevy_workouts"`.
 4. **Repeat steps 1 and 2** only when the cron logs `Hevy sign-in failed`.
 5. **Optional, route 2**: in Hevy, Settings → Integrations → Health Connect → allow Hevy's permissions.
 
