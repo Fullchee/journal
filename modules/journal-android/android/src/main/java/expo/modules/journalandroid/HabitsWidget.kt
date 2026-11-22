@@ -29,7 +29,15 @@ const val ACTION_HABITS_CHANGED = "expo.modules.journalandroid.HABITS_CHANGED"
 // Every Day is a Toronto calendar day, wherever the phone is, as in @/core.
 private val TORONTO: TimeZone = TimeZone.getTimeZone("America/Toronto")
 
-internal data class DueHabit(val id: String, val name: String, val tick: Boolean)
+// `places`, `time` (HH:MM) and `priority` are what a widget's filter matches; see `HabitsFilter.fits`.
+internal data class DueHabit(
+  val id: String,
+  val name: String,
+  val tick: Boolean,
+  val places: List<String> = emptyList(),
+  val time: String? = null,
+  val priority: String = "normal",
+)
 
 internal data class TileHabit(val id: String, val name: String)
 
@@ -62,13 +70,25 @@ internal fun dueHabits(saved: String, today: String): List<DueHabit>? =
     } else {
       val due = pushed.getJSONArray("due")
 
-      (0 until due.length()).map { due.getJSONObject(it) }.map {
-        DueHabit(it.getString("id"), it.getString("name"), it.getBoolean("tick"))
-      }
+      (0 until due.length()).map { due.getJSONObject(it) }.map(::dueHabit)
     }
   } catch (e: JSONException) {
     null
   }
+
+// A push saved by an app version before widget filters lacks the filter fields; it reads as matching every filter.
+private fun dueHabit(json: JSONObject): DueHabit {
+  val places = json.optJSONArray("places")
+
+  return DueHabit(
+    json.getString("id"),
+    json.getString("name"),
+    json.getBoolean("tick"),
+    if (places == null) emptyList() else (0 until places.length()).map { places.getString(it) },
+    if (json.isNull("time")) null else json.getString("time"),
+    json.optString("priority", "normal"),
+  )
+}
 
 // The timed Habit the tile starts; null when the owner has none.
 internal fun tileHabit(saved: String): TileHabit? =
@@ -98,6 +118,10 @@ class HabitsWidget : AppWidgetProvider() {
     if (widgetIds.isNotEmpty()) onUpdate(context, manager, widgetIds)
   }
 
+  override fun onDeleted(context: Context, widgetIds: IntArray) {
+    context.forgetHabitsFilters(widgetIds)
+  }
+
   override fun onAppWidgetOptionsChanged(context: Context, manager: AppWidgetManager, widgetId: Int, options: Bundle) {
     onUpdate(context, manager, intArrayOf(widgetId))
   }
@@ -109,17 +133,28 @@ class HabitsWidget : AppWidgetProvider() {
     for (widgetId in widgetIds) {
       val heightDp = manager.getAppWidgetOptions(widgetId).getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT)
 
-      manager.updateAppWidget(widgetId, views(context, habits?.take(rowsThatFit(heightDp)), now))
+      val filter = context.habitsFilter(widgetId)
+      val shown = habits?.filter(filter::fits)?.take(rowsThatFit(heightDp))
+
+      manager.updateAppWidget(widgetId, views(context, widgetId, filter, shown, now))
     }
 
     scheduleMidnightRedraw(context, now)
   }
 
-  private fun views(context: Context, habits: List<DueHabit>?, drawnAtMs: Long): RemoteViews {
+  private fun views(
+    context: Context,
+    widgetId: Int,
+    filter: HabitsFilter,
+    habits: List<DueHabit>?,
+    drawnAtMs: Long,
+  ): RemoteViews {
     val views = RemoteViews(context.packageName, R.layout.habits_widget)
     val rows = habits.orEmpty()
 
+    views.setTextViewText(R.id.habits_header, filter.caption() ?: context.getString(R.string.habits_widget_title))
     views.setOnClickPendingIntent(R.id.habits_header, context.widgetTap(""))
+    views.setOnClickPendingIntent(R.id.habits_filter, filterTap(context, widgetId))
     views.removeAllViews(R.id.habits_list)
 
     for (habit in rows) {
@@ -142,6 +177,18 @@ class HabitsWidget : AppWidgetProvider() {
 
     return views
   }
+
+  // Each widget's request code is its id, so every widget's button opens its own filter.
+  private fun filterTap(context: Context, widgetId: Int): PendingIntent =
+    PendingIntent.getActivity(
+      context,
+      widgetId,
+      Intent(context, HabitsWidgetConfigActivity::class.java)
+        .setAction(AppWidgetManager.ACTION_APPWIDGET_CONFIGURE)
+        .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+      PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+    )
 
   // At Toronto midnight the pushed list is yesterday's, so the widget asks to open the app until the next push.
   // Inexact and non-waking: the list only matters when the screen is on.

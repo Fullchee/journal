@@ -4,8 +4,10 @@ import type { AndroidManifest } from "expo/config-plugins";
 import {
   ALARM_ACTIVITY,
   addAlarmActivity,
+  addHabitsWidgetConfig,
   addTimedHabitTile,
   addWidgets,
+  HABITS_WIDGET_CONFIG,
   TIMED_HABIT_TILE,
 } from "../../modules/journal-android/app.plugin";
 
@@ -50,6 +52,32 @@ describe("addAlarmActivity", () => {
     const manifest = addAlarmActivity(addAlarmActivity(emptyManifest()));
 
     expect(alarmActivities(manifest)).toHaveLength(1);
+  });
+});
+
+const configActivities = (manifest: AndroidManifest) =>
+  manifest.manifest.application?.[0]?.activity?.filter(
+    (activity) => activity.$["android:name"] === HABITS_WIDGET_CONFIG,
+  );
+
+describe("addHabitsWidgetConfig", () => {
+  it("lets the launcher open the Habits widget's filter when the widget is placed", () => {
+    const [activity] = configActivities(addHabitsWidgetConfig(emptyManifest())) ?? [];
+
+    expect(activity).toMatchObject({
+      $: { "android:exported": "true", "android:theme": "@style/HabitsWidgetConfig" },
+      "intent-filter": [
+        {
+          action: [{ $: { "android:name": "android.appwidget.action.APPWIDGET_CONFIGURE" } }],
+        },
+      ],
+    });
+  });
+
+  it("declares the filter screen once when prebuild runs again", () => {
+    const manifest = addHabitsWidgetConfig(addHabitsWidgetConfig(emptyManifest()));
+
+    expect(configActivities(manifest)).toHaveLength(1);
   });
 });
 

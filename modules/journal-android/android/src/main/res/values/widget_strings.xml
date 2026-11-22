@@ -26,6 +26,16 @@
     <string name="habits_widget_tick">Done: %1$s</string>
     <string name="habits_widget_all_done">Nothing left for today</string>
     <string name="habits_widget_not_loaded">Open the app to load today\'s Habits</string>
+    <string name="habits_widget_filter">Filter this widget</string>
+    <string name="habits_filter_title">Habits widget</string>
+    <string name="habits_filter_hint">Show only the due Habits that fit. Habits with no time or Places fit every choice.</string>
+    <string name="habits_filter_time_of_day">Time of day</string>
+    <string name="habits_filter_place">Place</string>
+    <string name="habits_filter_priority">Priority</string>
+    <string name="habits_filter_any_time">Any time</string>
+    <string name="habits_filter_anywhere">Anywhere</string>
+    <string name="habits_filter_any_priority">Any priority</string>
+    <string name="habits_filter_save">Save</string>
     <string name="timed_tile_label">Timed Habit</string>
     <string name="timed_tile_start">Start %1$s</string>
     <string name="timed_tile_stop">Stop %1$s</string>

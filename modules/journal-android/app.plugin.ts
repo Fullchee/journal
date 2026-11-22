@@ -1,4 +1,4 @@
-// Declares AlarmActivity, the permissions Habit alarms need, the home-screen widgets and the Quick Settings tile, so
+// Declares AlarmActivity, the Habits widget's filter screen, the permissions Habit alarms need, the home-screen widgets and the Quick Settings tile, so
 // `android/` stays generated.
 import {
   AndroidConfig,
@@ -41,6 +41,38 @@ export function addAlarmActivity(manifest: AndroidManifest): AndroidManifest {
         "android:launchMode": "singleInstance",
         "android:theme": "@android:style/Theme.Material.NoActionBar",
       },
+    },
+  ];
+
+  return manifest;
+}
+
+export const HABITS_WIDGET_CONFIG = "expo.modules.journalandroid.HabitsWidgetConfigActivity";
+
+/** The Habits widget's filter screen; the launcher starts it on placement, so it is exported. */
+export function addHabitsWidgetConfig(manifest: AndroidManifest): AndroidManifest {
+  const application = AndroidConfig.Manifest.getMainApplicationOrThrow(manifest);
+
+  const others = (application.activity ?? []).filter(
+    (activity) => activity.$["android:name"] !== HABITS_WIDGET_CONFIG,
+  );
+
+  application.activity = [
+    ...others,
+    {
+      $: {
+        "android:name": HABITS_WIDGET_CONFIG,
+        "android:exported": "true",
+        "android:excludeFromRecents": "true",
+        // Its own task, so Save returns to the home screen, not into the app.
+        "android:taskAffinity": "",
+        "android:theme": "@style/HabitsWidgetConfig",
+      },
+      "intent-filter": [
+        {
+          action: [{ $: { "android:name": "android.appwidget.action.APPWIDGET_CONFIGURE" } }],
+        },
+      ],
     },
   ];
 
@@ -146,6 +178,7 @@ export function addTimedHabitTile(manifest: AndroidManifest): AndroidManifest {
 const withJournalAndroid: ConfigPlugin = (config) =>
   withAndroidManifest(config, (modConfig) => {
     addAlarmActivity(modConfig.modResults);
+    addHabitsWidgetConfig(modConfig.modResults);
     addWidgets(modConfig.modResults);
     addTimedHabitTile(modConfig.modResults);
 

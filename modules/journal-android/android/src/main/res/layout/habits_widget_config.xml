@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A Habits widget's filter: three optional fields, each open by default, then Cancel and Save. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:minWidth="280dp"
+    android:orientation="vertical"
+    android:paddingStart="24dp"
+    android:paddingTop="8dp"
+    android:paddingEnd="24dp"
+    android:paddingBottom="8dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:text="@string/habits_filter_hint"
+        android:textAppearance="?android:attr/textAppearanceSmall" />
+
+    <TextView
+        style="@style/HabitsFilterLabel"
+        android:labelFor="@+id/filter_time_of_day"
+        android:text="@string/habits_filter_time_of_day" />
+
+    <Spinner
+        android:id="@+id/filter_time_of_day"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="48dp" />
+
+    <LinearLayout
+        android:id="@+id/filter_place_row"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            style="@style/HabitsFilterLabel"
+            android:labelFor="@+id/filter_place"
+            android:text="@string/habits_filter_place" />
+
+        <Spinner
+            android:id="@+id/filter_place"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="48dp" />
+    </LinearLayout>
+
+    <TextView
+        style="@style/HabitsFilterLabel"
+        android:labelFor="@+id/filter_priority"
+        android:text="@string/habits_filter_priority" />
+
+    <Spinner
+        android:id="@+id/filter_priority"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="48dp" />
+
+    <LinearLayout
+        style="?android:attr/buttonBarStyle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:gravity="end"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/filter_cancel"
+            style="?android:attr/buttonBarButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@android:string/cancel" />
+
+        <Button
+            android:id="@+id/filter_save"
+            style="?android:attr/buttonBarButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/habits_filter_save" />
+    </LinearLayout>
+</LinearLayout>

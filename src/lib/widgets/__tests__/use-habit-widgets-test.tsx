@@ -33,7 +33,8 @@ it("pushes today's open Habits to Android once the Habits load", async () => {
   await waitFor(() => expect(JournalAndroid.setHabits).toHaveBeenCalled());
   expect(JSON.parse(jest.mocked(JournalAndroid.setHabits).mock.calls[0]![0])).toEqual({
     date: torontoDay(new Date()),
-    due: [{ id: "walk", name: "Walk", tick: true }],
+    due: [{ id: "walk", name: "Walk", tick: true, places: [], time: null, priority: "normal" }],
+    places: [],
     timed: null,
   });
 });

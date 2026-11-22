@@ -1,18 +1,38 @@
-import { dueToday, isTimed, torontoDay, torontoTime, type Durations, type Habit } from "@/core";
+import {
+  dueToday,
+  habitTime,
+  isTimed,
+  normalizePlaces,
+  torontoDay,
+  torontoTime,
+  type Durations,
+  type Habit,
+  type Priority,
+} from "@/core";
 
 import type { HabitsBody } from "@/lib/data/habits";
 
-/** One open Habit on the Habits widget; `tick` is false for a timed Habit, which logs minutes, not a check. */
+/**
+ * One open Habit on the Habits widget; `tick` is false for a timed Habit, which logs minutes, not a check.
+ * `places`, `time` and `priority` are what each placed widget's own filter matches on.
+ */
 interface WidgetHabit {
   id: string;
   name: string;
   tick: boolean;
+  places: string[];
+  time: string | null;
+  priority: Priority;
 }
 
-/** What the Habits widget and the Quick Settings tile read; the widget shows `due` only on the Day `date`. */
+/**
+ * What the Habits widget and the Quick Settings tile read; the widget shows `due` only on the Day `date`.
+ * `places` are the Places a widget's filter offers.
+ */
 export interface HabitWidgets {
   date: string;
   due: WidgetHabit[];
+  places: string[];
   timed: { id: string; name: string } | null;
 }
 
@@ -41,13 +61,26 @@ function tileHabit({ habits, durations = {} }: HabitsBody) {
   return habit ? { id: habit.id, name: habit.name } : null;
 }
 
+const widgetHabit = (habit: Habit): WidgetHabit => ({
+  id: habit.id,
+  name: habit.name,
+  tick: !isTimed(habit),
+  places: habit.places,
+  time: habitTime(habit),
+  priority: habit.priority,
+});
+
+/** Every active Habit's Places, so a widget can filter to a place even when nothing there is due today. */
+const activePlaces = (habits: Habit[]) =>
+  normalizePlaces(habits.filter((habit) => habit.active).flatMap((habit) => habit.places));
+
 /** Today's due Habits still open, in Today's order, plus the Quick Settings tile's timed Habit. */
 export function habitWidgets(body: HabitsBody, now: Date): HabitWidgets {
   const due = dueToday(body.habits, body.counts ?? {}, body.durations ?? {}, now)
     .filter(({ day }) => day.status === "empty")
-    .map(({ habit }) => ({ id: habit.id, name: habit.name, tick: !isTimed(habit) }));
+    .map(({ habit }) => widgetHabit(habit));
 
-  return { date: torontoDay(now), due, timed: tileHabit(body) };
+  return { date: torontoDay(now), due, places: activePlaces(body.habits), timed: tileHabit(body) };
 }
 
 const MINUTE_MS = 60_000;

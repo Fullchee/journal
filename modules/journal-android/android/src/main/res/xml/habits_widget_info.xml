@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The app pushes the list after each check or save, and the widget redraws at Toronto midnight, so no periodic updates. -->
+<!-- The app pushes the list after each check or save, and the widget redraws at Toronto midnight, so no periodic updates.
+     Placing one opens its filter; "reconfigurable" lets Android 12+ launchers reopen it too. -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:configure="expo.modules.journalandroid.HabitsWidgetConfigActivity"
     android:description="@string/habits_widget_description"
     android:initialLayout="@layout/habits_widget"
     android:minWidth="180dp"
@@ -11,4 +13,5 @@
     android:targetCellWidth="3"
     android:targetCellHeight="2"
     android:updatePeriodMillis="0"
-    android:widgetCategory="home_screen" />
+    android:widgetCategory="home_screen"
+    android:widgetFeatures="reconfigurable" />

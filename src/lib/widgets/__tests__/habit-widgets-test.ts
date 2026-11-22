@@ -26,7 +26,8 @@ describe("habitWidgets", () => {
 
     expect(habitWidgets(body([walk, meds], { counts: { [TODAY]: { meds: 1 } } }), NOW)).toEqual({
       date: TODAY,
-      due: [{ id: "walk", name: "Walk", tick: true }],
+      due: [{ id: "walk", name: "Walk", tick: true, places: [], time: null, priority: "normal" }],
+      places: [],
       timed: null,
     });
   });
@@ -34,8 +35,34 @@ describe("habitWidgets", () => {
   it("gives a timed Habit no tick, since it logs minutes", () => {
     const read = timedHabit({ id: "read", name: "Read" });
 
-    expect(habitWidgets(body([read]), NOW).due).toEqual([
+    expect(habitWidgets(body([read]), NOW).due).toMatchObject([
       { id: "read", name: "Read", tick: false },
+    ]);
+  });
+
+  it("gives each Habit what a widget's filter matches: Places, time of day and priority", () => {
+    const lift = habit({
+      id: "lift",
+      name: "Lift",
+      places: ["Gym"],
+      usualWhen: "07:30",
+      priority: "high",
+    });
+
+    expect(habitWidgets(body([lift]), NOW).due).toEqual([
+      { id: "lift", name: "Lift", tick: true, places: ["Gym"], time: "07:30", priority: "high" },
+    ]);
+  });
+
+  it("offers every active Habit's Places once, even where nothing is due", () => {
+    const lift = habit({ id: "lift", places: ["Gym", "Home"] });
+    const stretch = habit({ id: "stretch", places: [" gym ", "Office"] });
+    const shelved = habit({ id: "shelved", places: ["Library"], active: false });
+
+    expect(habitWidgets(body([lift, stretch, shelved]), NOW).places).toEqual([
+      "Gym",
+      "Home",
+      "Office",
     ]);
   });
 

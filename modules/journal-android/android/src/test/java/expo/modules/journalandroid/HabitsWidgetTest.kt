@@ -7,8 +7,8 @@ import org.junit.Test
 private const val SAVED = """{
   "date": "2026-11-04",
   "due": [
-    {"id": "walk", "name": "Walk", "tick": true},
-    {"id": "read", "name": "Read", "tick": false}
+    {"id": "walk", "name": "Walk", "tick": true, "places": ["Park"], "time": "07:00", "priority": "high"},
+    {"id": "read", "name": "Read", "tick": false, "places": [], "time": null, "priority": "normal"}
   ],
   "timed": {"id": "read", "name": "Read"}
 }"""
@@ -20,8 +20,16 @@ class HabitsWidgetTest {
   @Test
   fun listsTheDueHabitsPushedForToday() {
     assertEquals(
-      listOf(DueHabit("walk", "Walk", true), DueHabit("read", "Read", false)),
+      listOf(DueHabit("walk", "Walk", true, listOf("Park"), "07:00", "high"), DueHabit("read", "Read", false)),
       dueHabits(SAVED, "2026-11-04"),
+    )
+  }
+
+  @Test
+  fun readsAPushFromBeforeFiltersAsMatchingEveryFilter() {
+    assertEquals(
+      listOf(DueHabit("walk", "Walk", true)),
+      dueHabits("""{"date": "2026-11-04", "due": [{"id": "walk", "name": "Walk", "tick": true}]}""", "2026-11-04"),
     )
   }
 
