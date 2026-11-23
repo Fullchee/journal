@@ -87,6 +87,7 @@ const brief = (over: Partial<BriefBody["facts"]>, prose: BriefBody["prose"]): Br
     habits: [],
     oneOffs: [],
     skips: [],
+    notes: [],
     ...over,
   },
   prose,

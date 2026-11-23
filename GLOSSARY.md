@@ -81,7 +81,7 @@ The app's vocabulary. Use these terms word for word in code, UI copy and docs.
 - **Rest mode** — a pause of 1 to 30 days that I start and can end early from Settings. Every Streak neither grows nor breaks, Freeze earning pauses and Habit reminders stay quiet; a Habit I still do adds to its Streak.
   _Avoid_: vacation mode, pause, holiday
 - **Record** — how a Habit's occurrences are logged: **check** (once a day), **count** (each time) or **duration** (each **Duration entry**, against a minutes-a-day bar: a minimum for good, a limit for bad).
-- **Duration entry** — one timed occurrence of a duration Habit: a Day, a start time and minutes. A day's count and total come from its entries.
+- **Duration entry** — one timed occurrence of a duration Habit: a Day, a start time, minutes and an optional one-line **note** on what the time was spent on, such as "Android wrapper" under Side projects. A day's count and total come from its entries. A Habit check takes the same note.
   _Avoid_: session, stint, log
 - **Alarm** — an optional field on a Habit: a time and a kind, **alarm** (rings at alarm volume with the phone's alarm sound, or one song the owner picks for every alarm on that phone) or **persistent** (quiet). It rings in the Android app only, titled with the Habit's name, and stays in the notification shade until tapped. Its Postpone rings it again 10 minutes later unless the Day is logged first. It rings on a fixed-weekday Habit's weekdays, on each due day of an every-N-days Habit (one ring per day, with no row in the alarms widget) and every day for daily, N-times-a-week and N-times-a-month Habits. Tree, Backlog and Reference Habits don't ring.
   _Avoid_: reminder (as a UI label), timer

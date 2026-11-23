@@ -127,6 +127,42 @@ test("Undo restores each count, removing a row the log created", async () => {
   assert.deepEqual(await counts(env), [{ habit: "pushups", date: TODAY, count: 2 }]);
 });
 
+const checkNotes = (env: TestEnv) =>
+  rows<{ count: number; note: string }>(env, "SELECT count, note FROM habit_checks");
+
+test("Undo puts back the check's note a log replaced", async () => {
+  const env = await makeUndoEnv();
+
+  await env.DB.exec(
+    `INSERT INTO habit_checks (date, habit, count, note) VALUES ('${TODAY}', 'pushups', 2, 'Morning')`,
+  );
+
+  const action = await save(env, [
+    { habit: "pushups", count: 3, note: "Evening" },
+    { habit: "pushups", count: 1, note: "Late" },
+  ]);
+
+  assert.deepEqual(await checkNotes(env), [{ count: 6, note: "Late" }]);
+  await undo(env, action);
+  assert.deepEqual(await checkNotes(env), [{ count: 2, note: "Morning" }]);
+});
+
+test("Undo of a log that noted a check only in a later item puts back the note", async () => {
+  const env = await makeUndoEnv();
+
+  await env.DB.exec(
+    `INSERT INTO habit_checks (date, habit, count, note) VALUES ('${TODAY}', 'pushups', 2, 'Morning')`,
+  );
+
+  const action = await save(env, [
+    { habit: "pushups", count: 3 },
+    { habit: "pushups", count: 1, note: "Late" },
+  ]);
+
+  await undo(env, action);
+  assert.deepEqual(await checkNotes(env), [{ count: 2, note: "Morning" }]);
+});
+
 test("Undo restores a missed day", async () => {
   const env = await makeUndoEnv();
 

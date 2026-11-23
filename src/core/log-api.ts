@@ -9,6 +9,8 @@ const LogItem = z.object({
   start_time: z.optional(z.string()),
   minutes: z.optional(z.number()),
   count: z.optional(z.number()),
+  /** What the time or check was spent on, such as "Android wrapper". */
+  note: z.optional(z.string()),
 });
 
 export type LogItem = z.infer<typeof LogItem>;

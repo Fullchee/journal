@@ -190,6 +190,19 @@ export const Durations = z.record(z.string(), z.record(z.string(), z.array(Durat
 
 export type Durations = z.infer<typeof Durations>;
 
+/** The longest note a Duration entry or a Habit check keeps: one line. */
+export const MAX_NOTE = 200;
+
+/** `notes` maps an ISO date to each Habit's non-empty notes that day: its Duration entries' by start, then its check's. */
+const HabitNotes = z.record(z.string(), z.array(z.string()));
+
+export const DayNotes = z.record(z.string(), HabitNotes);
+
+export type DayNotes = z.infer<typeof DayNotes>;
+
+/** A note as stored: one line, trimmed, at most MAX_NOTE characters. */
+export const cleanNote = (note: string) => note.replaceAll(/\s+/g, " ").trim().slice(0, MAX_NOTE);
+
 /** `outside`: weather, a cancellation, someone else's plans; `avoidance`: I put it off. */
 export const RESCHEDULE_CAUSES = ["outside", "avoidance"] as const;
 

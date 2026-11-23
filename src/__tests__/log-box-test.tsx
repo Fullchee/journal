@@ -336,6 +336,26 @@ describe("log box", () => {
     });
   });
 
+  it("shows the drafted note, and Save posts the note the owner edited", async () => {
+    const { writes: posts } = fakeApi(logRoutes({ type: "unclear", text: "" }));
+
+    await openLogForm(
+      [{ habit: "walk", start_time: "08:00", minutes: 20, note: "Lakeshore" }],
+      "walked 20 min at 8: Lakeshore",
+    );
+
+    expect(await screen.findByLabelText("Note")).toHaveDisplayValue("Lakeshore");
+    await userEvent.paste(screen.getByLabelText("Note"), "High Park");
+    await userEvent.press(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() =>
+      expect(posts.at(-1)?.body).toEqual({
+        text: "walked 20 min at 8: Lakeshore",
+        log: [{ habit: "walk", date: TODAY, start_time: "08:00", minutes: 20, note: "High Park" }],
+      }),
+    );
+  });
+
   it("lets the owner change the Habit, and offers only tracked ones", async () => {
     const { writes: posts } = fakeApi(
       logRoutes({ type: "entries", entries: [{ habit: null, count: 3 }] }),

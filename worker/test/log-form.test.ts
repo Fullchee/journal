@@ -4,7 +4,7 @@ import { MODEL_DOWN } from "@worker/lib/log-model";
 import { onRequestPost as postDraft } from "@worker/api/log/draft";
 import { onRequestPost as postEntries } from "@worker/api/log/entries";
 import type { Ai, Env, Json, SqlValue } from "@worker/lib/env";
-import { insertHabit } from "@worker/lib/habit-records";
+import { insertHabit, readNotes } from "@worker/lib/habit-records";
 import type { ModelReply } from "@worker/lib/log-thread";
 import { makeD1 } from "./helpers/d1";
 import { apiRequest, makeEnv, OWNER, STRANGER } from "./helpers/env";
@@ -188,6 +188,58 @@ test("saving entries writes them and returns the receipt and Undo action", async
   ]);
   assert.deepEqual(await rows(env, "SELECT text FROM log_actions"), [
     { text: "youtube at 8 and 5 pushups" },
+  ]);
+});
+
+test("a draft keeps the note the model gave, on one line", async () => {
+  const env = await makeFormEnv({
+    action: "log",
+    log: [{ habit: "youtube", minutes: 120, note: " Android\nwrapper " }],
+  });
+
+  const res = await draft(env, { text: "Side projects for the past two hours: Android wrapper" });
+
+  assert.deepEqual(await readJson(res), {
+    type: "entries",
+    entries: [{ habit: "youtube", minutes: 120, note: "Android wrapper" }],
+  });
+});
+
+test("saving entries keeps each note, and readNotes lists a Day's notes by start, then the check's", async () => {
+  const env = await makeFormEnv();
+
+  await save(env, {
+    text: "notes",
+    log: [
+      { habit: "youtube", start_time: "09:00", minutes: 30, note: "Android wrapper" },
+      { habit: "youtube", start_time: "08:00", minutes: 30, note: "Talk on Hermes" },
+      { habit: "youtube", start_time: "07:00", minutes: 30 },
+      { habit: "pushups", count: 5, note: "Before lunch" },
+    ],
+  });
+
+  assert.deepEqual(
+    await rows(env, "SELECT start_time, note FROM habit_durations ORDER BY start_time"),
+    [
+      { start_time: "07:00", note: "" },
+      { start_time: "08:00", note: "Talk on Hermes" },
+      { start_time: "09:00", note: "Android wrapper" },
+    ],
+  );
+  assert.deepEqual(await readNotes(env, TODAY), {
+    [TODAY]: { pushups: ["Before lunch"], youtube: ["Talk on Hermes", "Android wrapper"] },
+  });
+  assert.deepEqual(await readNotes(env, "2026-11-07"), {});
+});
+
+test("a log without a note keeps the check's note", async () => {
+  const env = await makeFormEnv();
+
+  await save(env, { text: "", log: [{ habit: "pushups", count: 5, note: "Before lunch" }] });
+  await save(env, { text: "", log: [{ habit: "pushups", count: 2 }] });
+
+  assert.deepEqual(await rows(env, "SELECT count, note FROM habit_checks"), [
+    { count: 7, note: "Before lunch" },
   ]);
 });
 

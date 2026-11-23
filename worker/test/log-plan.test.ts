@@ -75,7 +75,23 @@ test("a duration entry with a start time is written as given", () => {
     startTime: "08:00",
     minutes: 30,
     endedNow: false,
+    note: "",
   });
+});
+
+test("a note is kept on one trimmed line, and a long one is cut to fit", () => {
+  const [entry, check] = writesOf(
+    resolveItems(
+      [
+        { habit: "youtube", minutes: 120, note: "  Android\n wrapper " },
+        { habit: "floss", note: "x".repeat(250) },
+      ],
+      ctx,
+    ),
+  );
+
+  assert.equal(entry?.note, "Android wrapper");
+  assert.equal(check?.note, "x".repeat(200));
 });
 
 test("a one-digit hour is padded", () => {
@@ -105,6 +121,7 @@ test("an entry that ended just now but started before midnight is logged on the 
     startTime: "23:35",
     minutes: 45,
     endedNow: true,
+    note: "",
   });
 });
 
@@ -165,7 +182,13 @@ for (const date of ["2026-11-07", "yesterday", "2026-02-30"])
 test("a check Habit always logs a count of 1", () => {
   const [write] = writesOf(resolveItems([{ habit: "floss", count: 5 }], ctx));
 
-  assert.deepEqual(write, { record: "check", habit: floss, date: "2026-11-06", count: 1 });
+  assert.deepEqual(write, {
+    record: "check",
+    habit: floss,
+    date: "2026-11-06",
+    count: 1,
+    note: "",
+  });
 });
 
 for (const [given, added] of [
@@ -178,7 +201,13 @@ for (const [given, added] of [
   test(`a count Habit given ${given} adds ${added}`, () => {
     const [write] = writesOf(resolveItems([{ habit: "pushups", count: given }], ctx));
 
-    assert.deepEqual(write, { record: "count", habit: pushups, date: "2026-11-06", count: added });
+    assert.deepEqual(write, {
+      record: "count",
+      habit: pushups,
+      date: "2026-11-06",
+      count: added,
+      note: "",
+    });
   });
 
 test("capCount stops at MAX_COUNT", () => {
@@ -280,6 +309,13 @@ for (const [name, extra, expected] of guesses)
     assert.deepEqual(scheduleOf(extra), expected);
   });
 
+test("a create proposal keeps the note for its first entry", () => {
+  assert.deepEqual(
+    readCreate({ name: "Side projects", kind: "good", record: "duration", note: "Android" })?.entry,
+    { note: "Android" },
+  );
+});
+
 test("an invalid create proposal is null", () => {
   assert.equal(readCreate(null), null);
   assert.equal(readCreate({ name: "", kind: "good", record: "check" }), null);
@@ -295,6 +331,7 @@ const at = (startTime: string): Extract<Write, { record: "duration" }> => ({
   startTime,
   minutes: 30,
   endedNow: false,
+  note: "",
 });
 
 test("earliestDate picks the first date written, or the fallback", () => {
@@ -319,11 +356,19 @@ test("receiptLine reads each Record style", () => {
     "Logged YouTube: 30 min at 9:30 AM (today 30 min).",
   );
   assert.equal(
-    receiptLine({ record: "count", habit: pushups, date: "2026-11-05", count: 2 }, 5, "2026-11-06"),
+    receiptLine(
+      { record: "count", habit: pushups, date: "2026-11-05", count: 2, note: "" },
+      5,
+      "2026-11-06",
+    ),
     "Logged Push-ups: +2 (yesterday 5).",
   );
   assert.equal(
-    receiptLine({ record: "check", habit: floss, date: "2026-11-06", count: 1 }, 1, "2026-11-06"),
+    receiptLine(
+      { record: "check", habit: floss, date: "2026-11-06", count: 1, note: "" },
+      1,
+      "2026-11-06",
+    ),
     "Logged Floss for today.",
   );
 });

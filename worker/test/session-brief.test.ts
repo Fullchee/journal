@@ -70,6 +70,7 @@ test("factsOf groups by Toronto day, splits lows and highs, and counts habits", 
     ],
     oneOffs: { habits: [], checks: [], reschedules: {} },
     skips: [],
+    notes: [],
   });
 
   assert.equal(facts.rows.length, 2);
@@ -146,6 +147,31 @@ test("the brief counts a duration Habit once on each day it has an entry", async
     .run();
   const body = await (await call(env, `/api/session-brief?start=${today}`)).json();
   assert.deepEqual(body.facts.habits, [{ name: "Bedtime meditation (15 min)", days: 1 }]);
+});
+
+test("the brief lists each Habit's notes with the Habit's name", async () => {
+  const env = makeEnv();
+  const today = torontoDay(new Date());
+  await env.DB.prepare(
+    "UPDATE habits SET record = 'duration', target_minutes = 15 WHERE id = 'sit'",
+  )
+    .bind()
+    .run();
+  await env.DB.prepare(
+    "INSERT INTO habit_durations (habit, date, start_time, minutes, note) VALUES ('sit', ?1, '08:00', 10, 'Body scan')",
+  )
+    .bind(today)
+    .run();
+  // habit_checks has no foreign key, so a deleted Habit's note can outlive it.
+  await env.DB.prepare(
+    "INSERT INTO habit_checks (date, habit, count, note) VALUES (?1, 'gone', 1, 'No Habit')",
+  )
+    .bind(today)
+    .run();
+  const body = await (await call(env, `/api/session-brief?start=${today}`)).json();
+  assert.deepEqual(body.facts.notes, [
+    { name: "Bedtime meditation (15 min)", date: today, note: "Body scan" },
+  ]);
 });
 
 const seedOneOff = async (env: ReturnType<typeof makeEnv>, startDate: string) =>

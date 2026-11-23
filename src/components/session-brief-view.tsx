@@ -5,6 +5,7 @@ import {
   briefRowLine,
   habitLine,
   moodLines,
+  noteLine,
   skipLine,
   sleepLine,
   type BriefBody,
@@ -73,6 +74,11 @@ export function SessionBriefView({ brief: { facts, prose } }: { brief: BriefBody
           {facts.skips.length > 0 && (
             <Section title="Skips">
               <Bullets items={facts.skips.map((skip) => skipLine(skip))} empty="" />
+            </Section>
+          )}
+          {facts.notes.length > 0 && (
+            <Section title="Habit notes">
+              <Bullets items={facts.notes.map((note) => noteLine(note))} empty="" />
             </Section>
           )}
           <Section title="To raise in session">

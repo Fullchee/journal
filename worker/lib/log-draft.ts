@@ -1,4 +1,4 @@
-import type { DraftEntry, LogDraft, LogEntry } from "@/core";
+import { cleanNote, type DraftEntry, type LogDraft, type LogEntry } from "@/core";
 import { isMinutes } from "./habit-records";
 import {
   ASK_AGAIN,
@@ -18,14 +18,16 @@ const UNCLEAR: LogDraft = { type: "unclear", text: ASK_AGAIN.text };
 
 // The owner fills any field the form leaves empty, so a field that doesn't check out is dropped, not asked about.
 function fieldsOf(item: ModelItem, { today }: LogContext): LogEntry {
-  const { date, start_time: start, minutes, count } = item;
+  const { date, start_time: start, minutes, count, note = "" } = item;
   const startTime = start === undefined ? null : readTime(start);
+  const cleaned = cleanNote(note);
 
   return {
     ...(date !== undefined && isRealDate(date) && date <= today && { date }),
     ...(startTime !== null && { start_time: startTime }),
     ...(isMinutes(minutes) && { minutes }),
     ...(count !== undefined && Number.isSafeInteger(count) && count >= 1 && { count }),
+    ...(cleaned !== "" && { note: cleaned }),
   };
 }
 

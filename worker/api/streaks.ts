@@ -1,7 +1,7 @@
 import { MAX_REST_DAYS, shiftDay, torontoDay, type RestPeriod } from "@/core";
 import { authorize, authorizedBody } from "@worker/lib/auth";
 import type { Env, PagesContext } from "@worker/lib/env";
-import { readRecords } from "@worker/lib/habit-records";
+import { readNotes, readRecords } from "@worker/lib/habit-records";
 import { json } from "@worker/lib/json";
 import * as z from "zod/mini";
 
@@ -57,13 +57,14 @@ async function endRest(env: Env, today: string) {
   return true;
 }
 
-/** Every Habit's counts, Duration entries and Skip causes, plus every Rest period: what Streaks replay. */
+/** Every Habit's counts, Duration entries and Skip causes, plus every Rest period: what Streaks replay. History shows the notes. */
 export async function onRequestGet({ request, env }: PagesContext) {
   const viewer = await authorize(request, env);
 
   if (viewer instanceof Response) return viewer;
+  const records = await readRecords(env, ALL_HISTORY, new Date());
 
-  return json(await readRecords(env, ALL_HISTORY, new Date()));
+  return json({ ...records, notes: await readNotes(env, ALL_HISTORY) });
 }
 
 export async function onRequestPost({ request, env }: PagesContext) {

@@ -27,6 +27,7 @@ const row = (over: Partial<FormEntry> = {}): FormEntry => ({
   startTime: "08:00",
   minutes: "30",
   count: "1",
+  note: "",
   ...over,
 });
 
@@ -60,6 +61,13 @@ describe("openEntries", () => {
     assert.deepEqual(open([{ habit: null, date: "2026-11-07", start_time: "18:00", count: 3 }]), [
       row({ habit: null, date: "2026-11-07", startTime: "18:00", minutes: "", count: "3" }),
     ]);
+  });
+
+  test("keeps the model's note", () => {
+    assert.deepEqual(
+      open([{ habit: "walk", start_time: "08:00", minutes: 30, note: "Lakeshore" }]),
+      [row({ note: "Lakeshore" })],
+    );
   });
 
   test("an earlier day or a run past midnight leaves the start blank", () => {
@@ -151,6 +159,22 @@ describe("logForm items", () => {
       [
         { habit: "walk", date: "2026-11-08", start_time: "08:05", minutes: 30 },
         { habit: "water", date: "2026-11-08", count: 2 },
+        { habit: "floss", date: "2026-11-08" },
+      ],
+    );
+  });
+
+  test("sends a note on one trimmed line, and none when it is blank", () => {
+    assert.deepEqual(
+      formOf([row({ note: " Android\n wrapper " }), row({ habit: "floss", note: "  " })]).items,
+      [
+        {
+          habit: "walk",
+          date: "2026-11-08",
+          start_time: "08:00",
+          minutes: 30,
+          note: "Android wrapper",
+        },
         { habit: "floss", date: "2026-11-08" },
       ],
     );

@@ -25,7 +25,7 @@ import {
   useHabitTracker,
   type HabitsBody,
 } from "@/lib/data/habits";
-import { useHabitRecords } from "@/lib/data/streaks";
+import { useDayNotes, useHabitRecords } from "@/lib/data/streaks";
 
 // Years of daily periods would be a long render, so the list grows a page at a time.
 const PAGE = 60;
@@ -120,6 +120,7 @@ function HistoryBody({ habit, body }: { habit: Habit; body: HabitsBody }) {
   const [now] = useState(() => new Date());
   const [limit, setLimit] = useState(PAGE);
   const records = useHabitRecords(body);
+  const notes = useDayNotes();
 
   if (records === null) return <Text variant="muted">Loading History…</Text>;
   const history = habitHistory(habit, records, now);
@@ -129,7 +130,7 @@ function HistoryBody({ habit, body }: { habit: Habit; body: HabitsBody }) {
       <HistorySummary history={history} strength={habitStrength(habit, records, now)} />
       <HabitTargets habitId={habit.id} />
       <BackfillCalendar habit={habit} records={records} today={torontoDay(now)} />
-      <HistoryList history={history} limit={limit} />
+      <HistoryList history={history} limit={limit} notes={notes} habitId={habit.id} />
       {history.periods.length > limit && (
         <Button
           variant="outline"

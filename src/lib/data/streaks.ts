@@ -10,6 +10,7 @@ import * as z from "zod/mini";
 import {
   checkInStreak,
   Counts,
+  DayNotes,
   Durations,
   habitHistory,
   habitStreak,
@@ -34,6 +35,7 @@ const StreakHistory = z.object({
   durations: Durations,
   skips: Skips,
   restPeriods: z.array(RestPeriod),
+  notes: DayNotes,
 });
 
 type StreakHistory = z.infer<typeof StreakHistory>;
@@ -91,6 +93,13 @@ export function useHabitRecords(recent: HabitsBody): StreakRecords | null {
   const { data } = useQuery(streakHistoryQuery);
 
   return data ? recordsOf(data, recent) : null;
+}
+
+/** Each Day's notes on Duration entries and checks; empty before the history loads. */
+export function useDayNotes(): DayNotes {
+  const { data } = useQuery({ ...streakHistoryQuery, select: (history) => history.notes });
+
+  return data ?? {};
 }
 
 // The persisted cache shows at once, so only a fetch since mount that has settled holds the server's answers.

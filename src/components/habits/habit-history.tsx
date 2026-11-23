@@ -3,7 +3,9 @@ import {
   historyStrip,
   historyTotalsLabel,
   loggedLabel,
+  periodNotes,
   strengthLabel,
+  type DayNotes,
   type HabitHistory,
   type HistoryMark,
 } from "@/core";
@@ -103,18 +105,33 @@ function periodLines(history: HabitHistory) {
   }));
 }
 
-/** Every period since the start date, newest first. */
-export function HistoryList({ history, limit }: { history: HabitHistory; limit: number }) {
+interface HistoryListProps {
+  history: HabitHistory;
+  limit: number;
+  /** Each Day's notes, listed under the period that holds the Day. */
+  notes: DayNotes;
+  habitId: string;
+}
+
+/** Every period since the start date, newest first, each with its notes. */
+export function HistoryList({ history, limit, notes, habitId }: HistoryListProps) {
   return (
     <View role="list" aria-label="Periods" className="gap-1">
       {periodLines(history)
         .slice(0, limit)
-        .map(({ start, label, value }) => (
-          <View key={start} role="listitem" className="border-border flex-row gap-3 border-b py-2">
-            <Text className="flex-1">{label}</Text>
-            <Text variant="muted">{value}</Text>
-          </View>
-        ))}
+        .map(({ start, label, value }) => {
+          const lines = periodNotes(notes, habitId, history.unit, start);
+
+          return (
+            <View key={start} role="listitem" className="border-border gap-1 border-b py-2">
+              <View className="flex-row gap-3">
+                <Text className="flex-1">{label}</Text>
+                <Text variant="muted">{value}</Text>
+              </View>
+              {lines.length > 0 && <Text variant="muted">{lines.join("\n")}</Text>}
+            </View>
+          );
+        })}
     </View>
   );
 }

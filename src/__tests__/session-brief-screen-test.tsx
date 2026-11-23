@@ -67,6 +67,7 @@ const BRIEF: BriefBody = {
     habits: [{ name: "Walk", days: 2 }],
     oneOffs: [],
     skips: [],
+    notes: [],
   },
   prose: { summary: "A slow week.", patterns: ["Low on workdays"], toRaise: "Sleep." },
 };
@@ -172,6 +173,15 @@ it("lists Skips with avoidance flagged", async () => {
   expect(
     await screen.findByText("• 2026-11-04 Run: avoidance (flagged) “tired”"),
   ).toBeOnTheScreen();
+});
+
+it("lists Habit notes", async () => {
+  const note = { name: "Side projects", date: "2026-11-04", note: "Android wrapper" };
+
+  fakeApi(briefRoutes({ brief: { ...BRIEF, facts: { ...BRIEF.facts, notes: [note] } } }));
+  await renderBrief();
+
+  expect(await screen.findByText("• 2026-11-04 Side projects: Android wrapper")).toBeOnTheScreen();
 });
 
 it("shows Day by day as a table on a wide screen", async () => {

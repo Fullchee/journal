@@ -8,7 +8,14 @@ import {
   shiftDay,
   torontoDay,
 } from "./calendar";
-import { blankHabit, isReference, type Draft, type Durations, type Habit } from "./habits-view";
+import {
+  blankHabit,
+  cleanNote,
+  isReference,
+  type Draft,
+  type Durations,
+  type Habit,
+} from "./habits-view";
 import { DraftEntry, type HabitDetails, type LogItem, type NewHabit } from "./log-api";
 
 /** One row of the log form; numbers stay text while the owner types them. */
@@ -18,6 +25,7 @@ export interface FormEntry {
   startTime: string;
   minutes: string;
   count: string;
+  note: string;
 }
 
 const MINUTES_PER_DAY = 1440;
@@ -43,6 +51,7 @@ function formEntryOf(entry: DraftEntry, now: Date): FormEntry {
     startTime: entry.start_time ?? (endedNow >= 0 ? formatMinutes(endedNow) : ""),
     minutes: entry.minutes === undefined ? "" : String(entry.minutes),
     count: String(entry.count ?? 1),
+    note: entry.note ?? "",
   };
 }
 
@@ -84,7 +93,8 @@ function entryProblem(entry: FormEntry, habit: Habit | undefined, now: Date): st
 }
 
 function logItemOf(entry: FormEntry, habit: Habit): LogItem {
-  const base = { habit: habit.id, date: entry.date };
+  const note = cleanNote(entry.note);
+  const base = { habit: habit.id, date: entry.date, ...(note !== "" && { note }) };
 
   switch (habit.record) {
     case "duration": {

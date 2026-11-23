@@ -6,6 +6,7 @@ import {
   historyStrip,
   historyTotalsLabel,
   loggedLabel,
+  periodNotes,
   type HabitHistory,
 } from "@/core/habit-history";
 import type { Counts, Habit, Skip, Skips } from "@/core/habits-view";
@@ -316,6 +317,28 @@ describe("a bad Habit", () => {
     );
 
     expect(marks(history)).toEqual([2, 1]);
+  });
+});
+
+describe("periodNotes", () => {
+  // START is Mon 5 Oct; day(8) is Tue 13 Oct.
+  const notes = {
+    [day(0)]: { walk: ["Lakeshore", "High Park"], run: ["Track"] },
+    [day(8)]: { walk: ["Ravine"] },
+  };
+
+  test("a Day lists its own notes, as written", () => {
+    expect(periodNotes(notes, "walk", "day", day(0))).toEqual(["Lakeshore", "High Park"]);
+    expect(periodNotes(notes, "walk", "day", day(1))).toEqual([]);
+  });
+
+  test("a week or a month names each note's Day", () => {
+    expect(periodNotes(notes, "walk", "week", day(7))).toEqual(["Tue 13 Oct: Ravine"]);
+    expect(periodNotes(notes, "walk", "month", "2026-10-01")).toEqual([
+      "Mon 5 Oct: Lakeshore",
+      "Mon 5 Oct: High Park",
+      "Tue 13 Oct: Ravine",
+    ]);
   });
 });
 

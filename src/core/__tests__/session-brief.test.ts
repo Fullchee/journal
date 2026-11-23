@@ -71,6 +71,11 @@ test("factsOf groups by Toronto day, splits lows and highs, and counts habits", 
     ],
     oneOffs: { habits: [], checks: [], reschedules: {} },
     skips: [],
+    notes: [
+      { name: "Side projects", date: "2026-11-04", note: "Android wrapper" },
+      { name: "Side projects", date: "2026-11-01", note: "Before the window" },
+      { name: "Walk", date: "2026-11-03", note: "Lakeshore" },
+    ],
   });
 
   assert.equal(facts.rows.length, 2);
@@ -81,6 +86,10 @@ test("factsOf groups by Toronto day, splits lows and highs, and counts habits", 
   assert.deepEqual(facts.habits, [
     { name: "Walk", days: 2 },
     { name: "Stretch", days: 1 },
+  ]);
+  assert.deepEqual(facts.notes, [
+    { name: "Walk", date: "2026-11-03", note: "Lakeshore" },
+    { name: "Side projects", date: "2026-11-04", note: "Android wrapper" },
   ]);
 });
 

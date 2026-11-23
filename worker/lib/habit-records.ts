@@ -11,6 +11,7 @@ import {
   targetCountRange,
   UsualWhen,
   type Counts,
+  type DayNotes,
   type Durations,
   type Draft,
   type Habit,
@@ -201,6 +202,28 @@ async function readDurations(env: Env, since: string) {
   }
 
   return durations;
+}
+
+/** Each Habit's non-empty notes since `since`: a Day's Duration entries' by start, then its check's. */
+export async function readNotes(env: Env, since: string) {
+  const { results } = await env.DB.prepare(
+    "SELECT date, habit, note FROM (" +
+      "SELECT date, habit, note, 0 AS source, start_time, id FROM habit_durations WHERE date >= ?1 AND note != '' " +
+      "UNION ALL SELECT date, habit, note, 1, '', 0 FROM habit_checks WHERE date >= ?1 AND note != ''" +
+      ") ORDER BY date, habit, source, start_time, id",
+  )
+    .bind(since)
+    .all<{ date: string; habit: string; note: string }>();
+
+  const notes: DayNotes = {};
+
+  for (const { date, habit, note } of results) {
+    const day = notes[date] ?? {};
+    day[habit] = [...(day[habit] ?? []), note];
+    notes[date] = day;
+  }
+
+  return notes;
 }
 
 /** A new Habit goes to the end of the list. */
@@ -562,6 +585,12 @@ export const writeCheck = (
   ...endSkips(db, habit, [date]),
 ];
 
+/** The note of the Day's check; a Day with no done check keeps none. */
+export const writeCheckNote = (db: D1, { habit, date, note }: DayOf & { note: string }) =>
+  db
+    .prepare(`UPDATE habit_checks SET note = ?3 WHERE ${DAY} AND count > 0`)
+    .bind(habit, date, note);
+
 /** `set` is the owner's Skip, over any answer; `fill` is an automatic source's, only on an unanswered Day. */
 export type SkipMode = "set" | "fill";
 
@@ -610,12 +639,13 @@ export const clearCheck = (db: D1, { habit, date }: DayOf): RecordWrite => [
   db.prepare(`DELETE FROM habit_skips WHERE ${DAY}`).bind(habit, date),
 ];
 
-/** One new Duration entry; `id` names the calendar event it logs. */
+/** One new Duration entry; `id` names the calendar event it logs. Only the owner writes a `note`. */
 export interface NewEntry {
   date: string;
   startTime: string;
   minutes: number;
   id?: string;
+  note?: string;
 }
 
 /** `owner` adds every entry; `import` skips one whose date and start the Habit has; `calendar` logs each event once, never on a Skipped Day. */
@@ -628,7 +658,8 @@ const SAME_START =
 
 const ADD_SQL: Record<EntrySource, string[]> = {
   owner: [
-    `INSERT INTO habit_durations (habit, date, start_time, minutes) SELECT ?1, ${ENTRY} FROM json_each(?2) e WHERE ${IS_DURATION}`,
+    "INSERT INTO habit_durations (habit, date, start_time, minutes, note) " +
+      `SELECT ?1, ${ENTRY}, coalesce(e.value ->> 'note', '') FROM json_each(?2) e WHERE ${IS_DURATION}`,
   ],
   // One statement whatever the import's size, so a re-import adds only new workouts.
   import: [

@@ -6,6 +6,7 @@ import {
   torontoDay,
   torontoTime,
   type Counts,
+  type DayNotes,
   type Habit,
   type Logged,
   type StreakRecords,
@@ -19,9 +20,11 @@ import {
   newHabitId,
   readHabit,
   readHabits,
+  readNotes,
   readRecords,
   removeDurations,
   writeCheck,
+  writeCheckNote,
   writeSkip,
 } from "./habit-records";
 import {
@@ -58,12 +61,13 @@ const Entry = z.object({
 
 type Entry = z.infer<typeof Entry>;
 
-// A count of 0 means the day had no habit_checks row.
+// A count of 0 means the day had no habit_checks row. `note` is the check's note before, kept only when the log changed it.
 const CountChange = z.object({
   habit: z.string(),
   date: z.string(),
   before: z.number(),
   after: z.number(),
+  note: z.optional(z.string()),
 });
 
 type CountChange = z.infer<typeof CountChange>;
@@ -115,15 +119,24 @@ type CountWrite = Exclude<Write, { record: "duration" }>;
 // Several writes to one Habit on one day stack, so each starts from the count the one before left.
 function countChange(
   changes: Map<string, CountChange>,
-  counts: Counts,
+  { counts, notes }: { counts: Counts; notes: DayNotes },
   write: CountWrite,
 ): CountChange {
   const earlier = changes.get(`${write.date} ${write.habit.id}`);
   const before = earlier?.before ?? counts[write.date]?.[write.habit.id] ?? 0;
   const current = earlier?.after ?? before;
   const after = write.record === "check" ? 1 : capCount(Math.max(0, current) + write.count);
+  // A check or count Habit has no Duration entries, so its Day's only note is its check's.
+  const stored = notes[write.date]?.[write.habit.id]?.[0] ?? "";
+  const note = earlier?.note ?? (write.note === "" ? undefined : stored);
 
-  return { habit: write.habit.id, date: write.date, before, after };
+  return {
+    habit: write.habit.id,
+    date: write.date,
+    before,
+    after,
+    ...(note !== undefined && { note }),
+  };
 }
 
 // A done write replaces the Day's Skip, so the Receipt keeps it for Undo to put back.
@@ -142,7 +155,12 @@ function skippedDay(
 export async function applyLog(env: Env, { text, writes, created, today }: LogWrite) {
   // An entry from the day before can run past midnight into the first day written.
   const since = shiftDay(earliestDate(writes, "9999-12-31"), -1);
-  const records = await readRecords(env, since, new Date());
+
+  const [records, notes] = await Promise.all([
+    readRecords(env, since, new Date()),
+    readNotes(env, since),
+  ]);
+
   const { counts, durations: entries } = records;
 
   // D1 runs a batch as one transaction, so if another write takes this id first the whole batch fails instead of mixing rows.
@@ -168,7 +186,10 @@ export async function applyLog(env: Env, { text, writes, created, today }: LogWr
     if (skip) skipped.set(`${write.date} ${write.habit.id}`, skip);
 
     if (write.record !== "duration") {
-      changes.set(`${write.date} ${write.habit.id}`, countChange(changes, counts, write));
+      changes.set(
+        `${write.date} ${write.habit.id}`,
+        countChange(changes, { counts, notes }, write),
+      );
       statements.push(
         ...writeCheck(env.DB, {
           habit: write.habit.id,
@@ -177,6 +198,11 @@ export async function applyLog(env: Env, { text, writes, created, today }: LogWr
           mode: "add",
         }),
       );
+
+      if (write.note !== "")
+        statements.push(
+          writeCheckNote(env.DB, { habit: write.habit.id, date: write.date, note: write.note }),
+        );
       receipts.push(() => receiptLine(write, countAfter(write), today));
       continue;
     }
@@ -192,7 +218,14 @@ export async function applyLog(env: Env, { text, writes, created, today }: LogWr
       ...addDurations(
         env.DB,
         added.habit,
-        [{ date: added.date, startTime: added.start_time, minutes: added.minutes }],
+        [
+          {
+            date: added.date,
+            startTime: added.start_time,
+            minutes: added.minutes,
+            note: write.note,
+          },
+        ],
         "owner",
       ),
     );
@@ -354,11 +387,14 @@ function undoStatements(env: Env, id: number, applied: Applied) {
     ...added.flatMap(({ habit: entryHabit, date, start_time: startTime, minutes }) =>
       removeDurations(env.DB, { entry: { habit: entryHabit, date, startTime, minutes } }),
     ),
-    ...counts.flatMap(({ date, habit: counted, before }) =>
-      before > 0
-        ? writeCheck(env.DB, { habit: counted, date, count: before, mode: "set" })
-        : clearCheck(env.DB, { habit: counted, date }),
-    ),
+    ...counts.flatMap(({ date, habit: counted, before, note }) => {
+      if (before <= 0) return clearCheck(env.DB, { habit: counted, date });
+      const restored = writeCheck(env.DB, { habit: counted, date, count: before, mode: "set" });
+
+      return note === undefined
+        ? restored
+        : [...restored, writeCheckNote(env.DB, { habit: counted, date, note })];
+    }),
     // `fill`, so a Day logged again since keeps that answer.
     ...restoredSkips(applied).flatMap(({ habit: skippedHabit, date, cause, note }) =>
       writeSkip(env.DB, {

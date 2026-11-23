@@ -20,6 +20,7 @@ const ITEM = {
     start_time: { type: "string" },
     minutes: { type: "integer" },
     count: { type: "integer" },
+    note: { type: "string" },
   },
   required: ["habit"],
 };
@@ -39,6 +40,7 @@ const SCHEMA = {
         start_time: { type: "string" },
         minutes: { type: "integer" },
         count: { type: "integer" },
+        note: { type: "string" },
       },
     },
     create: {
@@ -55,6 +57,7 @@ const SCHEMA = {
         start_time: { type: "string" },
         minutes: { type: "integer" },
         count: { type: "integer" },
+        note: { type: "string" },
       },
       required: ["name", "kind", "record", "target_type"],
     },
@@ -77,8 +80,9 @@ const PROMPT = `You turn one person's sentence into Habit logs. Reply with JSON 
   Use only ids from "habits". "duration" Habits need minutes; give start_time (24-hour) only if the person said when it started. "count" Habits take count (default 1). "check" Habits need neither.
   Leave out date for today. Resolve "yesterday" and weekday names to the latest past date.
   Several Habits in one sentence go in one log list.
+  Put what the time or check was spent on in "note", a few words in the person's own wording: "Side projects for the past two hours: Android wrapper" gives "note":"Android wrapper". Leave out note when they said nothing more than the Habit.
 - {"action":"ask","question":"Which Habit was that?","habits":["<id>","<id>"],"entry":{"minutes":30},"create":{...}} when the sentence could be two or more Habits, or one only loosely.
-  "habits" lists up to 3 candidate ids, best first. "entry" holds what the sentence said (date, start_time, minutes, count).
+  "habits" lists up to 3 candidate ids, best first. "entry" holds what the sentence said (date, start_time, minutes, count, note).
   Add "create" (same shape as below) when a new Habit might fit better than every candidate.
 - {"action":"ask","question":"...","options":["..."]} only when the sentence is missing something that isn't the Habit. Options are short plain words, never ids.
 - {"action":"create","create":{"name":"...","kind":"good|bad","record":"check|count|duration","target_minutes":60,"target_type":"daily|weekly|days","target_count":3,"target_days":[1,3],"minutes":30}} when no Habit fits. Name it the way a person would, e.g. "Watching YouTube". Never invent an id.

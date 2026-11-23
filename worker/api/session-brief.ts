@@ -3,7 +3,7 @@ import { factsOf, habitsDone, type Habit } from "@/core";
 import { writeProse } from "@worker/lib/session-brief-prose";
 import { readCheckIns } from "@worker/lib/check-in-store";
 import { readReschedules } from "@worker/lib/habit-reschedules";
-import { readHabits, readRecords } from "@worker/lib/habit-records";
+import { readHabits, readNotes, readRecords } from "@worker/lib/habit-records";
 import type { PagesContext } from "@worker/lib/env";
 import { json } from "@worker/lib/json";
 
@@ -36,7 +36,7 @@ export async function onRequestGet({ request, env }: PagesContext) {
   const since = new Date(Date.parse(start) - SLACK_MS).toISOString();
   const now = new Date();
 
-  const [checkIns, sleep, habits, records, reschedules] = await Promise.all([
+  const [checkIns, sleep, habits, records, reschedules, notes] = await Promise.all([
     readCheckIns(env, "WHERE checked_in_at >= ?", since),
     env.DB.prepare(
       "SELECT date, duration_min AS durationMin, sleep_score AS sleepScore FROM sleep WHERE date >= ? ORDER BY date",
@@ -46,6 +46,7 @@ export async function onRequestGet({ request, env }: PagesContext) {
     readHabits(env),
     readRecords(env, start, now),
     readReschedules(env),
+    readNotes(env, start),
   ]);
 
   // Active only, as on Today: a backlogged One-off is not overdue.
@@ -70,6 +71,9 @@ export async function onRequestGet({ request, env }: PagesContext) {
       date,
       ...record,
     })),
+    notes: recordsOf(notes, habits).flatMap(({ habit, date, record }) =>
+      record.map((note) => ({ name: habit.name, date, note })),
+    ),
   });
 
   // The prose reads Check-ins; One-offs alone are listed as facts.

@@ -1,4 +1,5 @@
 import {
+  MAX_NOTE,
   blankEntry,
   torontoDay,
   logForm,
@@ -78,6 +79,13 @@ function EntryRow({ row: { entry, habit, overlap }, habits, now, update, remove 
           onChangeText={(count) => update({ count })}
         />
       )}
+      <TextField
+        label="Note"
+        placeholder="What was it spent on?"
+        maxLength={MAX_NOTE}
+        value={entry.note}
+        onChangeText={(note) => update({ note })}
+      />
       {overlap !== null && <Text className="text-destructive text-sm">{overlap}</Text>}
       {remove && (
         <Button variant="ghost" size="sm" className="self-start" onPress={remove}>

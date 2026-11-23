@@ -103,7 +103,13 @@ const tracker = (): HabitsBody => ({
 function serve() {
   fakeApi({
     "/api/habits": tracker,
-    "/api/streaks": () => ({ counts: COUNTS, durations: {}, skips: SKIPS, restPeriods: [] }),
+    "/api/streaks": () => ({
+      counts: COUNTS,
+      durations: {},
+      skips: SKIPS,
+      restPeriods: [],
+      notes: { [ago(2)]: { walk: ["Lakeshore", "High Park"] } },
+    }),
   });
 }
 
@@ -167,6 +173,15 @@ describe("Habit History", () => {
 
     expect(await screen.findByText("New habit")).toBeOnTheScreen();
     expect(screen.queryByRole("link", { name: /^History of/ })).not.toBeOnTheScreen();
+  });
+
+  it("lists each Day's notes under the Day", async () => {
+    serve();
+    await renderRouter(APP_DIR, { initialUrl: "/habit/walk/history" });
+
+    const label = await screen.findByText(dueDateLabel(ago(2)));
+
+    expect(label.parent?.parent).toHaveTextContent(/Lakeshore\s+High Park/);
   });
 
   it("shows a bad Habit what it logged, never hit or missed", async () => {

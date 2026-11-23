@@ -1,4 +1,5 @@
 import {
+  cleanNote,
   clockLabel,
   formatDay,
   formatMinutes,
@@ -32,7 +33,7 @@ export interface LogContext {
   time: string;
 }
 
-/** One checked write. A `check` Habit's count is always 1; a `count` Habit's count is what to add. */
+/** One checked write. A `check` Habit's count is always 1; a `count` Habit's count is what to add. An empty note is none. */
 export type Write =
   | {
       record: "duration";
@@ -41,8 +42,9 @@ export type Write =
       startTime: string;
       minutes: number;
       endedNow: boolean;
+      note: string;
     }
-  | { record: "check" | "count"; habit: LogHabit; date: string; count: number };
+  | { record: "check" | "count"; habit: LogHabit; date: string; count: number; note: string };
 
 /** Why an entry can't be saved, as a question to the owner. */
 export interface Ask {
@@ -112,6 +114,7 @@ function durationWrite(
   const { minutes, start_time: start } = item;
 
   if (!isMinutes(minutes)) return ask(`How many minutes of ${habit.name}?`);
+  const note = cleanNote(item.note ?? "");
 
   if (start !== undefined) {
     const startTime = readTime(start);
@@ -123,7 +126,15 @@ function durationWrite(
         `${clockLabel(startTime)} today hasn't come yet. What time did ${habit.name} start?`,
       );
 
-    return { record: "duration", habit, date, startTime, minutes, endedNow: false };
+    return {
+      record: "duration",
+      habit,
+      date,
+      startTime,
+      minutes,
+      endedNow: false,
+      note,
+    };
   }
 
   // "Ended just now" only means something today.
@@ -132,7 +143,15 @@ function durationWrite(
 
   // An entry that started before midnight belongs to the day it started, like any entry that runs past midnight.
   return startMinute >= 0
-    ? { record: "duration", habit, date, startTime: timeOf(startMinute), minutes, endedNow: true }
+    ? {
+        record: "duration",
+        habit,
+        date,
+        startTime: timeOf(startMinute),
+        minutes,
+        endedNow: true,
+        note,
+      }
     : {
         record: "duration",
         habit,
@@ -140,6 +159,7 @@ function durationWrite(
         startTime: timeOf(startMinute + MINUTES_PER_DAY),
         minutes,
         endedNow: true,
+        note,
       };
 }
 
@@ -160,6 +180,7 @@ function resolveItem(item: ModelItem | null, ctx: LogContext): Write | Ask {
     habit,
     date,
     count: habit.record === "check" ? 1 : countOf(item.count),
+    note: cleanNote(item.note ?? ""),
   };
 }
 
@@ -184,12 +205,13 @@ const isOneOf = <Value extends string>(
 ): value is Value => list.some((entry) => entry === value);
 
 /** Only the fields the model gave, so the form leaves the rest empty. */
-export function entryOf({ date, start_time, minutes, count }: ModelItem): LogEntry {
+export function entryOf({ date, start_time, minutes, count, note }: ModelItem): LogEntry {
   return {
     ...(date !== undefined && { date }),
     ...(start_time !== undefined && { start_time }),
     ...(minutes !== undefined && { minutes }),
     ...(count !== undefined && { count }),
+    ...(note !== undefined && { note }),
   };
 }
 
@@ -226,7 +248,18 @@ export function readCreate(
   create: ModelCreate | null | undefined,
 ): { habit: NewHabit; entry: LogEntry } | null {
   if (create === null || create === undefined) return null;
-  const { name, kind, record, target_minutes: target, date, start_time, minutes, count } = create;
+
+  const {
+    name,
+    kind,
+    record,
+    target_minutes: target,
+    date,
+    start_time,
+    minutes,
+    count,
+    note,
+  } = create;
 
   if (
     name === undefined ||
@@ -245,7 +278,7 @@ export function readCreate(
       target_minutes: isMinutes(target) ? target : DEFAULT_TARGET_MINUTES,
       ...scheduleOf(create),
     },
-    entry: entryOf({ date, start_time, minutes, count }),
+    entry: entryOf({ date, start_time, minutes, count, note }),
   };
 }
 

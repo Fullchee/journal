@@ -9,7 +9,8 @@ Reply with JSON only: {"summary": string, "patterns": string[], "toRaise": strin
 summary: one line on the shape of the period. patterns: 0-4 bullets, only with 2 or more data points, linking zone to place, what they were doing, sleep or habits.
 toRaise: one item, the hardest moment or the pattern that repeats most.
 oneOffs are things planned for one date. A Reschedule with cause "avoidance" means the person put it off; report it plainly, without judgement.
-skips are recurring Habits the person chose not to do on a day; one with cause "avoidance" is flagged the same way.`;
+skips are recurring Habits the person chose not to do on a day; one with cause "avoidance" is flagged the same way.
+notes say what a Habit's time or check was spent on that day, in the person's words.`;
 
 /** A failing model costs only the prose: the brief still shows its facts. */
 export async function writeProse(ai: Ai, facts: BriefFacts): Promise<Prose | null> {

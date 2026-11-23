@@ -1,7 +1,7 @@
 import { daysFrom, mondayOf, monthDaysOf, shiftDay, torontoDay } from "./calendar";
 import { monthLabel } from "./habit-calendar";
 import { habitDayReader, type DayReading, type StreakRecords } from "./habit-day";
-import { dayMonthLabel, dueDateLabel, type Habit } from "./habits-view";
+import { dayMonthLabel, dueDateLabel, type DayNotes, type Habit } from "./habits-view";
 import { dayMark, streakFacts, weekSlot, type DayFacts } from "./streak";
 
 /** How History counts a Habit: a day, a week for an N-a-week Habit or a month for an N-a-month one. */
@@ -92,6 +92,14 @@ const PERIOD_DAYS: Record<HistoryUnit, (start: string) => string[]> = {
   week: (monday) => daysFrom(monday, shiftDay(monday, 6)),
   month: monthDaysOf,
 };
+
+/** The notes of one History period, oldest Day first; a week or a month names each note's Day: "Tue 10 Nov: …". */
+export const periodNotes = (notes: DayNotes, habit: string, unit: HistoryUnit, start: string) =>
+  PERIOD_DAYS[unit](start).flatMap((day) =>
+    (notes[day]?.[habit] ?? []).map((note) =>
+      unit === "day" ? note : `${dueDateLabel(day)}: ${note}`,
+    ),
+  );
 
 interface HistoryReader {
   read: (day: string) => DayReading;

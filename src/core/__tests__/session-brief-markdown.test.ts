@@ -34,6 +34,7 @@ const facts = (extra: Partial<BriefFacts> = {}): BriefFacts => ({
   habits: [],
   oneOffs: [],
   skips: [],
+  notes: [],
   ...extra,
 });
 
@@ -88,6 +89,19 @@ test("briefMarkdown lists Skips only when there are some", () => {
     /## Skips\n\n- 2026-11-03 Run: avoidance \(flagged\)/,
   );
   assert.doesNotMatch(briefMarkdown({ facts: without, prose: null }), /## Skips/);
+});
+
+test("briefMarkdown lists Habit notes only when there are some", () => {
+  const note = { name: "Side projects", date: "2026-11-03", note: "Android wrapper" };
+
+  const withNote = facts({ rows: [row()], notes: [note] });
+  const without = facts({ rows: [row()] });
+
+  assert.match(
+    briefMarkdown({ facts: withNote, prose: null }),
+    /## Habit notes\n\n- 2026-11-03 Side projects: Android wrapper/,
+  );
+  assert.doesNotMatch(briefMarkdown({ facts: without, prose: null }), /## Habit notes/);
 });
 
 test("briefRecordTitle names the window by month and day", () => {

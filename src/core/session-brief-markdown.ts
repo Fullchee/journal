@@ -6,6 +6,7 @@ import {
   BriefFacts,
   Prose,
   type BriefRow,
+  type BriefNote,
   type BriefSkip,
   type BriefSleepNight,
 } from "./session-brief";
@@ -50,6 +51,8 @@ export const habitLine = ({ name, days }: { name: string; days: number }) =>
 const SKIP_CAUSES = { outside: "outside", avoidance: "avoidance (flagged)" } as const;
 
 /** One Skip: when, which Habit, its cause, then the note. */
+export const noteLine = ({ date, name, note }: BriefNote) => `${date} ${name}: ${note}`;
+
 export function skipLine({ date, name, cause, note }: BriefSkip) {
   const quoted = filled(note, ` “${note}”`);
 
@@ -115,6 +118,11 @@ export function briefMarkdown({ facts, prose }: BriefBody) {
     facts.skips.length > 0 &&
       `## Skips\n\n${list(
         facts.skips.map((skip) => skipLine(skip)),
+        "",
+      )}`,
+    facts.notes.length > 0 &&
+      `## Habit notes\n\n${list(
+        facts.notes.map((note) => noteLine(note)),
         "",
       )}`,
     `## To raise in session\n\n${prose?.toRaise ?? PROSE_MISSING}`,

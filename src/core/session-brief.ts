@@ -142,6 +142,11 @@ export const skipsOf = (start: string, skips: SkipInput[]): BriefSkip[] =>
     .toSorted((a, b) => a.date.localeCompare(b.date))
     .map((s) => ({ ...s, flagged: s.cause === "avoidance" }));
 
+/** A note on a Duration entry or a Habit check, such as "Android wrapper" under Side projects. */
+const BriefNote = z.object({ name: z.string(), date: z.string(), note: z.string() });
+
+export type BriefNote = z.infer<typeof BriefNote>;
+
 export const BriefFacts = z.object({
   start: z.string(),
   end: z.string(),
@@ -152,6 +157,7 @@ export const BriefFacts = z.object({
   habits: z.array(HabitDays),
   oneOffs: z.array(BriefOneOff),
   skips: z.array(BriefSkip),
+  notes: z.array(BriefNote),
 });
 
 export type BriefFacts = z.infer<typeof BriefFacts>;
@@ -229,12 +235,14 @@ export function factsOf(
     habitsDone,
     oneOffs,
     skips,
+    notes,
   }: {
     checkIns: CheckIn[];
     sleep: BriefSleepNight[];
     habitsDone: HabitDone[];
     oneOffs: OneOffInput;
     skips: SkipInput[];
+    notes: BriefNote[];
   },
 ): BriefFacts {
   const rows = checkIns
@@ -261,6 +269,7 @@ export function factsOf(
     habits: [...counts].map(([name, days]) => ({ name, days })).toSorted((a, b) => b.days - a.days),
     oneOffs: oneOffsOf(start, end, oneOffs),
     skips: skipsOf(start, skips),
+    notes: notes.filter((n) => n.date >= start).toSorted((a, b) => a.date.localeCompare(b.date)),
   };
 }
 

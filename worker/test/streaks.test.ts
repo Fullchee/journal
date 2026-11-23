@@ -26,6 +26,7 @@ interface Body {
   counts: Record<string, Record<string, number>>;
   skips: Record<string, Record<string, { cause: string }>>;
   restPeriods: RestPeriod[];
+  notes: Record<string, Record<string, string[]>>;
 }
 
 const restPeriodsOf = async (env: Env) => (await readJson<Body>(await get(env))).restPeriods;
@@ -59,6 +60,7 @@ test("GET returns every Habit's full history and the Rest periods", async () => 
   assert.equal(body.counts["2020-01-01"]?.["up"], 1);
   assert.equal(body.skips["2026-11-09"]?.["up"]?.cause, "outside");
   assert.deepEqual(body.restPeriods, [{ start: TODAY, end: "2026-11-12" }]);
+  assert.deepEqual(body.notes, {});
 });
 
 test("a stranger gets a 403 for Streaks and can't start Rest mode", async () => {

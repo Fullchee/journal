@@ -22,6 +22,7 @@ export const ModelItem = z.object({
   start_time: lenient(z.string()),
   minutes: lenient(z.number()),
   count: lenient(z.number()),
+  note: lenient(z.string()),
 });
 
 export type ModelItem = z.infer<typeof ModelItem>;
