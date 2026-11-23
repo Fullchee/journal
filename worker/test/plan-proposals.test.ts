@@ -11,6 +11,7 @@ const task = (id: string): PlanTask => ({
   priority: 1,
   dueDate: "2026-11-05",
   labels: [],
+  source: "todoist",
 });
 
 const replying = (response?: string): Ai => ({

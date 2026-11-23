@@ -20,6 +20,7 @@ const task = (id: string, over: Partial<PlanTask> = {}): PlanTask => ({
   priority: 1,
   dueDate: "2026-11-06",
   labels: [],
+  source: "todoist",
   ...over,
 });
 
@@ -126,5 +127,22 @@ test("plainTaskName drops inline Markdown and keeps the words", () => {
   assert.equal(
     plainTaskName("snake_case_name stays, 2 * 3 * 4 stays"),
     "snake_case_name stays, 2 * 3 * 4 stays",
+  );
+});
+
+test("blocksBody gives times only to Todoist tasks, though a Plan action still shares the block", () => {
+  const sized = sizeTasks(
+    [
+      task("t", { projectId: "6h9ggGQqPMhPGGJJ" }),
+      task("merge:web#1", { projectId: "6h9ggGQqPMhPGGJJ", source: "work-plan" }),
+    ],
+    {},
+  );
+
+  const pools = planPools(sized, [], "2026-11-09");
+
+  assert.deepEqual(
+    blocksBody("2026-11-09", pools).blocks.map((b) => [b.taskIds, b.description]),
+    [[["t"], "- Task t\n- Task merge:web#1"]],
   );
 });

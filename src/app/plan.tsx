@@ -34,7 +34,9 @@ const OFFLINE = "Planning needs a connection.";
 
 type Step = "reach" | "triage" | "blocks" | "done";
 
-const STEP_NAMES: Record<Exclude<Step, "done">, string> = {
+type StepName = Exclude<Step, "done">;
+
+const STEP_NAMES: Record<StepName, string> = {
   reach: "Reach for",
   triage: "Triage",
   blocks: "Blocks",
@@ -42,11 +44,12 @@ const STEP_NAMES: Record<Exclude<Step, "done">, string> = {
 
 export default function Planner() {
   const online = useIsOnline();
-  const tasks = useQuery(planTasksQuery);
   // Fixed for the visit, so crossing 17:00 mid-plan doesn't switch the day being planned.
   const [day] = useState(() => targetDay(new Date()));
+  const tasks = useQuery(planTasksQuery(day));
 
-  if (tasks.data?.tasks.length === 0) return <NothingToPlan body={tasks.data} day={day} />;
+  if (tasks.data?.tasks.length === 0 && tasks.data.workPlan.length === 0)
+    return <NothingToPlan body={tasks.data} day={day} />;
 
   if (tasks.data) return <PlanFlow body={tasks.data} day={day} online={online} />;
 
@@ -116,7 +119,12 @@ function proposeDay(
 }
 
 const initialMinutes = (body: PlanBody) =>
-  Object.fromEntries(body.tasks.map((t) => [t.id, String(body.proposals?.[t.id]?.minutes ?? 30)]));
+  Object.fromEntries(
+    [...body.tasks, ...body.workPlan].map((t) => [
+      t.id,
+      String(body.proposals?.[t.id]?.minutes ?? 30),
+    ]),
+  );
 
 function NothingToPlan({ body, day }: { body: PlanBody; day: string }) {
   return (
@@ -129,8 +137,12 @@ function NothingToPlan({ body, day }: { body: PlanBody; day: string }) {
 }
 
 function PlanFlow({ body, day, online }: { body: PlanBody; day: string; online: boolean }) {
-  const steps: [Exclude<Step, "done">, ...Exclude<Step, "done">[]] =
-    body.reminders === "" ? ["triage", "blocks"] : ["reach", "triage", "blocks"];
+  // The Work Plan was triaged at the day's close, so Triage shows only for Todoist tasks.
+  const fromTriage: [StepName, ...StepName[]] =
+    body.tasks.length > 0 ? ["triage", "blocks"] : ["blocks"];
+
+  const steps: [StepName, ...StepName[]] =
+    body.reminders === "" ? fromTriage : ["reach", ...fromTriage];
 
   const [step, setStep] = useState<Step>(steps[0]);
 
@@ -144,7 +156,7 @@ function PlanFlow({ body, day, online }: { body: PlanBody; day: string; online: 
 
   // A failed write that names a calendar problem replaces the busy times, as journal does.
   const calendar = blocks.data && blocks.data.status !== "ok" ? blocks.data : busy.data;
-  const kept = survivors(body.tasks, choices);
+  const kept = [...survivors(body.tasks, choices), ...body.workPlan];
   const proposal = proposeDay(calendar, kept, minutes, day);
 
   function confirmTriage() {
@@ -213,7 +225,7 @@ function PlanFlow({ body, day, online }: { body: PlanBody; day: string; online: 
         blocks={blocks}
         canWriteBlocks={kept.length > 0 && calendar?.status === "ok"}
         nothingPlaced={proposal.pools.every((p) => p.placed.length === 0)}
-        onNext={() => setStep("triage")}
+        onNext={() => setStep(fromTriage[0])}
         onConfirmTriage={confirmTriage}
         onConfirmBlocks={confirmBlocks}
       />
@@ -346,7 +358,7 @@ function CalendarProblem({ failure, busyFailed, onRetry }: CalendarProblemProps)
   );
 }
 
-function StepIndicator({ steps, current }: { steps: Exclude<Step, "done">[]; current: Step }) {
+function StepIndicator({ steps, current }: { steps: StepName[]; current: Step }) {
   return (
     <View className="flex-row flex-wrap gap-2" aria-label="Steps">
       {steps.map((name, i) => (

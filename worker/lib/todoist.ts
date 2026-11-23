@@ -46,6 +46,7 @@ const toPlanTask = (t: ApiTask): PlanTask => ({
   priority: t.priority,
   dueDate: t.due?.date ?? null,
   labels: t.labels,
+  source: "todoist",
 });
 
 /** Each page's cursor comes from the page before, so the pages load one after another. */

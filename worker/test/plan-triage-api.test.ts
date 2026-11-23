@@ -57,7 +57,11 @@ const seeded = async (zone: "Rain" | "Sun") => {
 };
 
 const read = (env: Awaited<ReturnType<typeof seeded>>, email: string | null = OWNER) =>
-  getTasks({ env, params: {}, request: apiRequest("GET", "https://x/api/plan/tasks", { email }) });
+  getTasks({
+    env,
+    params: {},
+    request: apiRequest("GET", "https://x/api/plan/tasks?day=2026-11-07", { email }),
+  });
 
 const triage = (
   env: Awaited<ReturnType<typeof seeded>>,
@@ -79,6 +83,53 @@ test("tasks come with the latest zone and its reminders", async () => {
     body.tasks.map((t: { id: string }) => t.id),
     ["t1"],
   );
+});
+
+test("tasks come with the day's pending, planned Work Plan actions in rank order", async () => {
+  const env = makeEnv();
+  const day = "2026-11-07";
+
+  await env.DB.batch([
+    env.DB.prepare("INSERT INTO tickets (key, title) VALUES ('APP-7', 'Faster search')").bind(),
+    ...["2026-11-06", day].map((planned) =>
+      env.DB.prepare(
+        "INSERT INTO plans (day, plan_date, written_at, planned_size, size_rule) VALUES (?, ?, ?, 2, 'fixed-2')",
+      ).bind(planned, planned, `${planned}T17:00:00-05:00`),
+    ),
+    ...[
+      [day, "fix:web#2", 1, "APP-7", 0, "pending"],
+      [day, "merge:web#1", 0, null, 0, "pending"],
+      [day, "merge:web#3", 2, null, 1, "pending"],
+      [day, "merge:web#4", 3, null, 0, "done"],
+      ["2026-11-06", "merge:web#5", 0, null, 0, "pending"],
+    ].map((row) =>
+      env.DB.prepare(
+        "INSERT INTO plan_actions (day, id, position, kind, ticket, pr, url, if_time, status) VALUES (?, ?, ?, 'merge', ?, 'web#1', NULL, ?, ?)",
+      ).bind(...row),
+    ),
+  ]);
+
+  const body = await (await read(env)).json();
+
+  assert.deepEqual(
+    body.workPlan.map((t: { id: string; content: string }) => [t.id, t.content]),
+    [
+      ["merge:web#1", "Merge web#1"],
+      ["fix:web#2", "Merge web#1: APP-7 Faster search"],
+    ],
+  );
+});
+
+test("tasks need a valid day to plan", async () => {
+  const env = await seeded("Rain");
+
+  const res = await getTasks({
+    env,
+    params: {},
+    request: apiRequest("GET", "https://x/api/plan/tasks?day=tomorrow", { email: OWNER }),
+  });
+
+  assert.equal(res.status, 400);
 });
 
 test("a Sun check-in shows no reminders", async () => {

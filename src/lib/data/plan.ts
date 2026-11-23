@@ -28,6 +28,8 @@ const PlanBody = z.object({
   zone: z.nullable(z.enum(ZONES)),
   reminders: z.string(),
   tasks: z.array(PlanTask),
+  /** The planned day's Work Plan actions: already sized at the day's close, so they skip triage. */
+  workPlan: z.array(PlanTask),
   proposals: z.nullable(Proposals),
 });
 
@@ -79,12 +81,14 @@ const ONE_QUICK_RETRY = {
 };
 
 /** Planning is online only, so tasks and busy times are fetched fresh on every visit and never stored. */
-export const planTasksQuery = queryOptions({
-  queryKey: ["plan", "tasks"],
-  queryFn: ({ signal }) => apiFetch("/api/plan/tasks", { signal }, PlanBody),
-  gcTime: 0,
-  ...ONE_QUICK_RETRY,
-});
+export const planTasksQuery = (day: string) =>
+  queryOptions({
+    queryKey: ["plan", "tasks", day],
+    queryFn: ({ signal }) =>
+      apiFetch(`/api/plan/tasks?${new URLSearchParams({ day })}`, { signal }, PlanBody),
+    gcTime: 0,
+    ...ONE_QUICK_RETRY,
+  });
 
 export const busyQuery = (day: string) =>
   queryOptions({

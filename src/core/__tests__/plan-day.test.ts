@@ -5,8 +5,10 @@ import {
   freeWindows,
   isJobHours,
   packBlocks,
+  planActionTask,
   poolOf,
   targetDay,
+  type PlanActionRow,
   type SizedTask,
 } from "@/core/plan-day";
 
@@ -18,6 +20,7 @@ const task = (id: string, minutes: number, over: Partial<SizedTask> = {}): Sized
   priority: 1,
   dueDate: "2026-11-06",
   minutes,
+  source: "todoist",
   ...over,
 });
 
@@ -174,4 +177,30 @@ test("fitBlocks reports the minutes of blocks that fit nowhere", () => {
     ["b"],
   );
   assert.equal(over, 40);
+});
+
+const action: PlanActionRow = {
+  id: "fix:web#12",
+  kind: "fix",
+  ticket: "APP-7",
+  pr: "web#12",
+  url: "https://x/12",
+  title: "Faster search",
+};
+
+test("planActionTask names a Plan action by its PR link and Ticket, as a job task", () => {
+  const planned = planActionTask(action, "2026-11-09");
+
+  assert.equal(planned.content, "Fix [web#12](https://x/12): APP-7 Faster search");
+  assert.equal(planned.source, "work-plan");
+  assert.equal(planned.dueDate, "2026-11-09");
+  assert.equal(poolOf(planned), "job");
+});
+
+const actionName = (over: Partial<PlanActionRow>) =>
+  planActionTask({ ...action, ...over }, "2026-11-09").content;
+
+test("planActionTask names a PR without a link, or a Ticket without a PR, as it has them", () => {
+  assert.equal(actionName({ url: null, ticket: null, title: null }), "Fix web#12");
+  assert.equal(actionName({ kind: "scenario", pr: null, url: null, title: "" }), "Scenario: APP-7");
 });

@@ -23,9 +23,43 @@ export const PlanTask = z.object({
   priority: z.number(),
   dueDate: z.nullable(z.string()),
   labels: z.array(z.string()),
+  /** A Todoist task, or a Plan action from the planned Work day's Plan, which lives only in D1. */
+  source: z.enum(["todoist", "work-plan"]),
 });
 
 export type PlanTask = z.infer<typeof PlanTask>;
+
+/** A pending Plan action with its Ticket's title, as D1 holds them. */
+export interface PlanActionRow {
+  id: string;
+  kind: string;
+  ticket: string | null;
+  pr: string | null;
+  url: string | null;
+  title: string | null;
+}
+
+const capitalize = (word: string) => word.charAt(0).toUpperCase() + word.slice(1);
+
+function planActionName({ kind, ticket, pr, url, title }: PlanActionRow) {
+  const prLink = pr !== null && url !== null ? `[${pr}](${url})` : pr;
+  const head = [capitalize(kind), prLink].filter(Boolean).join(" ");
+  const ticketName = [ticket, title].filter(Boolean).join(" ");
+
+  return ticketName === "" ? head : `${head}: ${ticketName}`;
+}
+
+/** A Plan action as a job task; its shared section packs the Plan into blocks of its own. */
+export const planActionTask = (action: PlanActionRow, day: string): PlanTask => ({
+  id: action.id,
+  content: planActionName(action),
+  projectId: JOB_PROJECT,
+  sectionId: "work-plan",
+  priority: 4,
+  dueDate: day,
+  labels: [],
+  source: "work-plan",
+});
 
 export const Disposition = z.enum(["keep", "postpone", "drop"]);
 
@@ -61,6 +95,7 @@ export interface SizedTask {
   priority: number;
   dueDate: string | null;
   minutes: number;
+  source: PlanTask["source"];
 }
 
 export interface Block {

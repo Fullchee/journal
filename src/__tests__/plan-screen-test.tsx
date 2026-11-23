@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, screen, userEvent, within } from "@testing-library/react-native";
-import type { PlanTask } from "@/core";
+import { planActionTask, type PlanTask } from "@/core";
 
 import PlanScreen from "@/app/plan";
 import { apiFetch } from "@/lib/api/api-fetch";
@@ -34,12 +34,14 @@ const task = (id: string, content: string): PlanTask => ({
   priority: 1,
   dueDate: "2026-11-07",
   labels: [],
+  source: "todoist",
 });
 
 const PLAN: PlanBody = {
   zone: "Rain",
   reminders: "- Walk outside",
   tasks: [task("1", "Laundry"), task("2", "Old idea")],
+  workPlan: [],
   proposals: {
     "1": { disposition: "keep", reason: "Due today", minutes: 45 },
     "2": { disposition: "keep", reason: "Stale", minutes: 30 },
@@ -118,7 +120,7 @@ it("retries a server error once before showing it", async () => {
   await screen.findByText("Couldn't load your tasks.");
 
   expect(
-    jest.mocked(apiFetch).mock.calls.filter(([path]) => path === "/api/plan/tasks"),
+    jest.mocked(apiFetch).mock.calls.filter(([path]) => path.startsWith("/api/plan/tasks")),
   ).toHaveLength(2);
 });
 
@@ -129,7 +131,7 @@ it("shows a refusal at once, without retrying", async () => {
   await screen.findByText("Couldn't load your tasks.");
 
   expect(
-    jest.mocked(apiFetch).mock.calls.filter(([path]) => path === "/api/plan/tasks"),
+    jest.mocked(apiFetch).mock.calls.filter(([path]) => path.startsWith("/api/plan/tasks")),
   ).toHaveLength(1);
 });
 
@@ -391,4 +393,54 @@ it("has nothing to block when every task is dropped", async () => {
 
   expect(await screen.findByText("No tasks kept, so nothing to block.")).toBeOnTheScreen();
   expect(screen.queryByRole("button", { name: "Confirm and write to calendar" })).toBeNull();
+});
+
+describe("the Work Plan", () => {
+  // 09:00 on a Monday in Toronto, so the plan targets a workday with job hours left.
+  beforeEach(() => jest.setSystemTime(new Date("2026-11-09T14:00:00Z")));
+
+  const merge = planActionTask(
+    { id: "merge:web#1", kind: "merge", ticket: "APP-7", pr: "web#1", url: null, title: "Search" },
+    "2026-11-09",
+  );
+
+  it("asks for the planned day and blocks its actions without triaging them", async () => {
+    fakeApi(planRoutes({ plan: { ...PLAN, tasks: [], workPlan: [merge] } }));
+    await renderPlan();
+
+    await screen.findByText("- Walk outside");
+    await press("Next");
+
+    expect(apiFetch).toHaveBeenCalledWith(
+      "/api/plan/tasks?day=2026-11-09",
+      expect.anything(),
+      expect.anything(),
+    );
+    expect(screen.queryByText("2. Triage")).toBeNull();
+    expect(screen.getByLabelText("Minutes for Merge web#1: APP-7 Search")).toHaveDisplayValue("30");
+    await screen.findByLabelText("Day timeline");
+    await press("Confirm and write to calendar");
+
+    const blocks: unknown = expect.objectContaining({
+      blocks: [expect.objectContaining({ taskIds: [] })],
+    });
+
+    expect(apiFetch).toHaveBeenCalledWith(
+      "/api/plan/blocks",
+      { method: "POST", body: blocks },
+      BlocksResult,
+    );
+  });
+
+  it("joins the kept Todoist tasks in the Blocks step", async () => {
+    fakeApi(planRoutes({ plan: { ...PLAN, reminders: "", workPlan: [merge] } }));
+    await renderPlan();
+
+    await screen.findByText("Laundry");
+    expect(screen.queryByTestId("triage-merge:web#1")).toBeNull();
+    await press("Confirm triage");
+
+    expect(await screen.findByLabelText("Minutes for Laundry")).toBeOnTheScreen();
+    expect(screen.getByLabelText("Minutes for Merge web#1: APP-7 Search")).toBeOnTheScreen();
+  });
 });

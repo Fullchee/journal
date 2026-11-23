@@ -56,6 +56,7 @@ const task = (id: string, projectId = "home"): PlanTask => ({
   priority: 1,
   dueDate: null,
   labels: [],
+  source: "todoist",
 });
 
 const sized = (id: string, projectId = "home") => ({ ...task(id, projectId), minutes: 30 });

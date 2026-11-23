@@ -28,6 +28,7 @@ const task = (id: string, content: string): SizedTask => ({
   priority: 1,
   dueDate: null,
   minutes: 30,
+  source: "todoist",
 });
 
 const POOLS: PoolPlan[] = [
@@ -158,10 +159,10 @@ describe("useWriteBlocks", () => {
 it("never persists the task list", async () => {
   jest
     .mocked(apiFetch)
-    .mockResolvedValue({ zone: null, reminders: "", tasks: [], proposals: null });
+    .mockResolvedValue({ zone: null, reminders: "", tasks: [], workPlan: [], proposals: null });
   const { client } = setup();
 
-  await client.query(planTasksQuery);
+  await client.query(planTasksQuery("2026-11-07"));
 
   expect(dehydrate(client, { shouldDehydrateQuery: shouldPersistQuery }).queries).toEqual([]);
 });

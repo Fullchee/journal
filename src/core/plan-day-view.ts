@@ -92,7 +92,7 @@ export function planPools(tasks: SizedTask[], busy: Span[], day: string): PoolPl
   });
 }
 
-/** The write for gate 2: one calendar block per placed block. */
+/** The write for gate 2: one calendar block per placed block; only Todoist tasks get a time. */
 export const blocksBody = (day: string, pools: PoolPlan[]) => ({
   day,
   blocks: pools.flatMap((p) =>
@@ -100,7 +100,7 @@ export const blocksBody = (day: string, pools: PoolPlan[]) => ({
       label: `${clockLabel(formatMinutes(start))}–${clockLabel(formatMinutes(end))} block`,
       start,
       end,
-      taskIds: block.tasks.map((t) => t.id),
+      taskIds: block.tasks.flatMap((t) => (t.source === "todoist" ? t.id : [])),
       description: block.tasks.map((t) => `- ${plainTaskName(t.content)}`).join("\n"),
     })),
   ),
@@ -125,4 +125,5 @@ export const sizeTasks = (
     priority: t.priority,
     dueDate: t.dueDate,
     minutes: estimateOrDefault(minutes[t.id]),
+    source: t.source,
   }));

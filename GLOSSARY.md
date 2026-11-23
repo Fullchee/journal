@@ -110,7 +110,7 @@ The app's vocabulary. Use these terms word for word in code, UI copy and docs.
 
 ## Planning
 
-- **Plan the day** — three steps over my Todoist tasks: Reach for (the current zone's Storm to Sun reminders), Triage (Keep, Postpone or Drop each overdue, today and tomorrow task) and Blocks (kept tasks placed on Google Calendar). It plans today before 17:00 and tomorrow from then. Needs a connection.
+- **Plan the day** — three steps over my Todoist tasks: Reach for (the current zone's Storm to Sun reminders), Triage (Keep, Postpone or Drop each overdue, today and tomorrow task) and Blocks (kept tasks placed on Google Calendar). Blocks also places the planned day's pending Plan actions in the job Pool; they skip Triage, since the Plan was sized at the day's close. It plans today before 17:00 and tomorrow from then. Needs a connection.
   _Avoid_: daily plan, schedule
 - **Pool** — whose time a task uses: personal or job. Each Pool has its own hours, and its Blocks never mix.
 - **Block** — a sitting of kept tasks from one Pool, placed in a free calendar slot with its total minutes. Today's next one or two show on Today.
