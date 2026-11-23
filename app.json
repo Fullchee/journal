@@ -107,7 +107,8 @@
           "project": "journal",
           "organization": "fullchee"
         }
-      ]
+      ],
+      "expo-background-task"
     ],
     "experiments": {
       "typedRoutes": true,

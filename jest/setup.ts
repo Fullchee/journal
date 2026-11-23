@@ -33,6 +33,10 @@ jest.mock("../modules/journal-android", () => ({
     alarmSound: jest.fn(() => ({ title: "Default alarm" })),
     pickAlarmSound: jest.fn(() => Promise.resolve(null)),
     createAlarmChannel: jest.fn(() => "alarms-sound"),
+    hasUsageAccess: jest.fn(() => false),
+    openUsageAccessSettings: jest.fn(),
+    screenEvents: jest.fn(() => []),
+    deviceName: jest.fn(() => "Example Phone"),
   },
 }));
 

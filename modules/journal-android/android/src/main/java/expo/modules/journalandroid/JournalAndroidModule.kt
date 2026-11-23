@@ -62,6 +62,16 @@ class JournalAndroidModule : Module() {
 
     Function("createAlarmChannel") { AlarmSound.createChannel(context) }
 
+    Function("hasUsageAccess") { ScreenTime.hasUsageAccess(context) }
+
+    Function("openUsageAccessSettings") { ScreenTime.openUsageAccessSettings(context) }
+
+    Function("screenEvents") { fromMs: Double, toMs: Double ->
+      ScreenTime.events(context, fromMs.toLong(), toMs.toLong())
+    }
+
+    Function("deviceName") { ScreenTime.deviceName(context) }
+
     // The system's alarm sound picker; on most phones its "Add" button takes any song on the phone.
     AsyncFunction("pickAlarmSound") { promise: Promise ->
       val activity = appContext.currentActivity ?: throw Exceptions.MissingActivity()

@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { type TestContext, test } from "node:test";
 
-import { diffWeeks, launchAgent, runNightly, type WeekDiff } from "./vault-diff.ts";
+import { diffWeeks, runNightly, type WeekDiff } from "./vault-diff.ts";
 
 const NOTE =
   "# 2026-W45\n\n#### Mon, Nov 2\n\n- [APP-101](https://acme.atlassian.net/browse/APP-101): Fix the sync\n";
@@ -147,16 +147,4 @@ test("runNightly counts a streak that starts the run log", (t) => {
   run(() => []);
 
   assert.equal(sent.comments.length, 1);
-});
-
-test("launchAgent runs the command nightly at 22:30 with the given PATH, escaping XML", () => {
-  const plist = launchAgent(["/usr/bin/env", "node", "/repo/a&b.ts"], "/bin:/usr/bin", "/logs");
-
-  assert.match(plist, /<string>\/repo\/a&amp;b\.ts<\/string>/u);
-  assert.match(plist, /<key>PATH<\/key>\n\s*<string>\/bin:\/usr\/bin<\/string>/u);
-  assert.match(
-    plist,
-    /<key>Hour<\/key>\n\s*<integer>22<\/integer>\n\s*<key>Minute<\/key>\n\s*<integer>30<\/integer>/u,
-  );
-  assert.match(plist, /<key>StandardOutPath<\/key>\n\s*<string>\/logs\/launchd\.log<\/string>/u);
 });

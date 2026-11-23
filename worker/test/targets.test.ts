@@ -126,9 +126,17 @@ test("GET marks a Pillar Goal's Target with its pillar", async () => {
 
 test("GET reads the Signals a Target measures", async () => {
   const env = makeEnv();
-  await seed(env, "INSERT INTO goals (id, title) VALUES (21, 'Sleep'), (22, 'Move')");
+  await seed(
+    env,
+    "INSERT INTO goals (id, title) VALUES (21, 'Sleep'), (22, 'Move'), (23, 'Screens')",
+  );
   await put(env, "21", { ...WEEKLY, measure: "sleep", number: 420 });
   await put(env, "22", { ...WEEKLY, measure: "intensity-minutes" });
+  await put(env, "23", { ...WEEKLY, measure: "screen-time", direction: "limit", number: 180 });
+  await seed(
+    env,
+    "INSERT INTO screen_time (device, day, minutes) VALUES ('phone', '2026-11-10', 100), ('laptop', '2026-11-10', 60), ('phone', '2026-11-11', 140)",
+  );
   await seed(
     env,
     "INSERT INTO sleep (date, sleep_start, sleep_end, duration_min) VALUES ('2026-11-10', 'a', 'b', 400), ('2026-11-11', 'a', 'b', 440)",
@@ -145,6 +153,7 @@ test("GET reads the Signals a Target measures", async () => {
     [
       [21, 420],
       [22, 40],
+      [23, 150],
     ],
   );
 });

@@ -103,6 +103,27 @@ describe("GoalTargetSection", () => {
     expect(screen.queryByText(/Measures/)).toBeNull();
   });
 
+  it("a screen time Target lists each Day's total across devices", async () => {
+    fakeApi({
+      [`/api/targets?day=${TODAY}`]: reply({
+        targets: [
+          {
+            ...CARDIO,
+            target: { ...CARDIO.target, measure: "screen-time", direction: "limit", number: 180 },
+            habits: [],
+            current: { ...CARDIO.current, value: 150 },
+          },
+        ],
+      }),
+      "/api/screen-time?from=2026-11-06": reply({ days: [{ day: TODAY, minutes: 150 }] }),
+    });
+
+    await show(<GoalTargetSection goalId={20} />);
+
+    expect(await screen.findByText("2 h 30 m a day this week, limit 3 h")).toBeOnTheScreen();
+    expect(await screen.findByText("Today")).toBeOnTheScreen();
+  });
+
   it("sets a Target on a Goal without one", async () => {
     const { writes } = serve(TODAY, []);
 

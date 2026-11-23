@@ -29,6 +29,7 @@ import { useAuth } from "@/lib/auth/auth-provider";
 import { useCheckInPrompt } from "@/lib/check-in-prompt/use-check-in-prompt";
 import { DataProvider, useIsOnline } from "@/lib/data/data-provider";
 import { useHealthConnectAutoLog } from "@/lib/health/health-connect-auto-log";
+import { useScreenTimeSync } from "@/lib/screen-time/screen-time";
 import { useFitbitAutoLog } from "@/lib/health/fitbit-auto-log";
 import { FONTS } from "@/lib/fonts";
 import { initSentry } from "@/lib/sentry";
@@ -171,6 +172,7 @@ function RootStack() {
           <HealthConnectAutoLog />
           <HabitWidgets />
           <FitbitAutoLog />
+          <ScreenTimeSync />
         </>
       )}
       <Stack>
@@ -235,6 +237,13 @@ function HabitWidgets() {
 // Signed in only: it posts each linked app's new Health Connect sessions to its Habit.
 function HealthConnectAutoLog() {
   useHealthConnectAutoLog();
+
+  return null;
+}
+
+// Signed in only: it sends this phone's screen-on minutes per Day.
+function ScreenTimeSync() {
+  useScreenTimeSync();
 
   return null;
 }

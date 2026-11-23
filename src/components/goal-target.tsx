@@ -12,6 +12,7 @@ import { TextInput, View } from "react-native";
 import { ChoiceRow, type Choice } from "@/components/choice-row";
 import { EditButton, INPUT_CLASS, SaveButtons, SaveStatus } from "@/components/note-body";
 import { Section } from "@/components/screen";
+import { ScreenTimeDays, UsageAccessPrompt } from "@/components/screen-time";
 import { useHabitTracker } from "@/lib/data/habits";
 import { useRemoveTarget, useSaveTarget, useTargets } from "@/lib/data/targets";
 
@@ -20,6 +21,7 @@ const MEASURES: Choice<GoalTarget["measure"]>[] = [
   { value: "minutes", label: "Minutes" },
   { value: "intensity-minutes", label: "Intensity minutes" },
   { value: "sleep", label: "Sleep" },
+  { value: "screen-time", label: "Screen time" },
 ];
 
 const NUMBER_UNITS: Record<GoalTarget["measure"], string> = {
@@ -27,6 +29,7 @@ const NUMBER_UNITS: Record<GoalTarget["measure"], string> = {
   minutes: "minutes",
   "intensity-minutes": "intensity minutes",
   sleep: "minutes a night",
+  "screen-time": "minutes a day",
 };
 
 const DIRECTIONS: Choice<GoalTarget["direction"]>[] = [
@@ -205,6 +208,12 @@ export function GoalTargetSection({ goalId }: { goalId: number }) {
             <>
               <Text>{targetLabel(view, today)}</Text>
               <MeasuredHabits ids={view.habits} />
+              {view.target.measure === "screen-time" && (
+                <>
+                  <ScreenTimeDays today={today} />
+                  <UsageAccessPrompt />
+                </>
+              )}
             </>
           )}
           <EditButton

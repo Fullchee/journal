@@ -7,8 +7,8 @@ import { buildGoalTree, goalSubtreeIds } from "./goal-tree";
 import type { Counts, Durations, Habit } from "./habits-view";
 import { intensityOf, Pillar, type ActivityDay } from "./pillar-balance";
 
-/** Times sum check and count Habits, minutes sum Duration entries; the other two are Signals. */
-const TARGET_MEASURES = ["times", "minutes", "intensity-minutes", "sleep"] as const;
+/** Times sum check and count Habits, minutes sum Duration entries; the rest are Signals. */
+const TARGET_MEASURES = ["times", "minutes", "intensity-minutes", "sleep", "screen-time"] as const;
 
 const TARGET_DIRECTIONS = ["minimum", "limit"] as const;
 
@@ -98,6 +98,8 @@ export interface TargetSources {
   durations: Durations;
   activity: ActivityDay[];
   sleep: { date: string; durationMin: number }[];
+  /** Each Day's screen-on minutes, summed across devices. */
+  screenTime: { day: string; minutes: number }[];
 }
 
 // Check and count Habits are counted in times, duration Habits in minutes. A minimum sums good Habits, a limit bad ones.
@@ -121,6 +123,13 @@ function measuredHabits(goalId: number, target: GoalTarget, goals: TargetGoal[],
 
 const sum = (values: number[]) => values.reduce((total, value) => total + value, 0);
 
+/** The mean of the values on `days`, rounded; null when none falls on them. */
+function dailyAverage(rows: { day: string; value: number }[], days: string[]) {
+  const values = rows.flatMap(({ day, value }) => (days.includes(day) ? [value] : []));
+
+  return values.length === 0 ? null : Math.round(sum(values) / values.length);
+}
+
 type Measurer = (habits: string[], sources: TargetSources, days: string[]) => number | null;
 
 const MEASURERS: Record<GoalTarget["measure"], Measurer> = {
@@ -135,13 +144,16 @@ const MEASURERS: Record<GoalTarget["measure"], Measurer> = {
     ),
   "intensity-minutes": (_, { activity }, days) =>
     sum(activity.flatMap((row) => (days.includes(row.date) ? intensityOf(row) : []))),
-  sleep: (_, { sleep }, days) => {
-    const nights = sleep.filter(({ date }) => days.includes(date));
-
-    return nights.length === 0
-      ? null
-      : Math.round(sum(nights.map(({ durationMin }) => durationMin)) / nights.length);
-  },
+  sleep: (_, { sleep }, days) =>
+    dailyAverage(
+      sleep.map(({ date, durationMin }) => ({ day: date, value: durationMin })),
+      days,
+    ),
+  "screen-time": (_, { screenTime }, days) =>
+    dailyAverage(
+      screenTime.map(({ day, minutes }) => ({ day, value: minutes })),
+      days,
+    ),
 };
 
 const PeriodValue = z.object({ from: Day, to: Day, value: z.nullable(z.number()) });
@@ -206,20 +218,28 @@ export function targetViews({ goals, targets, habits, sources }: TargetInputs, d
 
 const MINUTES_PER_HOUR = 60;
 
-// Sleep reads in hours, every other measure as a plain number.
-function amount(measure: GoalTarget["measure"], value: number) {
-  if (measure !== "sleep") return String(value);
-  const hours = Math.floor(value / MINUTES_PER_HOUR);
-  const minutes = value % MINUTES_PER_HOUR;
+/** "45 m", "2 h" or "2 h 40 m". */
+export function hoursLabel(minutes: number) {
+  const hours = Math.floor(minutes / MINUTES_PER_HOUR);
+  const rest = minutes % MINUTES_PER_HOUR;
 
-  return minutes === 0 ? `${hours} h` : `${hours} h ${minutes} m`;
+  if (hours === 0) return `${rest} m`;
+
+  return rest === 0 ? `${hours} h` : `${hours} h ${rest} m`;
 }
+
+const IN_HOURS = new Set<GoalTarget["measure"]>(["sleep", "screen-time"]);
+
+// Sleep and screen time read in hours, every other measure as a plain number.
+const amount = (measure: GoalTarget["measure"], value: number) =>
+  IN_HOURS.has(measure) ? hoursLabel(value) : String(value);
 
 const UNITS: Record<GoalTarget["measure"], string> = {
   times: "times",
   minutes: "min",
   "intensity-minutes": "intensity min",
   sleep: "a night",
+  "screen-time": "a day",
 };
 
 const shortDay = (day: string) => formatDay(day, { month: "short", day: "numeric" });

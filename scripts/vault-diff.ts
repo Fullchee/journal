@@ -5,12 +5,13 @@
 //   --install  schedules --nightly with launchd at 22:30 each night, from this checkout
 import { spawnSync } from "node:child_process";
 import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { homedir, userInfo } from "node:os";
+import { homedir } from "node:os";
 import path from "node:path";
 import * as z from "zod/mini";
 
 import { diffNoteLines, formatHunk, hunkHeading } from "../src/core/work/note-diff.ts";
 import { fetchNotes, journalApi, readWeeklyNotes } from "./import-work-log.ts";
+import { installAgent } from "./launch-agent.ts";
 
 /** A week whose notes differ: `headings` name the lines without their text; `lines` add the text. */
 export interface WeekDiff {
@@ -127,47 +128,6 @@ export function runNightly(diff: () => WeekDiff[], nightly: Nightly) {
   );
 }
 
-const LABEL = "com.fullchee.journal-vault-diff";
-
-const xml = (text: string) =>
-  text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
-
-const xmlStrings = (values: readonly string[]) =>
-  values.map((value) => `      <string>${xml(value)}</string>`).join("\n");
-
-/** A launchd agent running `args` at 22:30 each night; launchd runs a missed time once the Mac wakes. */
-export function launchAgent(args: readonly string[], envPath: string, logDir: string) {
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "https://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-  <dict>
-    <key>Label</key>
-    <string>${LABEL}</string>
-    <key>ProgramArguments</key>
-    <array>
-${xmlStrings(args)}
-    </array>
-    <key>EnvironmentVariables</key>
-    <dict>
-      <key>PATH</key>
-      <string>${xml(envPath)}</string>
-    </dict>
-    <key>StartCalendarInterval</key>
-    <dict>
-      <key>Hour</key>
-      <integer>22</integer>
-      <key>Minute</key>
-      <integer>30</integer>
-    </dict>
-    <key>StandardOutPath</key>
-    <string>${xml(path.join(logDir, "launchd.log"))}</string>
-    <key>StandardErrorPath</key>
-    <string>${xml(path.join(logDir, "launchd.log"))}</string>
-  </dict>
-</plist>
-`;
-}
-
 const LOG_DIR = path.join(homedir(), "Library/Logs/journal-vault-diff");
 
 function run(
@@ -180,20 +140,6 @@ function run(
   if (result.status !== 0) throw new Error(`${command} ${args[0]} failed: ${result.stderr}`);
 
   return result.stdout;
-}
-
-/** Writes the agent into ~/Library/LaunchAgents and (re)loads it, with this shell's PATH so node and gh resolve. */
-function install(workLog: string) {
-  const plist = path.join(homedir(), "Library/LaunchAgents", `${LABEL}.plist`);
-  const args = ["/usr/bin/env", "node", import.meta.filename, path.resolve(workLog), "--nightly"];
-  const domain = `gui/${userInfo().uid}`;
-  const { PATH = "" } = process.env;
-  mkdirSync(LOG_DIR, { recursive: true });
-  writeFileSync(plist, launchAgent(args, PATH, LOG_DIR));
-  // bootout fails when the agent isn't loaded yet; bootstrap then loads it fresh.
-  spawnSync("/bin/launchctl", ["bootout", domain, plist]);
-  run("/bin/launchctl", ["bootstrap", domain, plist]);
-  process.stdout.write(`Scheduled ${LABEL} at 22:30 nightly; logs in ${LOG_DIR}\n`);
 }
 
 const notify = (message: string) =>
@@ -231,7 +177,13 @@ if (import.meta.main) {
     );
 
   if (flag === "--install") {
-    install(workLog);
+    installAgent({
+      label: "com.fullchee.journal-vault-diff",
+      args: ["/usr/bin/env", "node", import.meta.filename, path.resolve(workLog), "--nightly"],
+      hour: 22,
+      minute: 30,
+      logDir: LOG_DIR,
+    });
   } else if (flag === "--nightly") {
     runNightly(diff, {
       today: new Date().toLocaleDateString("en-CA"),

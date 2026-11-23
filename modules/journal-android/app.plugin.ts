@@ -1,4 +1,4 @@
-// Declares AlarmActivity, the Habits widget's filter screen, the permissions Habit alarms need, the home-screen widgets and the Quick Settings tile, so
+// Declares AlarmActivity, the Habits widget's filter screen, the permissions Habit alarms and screen time need, the home-screen widgets and the Quick Settings tile, so
 // `android/` stays generated.
 import {
   AndroidConfig,
@@ -175,12 +175,34 @@ export function addTimedHabitTile(manifest: AndroidManifest): AndroidManifest {
   return manifest;
 }
 
+const USAGE_STATS = "android.permission.PACKAGE_USAGE_STATS";
+
+/**
+ * Screen time reads usage stats. Android grants it only from the Usage access settings page, never at install, and
+ * lint flags it as a system permission, hence `tools:ignore`.
+ */
+export function addUsageStatsPermission(manifest: AndroidManifest): AndroidManifest {
+  manifest.manifest.$["xmlns:tools"] = "http://schemas.android.com/tools";
+
+  const others = (manifest.manifest["uses-permission"] ?? []).filter(
+    (permission) => permission.$["android:name"] !== USAGE_STATS,
+  );
+
+  // config-plugins' permission type has no tools:ignore, so the permission is built apart from it.
+  const permission = { $: { "android:name": USAGE_STATS, "tools:ignore": "ProtectedPermissions" } };
+
+  manifest.manifest["uses-permission"] = [...others, permission];
+
+  return manifest;
+}
+
 const withJournalAndroid: ConfigPlugin = (config) =>
   withAndroidManifest(config, (modConfig) => {
     addAlarmActivity(modConfig.modResults);
     addHabitsWidgetConfig(modConfig.modResults);
     addWidgets(modConfig.modResults);
     addTimedHabitTile(modConfig.modResults);
+    addUsageStatsPermission(modConfig.modResults);
 
     return modConfig;
   });

@@ -27,6 +27,7 @@ import * as planBlocks from "@worker/api/plan/blocks";
 import * as planBusy from "@worker/api/plan/busy";
 import * as planTasks from "@worker/api/plan/tasks";
 import * as planTriage from "@worker/api/plan/triage";
+import * as screenTime from "@worker/api/screen-time";
 import * as search from "@worker/api/search";
 import * as sessionBrief from "@worker/api/session-brief";
 import * as sessionBriefWindow from "@worker/api/session-brief-window";
@@ -128,6 +129,8 @@ const ROUTES: Route[] = [
   { pattern: /^\/api\/plan\/busy$/, module: planBusy },
   { pattern: /^\/api\/plan\/tasks$/, module: planTasks },
   { pattern: /^\/api\/plan\/triage$/, module: planTriage },
+  // `/mac` is the path Access admits the Macs' service token to.
+  { pattern: /^\/api\/screen-time(?:\/mac)?$/, module: screenTime },
   { pattern: /^\/api\/search$/, module: search },
   { pattern: /^\/api\/session-brief$/, module: sessionBrief },
   { pattern: /^\/api\/session-brief-window$/, module: sessionBriefWindow },

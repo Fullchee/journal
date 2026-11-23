@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   GoalTarget,
+  hoursLabel,
   targetLabel,
   targetPeriod,
   targetReadFrom,
@@ -91,6 +92,10 @@ const SOURCES = {
     { date: "2026-11-10", durationMin: 400 },
     { date: "2026-11-11", durationMin: 440 },
   ],
+  screenTime: [
+    { day: "2026-11-09", minutes: 200 },
+    { day: "2026-11-10", minutes: 161 },
+  ],
 };
 
 function viewOf(target: GoalTarget, { goal = MOVE, day = "2026-11-12" } = {}) {
@@ -142,6 +147,14 @@ describe("targetViews", () => {
     assert.equal(view.previous?.value, null);
   });
 
+  test("screen time is the average Day across devices, and no Days is no value", () => {
+    const view = viewOf(weekly({ measure: "screen-time", direction: "limit", number: 180 }));
+
+    assert.deepEqual(view.habits, []);
+    assert.equal(view.current.value, 181);
+    assert.equal(view.previous?.value, null);
+  });
+
   test("a monthly Target compares with the month before", () => {
     const view = viewOf(weekly({ period: "month" }));
 
@@ -187,6 +200,13 @@ const TODAY = "2026-11-12";
 
 const labelOf = (target: GoalTarget, day = TODAY) => targetLabel(viewOf(target, { day }), TODAY);
 
+test("hoursLabel drops a zero hour or a zero minute", () => {
+  assert.deepEqual(
+    [45, 120, 160].map((minutes) => hoursLabel(minutes)),
+    ["45 m", "2 h", "2 h 40 m"],
+  );
+});
+
 describe("targetLabel", () => {
   test("a number shows progress toward it", () => {
     assert.equal(labelOf(weekly()), "95 / 150 min this week");
@@ -198,6 +218,13 @@ describe("targetLabel", () => {
     assert.equal(
       labelOf(weekly({ measure: "sleep", number: 450 })),
       "7 h / 7 h 30 m a night this week",
+    );
+  });
+
+  test("screen time reads in hours a day", () => {
+    assert.equal(
+      labelOf(weekly({ measure: "screen-time", direction: "limit", number: 180 })),
+      "3 h 1 m a day this week, limit 3 h",
     );
   });
 

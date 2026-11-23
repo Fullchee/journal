@@ -6,6 +6,7 @@ import {
   addAlarmActivity,
   addHabitsWidgetConfig,
   addTimedHabitTile,
+  addUsageStatsPermission,
   addWidgets,
   HABITS_WIDGET_CONFIG,
   TIMED_HABIT_TILE,
@@ -157,5 +158,21 @@ describe("addTimedHabitTile", () => {
     const rebuilt = addTimedHabitTile(addTimedHabitTile(emptyManifest()));
 
     expect(tiles(rebuilt)).toHaveLength(1);
+  });
+});
+
+describe("addUsageStatsPermission", () => {
+  it("declares usage stats once, telling lint it is meant", () => {
+    const manifest = addUsageStatsPermission(addUsageStatsPermission(emptyManifest()));
+
+    expect(manifest.manifest.$["xmlns:tools"]).toBe("http://schemas.android.com/tools");
+    expect(manifest.manifest["uses-permission"]).toEqual([
+      {
+        $: {
+          "android:name": "android.permission.PACKAGE_USAGE_STATS",
+          "tools:ignore": "ProtectedPermissions",
+        },
+      },
+    ]);
   });
 });

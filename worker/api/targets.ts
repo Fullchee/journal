@@ -61,7 +61,7 @@ export async function onRequestGet({ request, env }: PagesContext) {
     day,
   );
 
-  const [habits, records, activity, sleep] = await Promise.all([
+  const [habits, records, activity, sleep, screenTime] = await Promise.all([
     readHabits(env),
     readRecords(env, from, new Date()),
     rows<{ date: string; moderateMin: number | null; vigorousMin: number | null }>(
@@ -74,10 +74,15 @@ export async function onRequestGet({ request, env }: PagesContext) {
       "SELECT date, duration_min AS durationMin FROM sleep WHERE date >= ?",
       from,
     ),
+    rows<{ day: string; minutes: number }>(
+      env,
+      "SELECT day, SUM(minutes) AS minutes FROM screen_time WHERE day >= ? GROUP BY day",
+      from,
+    ),
   ]);
 
   const views = targetViews(
-    { goals, targets, habits, sources: { ...records, activity, sleep } },
+    { goals, targets, habits, sources: { ...records, activity, sleep, screenTime } },
     day,
   );
 

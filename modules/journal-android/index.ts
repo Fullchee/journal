@@ -19,4 +19,12 @@ export default requireNativeModule<{
   pickAlarmSound: () => Promise<AlarmSoundInfo | null>;
   /** Creates the alarm channel for the chosen sound, at alarm volume, and returns its id. */
   createAlarmChannel: () => string;
+  /** Whether the owner switched on Usage access, which screen time reads. */
+  hasUsageAccess: () => boolean;
+  /** Opens the Usage access setting for this app. */
+  openUsageAccessSettings: () => void;
+  /** The screen's on and off events between two instants in epoch ms, oldest first. */
+  screenEvents: (fromMs: number, toMs: number) => { at: number; on: boolean }[];
+  /** The phone's name from Settings, or its model. */
+  deviceName: () => string;
 }>("JournalAndroid");

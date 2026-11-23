@@ -16,6 +16,8 @@
     "forceConsistentCasingInFileNames": true,
     "verbatimModuleSyntax": true,
     "erasableSyntaxOnly": true,
+    // src/core/screen-time.ts names calendar.ts by its full path, so Node can run it from scripts/ without a bundler.
+    "allowImportingTsExtensions": true,
     "noUncheckedSideEffectImports": true
   }
 }
