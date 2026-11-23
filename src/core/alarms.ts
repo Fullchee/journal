@@ -1,6 +1,8 @@
 import { clockLabel, daysFrom, minutesOf, shiftDay, torontoDay } from "./calendar";
 import { dueBySchedule, canMiss, MISSED } from "./habit-day";
+import { isTree } from "./habit-tree";
 import { dueDateLabel, isOneOff, isTimed, WEEKDAYS, type Alarm, type Habit } from "./habits-view";
+import type { RestPeriod } from "./rest-mode";
 import type { SkipCause } from "./skip";
 
 /** A Habit notification's buttons; a count Habit's Done adds one to the Day instead of marking it done. */
@@ -53,12 +55,20 @@ export function hashText(text: string) {
 export const notificationId = (habitId: string, weekday = 0) =>
   (hashText(habitId) % 200_000_000) * 10 + weekday;
 
-const ringsOn = (habit: Habit): habit is Habit & { alarm: Alarm } =>
-  habit.alarm !== null && habit.active && habit.stage !== "tree" && habit.target.type !== "none";
+// A tree rings no more: Rest periods decide whether it still is one.
+const ringsOn = (
+  habit: Habit,
+  restPeriods: RestPeriod[],
+  now: Date,
+): habit is Habit & { alarm: Alarm } =>
+  habit.alarm !== null &&
+  habit.active &&
+  habit.target.type !== "none" &&
+  !isTree(habit, restPeriods, now);
 
 /** A Habit's alarm is still ahead today by the phone's clock, so the owner can silence today's ring. */
-export const ringsLaterToday = (habit: Habit, now: Date) =>
-  ringsOn(habit) && new Date(`${torontoDay(now)}T${habit.alarm.time}`) > now;
+export const ringsLaterToday = (habit: Habit, restPeriods: RestPeriod[], now: Date) =>
+  ringsOn(habit, restPeriods, now) && new Date(`${torontoDay(now)}T${habit.alarm.time}`) > now;
 
 // `weekday` follows the plugin's `Weekday` enum, where 1 is Sunday; a Habit's days use 0 for Sunday.
 function notificationFor(habit: Habit & { alarm: Alarm }, weekday?: number): ScheduledNotification {
@@ -149,9 +159,13 @@ function intervalNotifications(habit: Habit & { alarm: Alarm }, now: Date) {
  * Fixed-weekday Habits ring on their days and Every N days Habits on each due day; daily, N× a week and N× a month
  * Habits ring every day.
  */
-export const notificationsFor = (habits: Habit[], now = new Date()): ScheduledNotification[] =>
+export const notificationsFor = (
+  habits: Habit[],
+  restPeriods: RestPeriod[],
+  now = new Date(),
+): ScheduledNotification[] =>
   habits.flatMap((habit) => {
-    if (!ringsOn(habit)) return [];
+    if (!ringsOn(habit, restPeriods, now)) return [];
 
     if (isOneOff(habit)) return oneOffNotifications(habit, now);
 
@@ -162,15 +176,17 @@ export const notificationsFor = (habits: Habit[], now = new Date()): ScheduledNo
       : [notificationFor(habit)];
   });
 
-/** The hint under the alarm control in the Habit form. */
-export function alarmNote({
-  stage,
-  active,
-  target,
-  startDate,
-  alarm,
-}: Pick<Habit, "stage" | "active" | "target" | "startDate"> & { alarm: Alarm }) {
-  if (stage === "tree") return "Tree Habits don't ring.";
+/** The hint under the alarm control in the Habit form; `tree` is whether the Habit is a tree today. */
+export function alarmNote(
+  {
+    active,
+    target,
+    startDate,
+    alarm,
+  }: Pick<Habit, "active" | "target" | "startDate"> & { alarm: Alarm },
+  tree: boolean,
+) {
+  if (tree) return "Tree Habits don't ring.";
 
   if (!active) return "Backlog Habits don't ring.";
 
@@ -205,10 +221,14 @@ const EVERY_DAY = [0, 1, 2, 3, 4, 5, 6];
  * The widget has no WebView, so it gets the ringing Habits as plain rows, earliest first; its rows repeat weekly,
  * so a One-off and an Every N days Habit have none.
  */
-export const widgetAlarms = (habits: Habit[]): WidgetAlarm[] =>
+export const widgetAlarms = (
+  habits: Habit[],
+  restPeriods: RestPeriod[],
+  now: Date,
+): WidgetAlarm[] =>
   habits
     .flatMap((habit) =>
-      ringsOn(habit) && !isOneOff(habit) && habit.target.type !== "interval"
+      ringsOn(habit, restPeriods, now) && !isOneOff(habit) && habit.target.type !== "interval"
         ? {
             id: habit.id,
             name: habit.name,

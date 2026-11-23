@@ -8,6 +8,8 @@ import {
 } from "@/core/alarms";
 import { makeHabit } from "./helpers/habit";
 
+const NOW = new Date(2026, 10, 22, 12, 0);
+
 // alarmNote takes a non-null alarm, so it sits outside the Habit fixture.
 const wake = {
   ...makeHabit({ id: "out-of-bed-a1b2c3", name: "Out of bed" }),
@@ -15,7 +17,7 @@ const wake = {
 };
 
 test("notificationsFor schedules a daily Habit's alarm as one repeating notification", () => {
-  const [notification, ...rest] = notificationsFor([wake]);
+  const [notification, ...rest] = notificationsFor([wake], []);
 
   assert.equal(rest.length, 0);
   assert.equal(notification?.id, notificationId(wake.id));
@@ -28,16 +30,17 @@ test("notificationsFor schedules a daily Habit's alarm as one repeating notifica
 });
 
 test("notificationsFor keeps every notification on screen until it is tapped", () => {
-  const [notification] = notificationsFor([wake]);
+  const [notification] = notificationsFor([wake], []);
 
   assert.equal(notification?.ongoing, true);
   assert.equal(notification.autoCancel, true);
 });
 
 test("notificationsFor rings a fixed-weekday Habit on its weekdays, Sunday as the plugin's 1", () => {
-  const weekdays = notificationsFor([
-    { ...wake, target: { type: "days", count: 7, days: [0, 5] } },
-  ]);
+  const weekdays = notificationsFor(
+    [{ ...wake, target: { type: "days", count: 7, days: [0, 5] } }],
+    [],
+  );
 
   assert.deepEqual(
     weekdays.map((n) => [n.id, n.schedule.on]),
@@ -49,32 +52,49 @@ test("notificationsFor rings a fixed-weekday Habit on its weekdays, Sunday as th
 });
 
 test("notificationsFor rings an N× a week Habit every day", () => {
-  const [notification, ...rest] = notificationsFor([
-    { ...wake, target: { type: "weekly", count: 3, days: [] } },
-  ]);
+  const [notification, ...rest] = notificationsFor(
+    [{ ...wake, target: { type: "weekly", count: 3, days: [] } }],
+    [],
+  );
 
   assert.equal(rest.length, 0);
   assert.deepEqual(notification?.schedule.on, { hour: 7, minute: 15, second: 0 });
 });
 
 test("notificationsFor sends a persistent alarm to the quiet channel", () => {
-  const [notification] = notificationsFor([
-    { ...wake, alarm: { time: "07:15", kind: "persistent" } },
-  ]);
+  const [notification] = notificationsFor(
+    [{ ...wake, alarm: { time: "07:15", kind: "persistent" } }],
+    [],
+  );
 
   assert.equal(notification?.channelId, "persistent");
 });
 
-test("notificationsFor skips Habits with no alarm, Tree Habits, Backlog Habits and Reference Habits", () => {
+test("notificationsFor skips Habits with no alarm, trees, Backlog Habits and Reference Habits", () => {
   assert.deepEqual(
-    notificationsFor([
-      { ...wake, alarm: null },
-      { ...wake, stage: "tree" },
-      { ...wake, active: false },
-      { ...wake, target: { type: "none", count: 7, days: [] } },
-    ]),
+    notificationsFor(
+      [
+        { ...wake, alarm: null },
+        { ...wake, trees: [{ start: "2026-11-01", end: null }] },
+        { ...wake, active: false },
+        { ...wake, target: { type: "none", count: 7, days: [] } },
+      ],
+      [],
+      NOW,
+    ),
     [],
   );
+});
+
+const tree = { ...wake, trees: [{ start: "2026-11-01", end: null }] };
+
+test("a tree rings and has a widget row again after a Rest mode day", () => {
+  const rest = [{ start: "2026-11-10", end: "2026-11-11" }];
+
+  assert.equal(notificationsFor([tree], rest, NOW).length, 1);
+  assert.equal(widgetAlarms([tree], rest, NOW).length, 1);
+  assert.equal(ringsLaterToday(tree, [], new Date(2026, 10, 22, 6, 0)), false);
+  assert.equal(ringsLaterToday(tree, rest, new Date(2026, 10, 22, 6, 0)), true);
 });
 
 test("notificationId is stable, distinct per Habit and weekday, and fits a 32-bit int", () => {
@@ -91,20 +111,20 @@ test("notificationId is stable, distinct per Habit and weekday, and fits a 32-bi
 });
 
 test("alarmNote says when the alarm rings", () => {
-  assert.equal(alarmNote(wake), "Rings at 7:15 AM every day, in the Android app.");
+  assert.equal(alarmNote(wake, false), "Rings at 7:15 AM every day, in the Android app.");
   assert.equal(
-    alarmNote({ ...wake, target: { type: "days", count: 7, days: [1, 5] } }),
+    alarmNote({ ...wake, target: { type: "days", count: 7, days: [1, 5] } }, false),
     "Rings at 7:15 AM on Mon, Fri, in the Android app.",
   );
   assert.equal(
-    alarmNote({ ...wake, alarm: { time: "21:00", kind: "persistent" } }),
+    alarmNote({ ...wake, alarm: { time: "21:00", kind: "persistent" } }, false),
     "Shows quietly at 9:00 PM every day, in the Android app.",
   );
 });
 
 test("alarmNote says why a Tree or Backlog Habit stays silent", () => {
-  assert.equal(alarmNote({ ...wake, stage: "tree" }), "Tree Habits don't ring.");
-  assert.equal(alarmNote({ ...wake, active: false }), "Backlog Habits don't ring.");
+  assert.equal(alarmNote(wake, true), "Tree Habits don't ring.");
+  assert.equal(alarmNote({ ...wake, active: false }, false), "Backlog Habits don't ring.");
 });
 
 test("widgetAlarms lists ringing Habits earliest first, with every day for a daily Habit", () => {
@@ -115,7 +135,7 @@ test("widgetAlarms lists ringing Habits earliest first, with every day for a dai
     alarm: { time: "21:30", kind: "persistent" } as const,
   };
 
-  assert.deepEqual(widgetAlarms([late, wake]), [
+  assert.deepEqual(widgetAlarms([late, wake], [], NOW), [
     { id: wake.id, name: "Out of bed", time: "07:15", days: [0, 1, 2, 3, 4, 5, 6] },
     { id: "read-z9", name: "Read", time: "21:30", days: [0, 1, 2, 3, 4, 5, 6] },
   ]);
@@ -123,11 +143,16 @@ test("widgetAlarms lists ringing Habits earliest first, with every day for a dai
 
 test("widgetAlarms keeps a fixed-weekday Habit's days and skips Habits that don't ring", () => {
   assert.deepEqual(
-    widgetAlarms([
-      { ...wake, target: { type: "days", count: 2, days: [1, 3] } },
-      { ...wake, alarm: null },
-      { ...wake, active: false },
-    ]),
+    widgetAlarms(
+      [
+        { ...wake, target: { type: "days", count: 2, days: [1, 3] } },
+        { ...wake, alarm: null },
+        { ...wake, active: false },
+        tree,
+      ],
+      [],
+      NOW,
+    ),
     [{ id: wake.id, name: "Out of bed", time: "07:15", days: [1, 3] }],
   );
 });
@@ -143,7 +168,7 @@ const portage = {
 const BEFORE = new Date(2026, 10, 8, 12, 0);
 
 test("notificationsFor rings a One-off once, at its time on its date", () => {
-  const [notification, ...rest] = notificationsFor([portage], BEFORE);
+  const [notification, ...rest] = notificationsFor([portage], [], BEFORE);
 
   assert.equal(rest.length, 0);
   assert.equal(notification?.id, notificationId(portage.id));
@@ -154,15 +179,15 @@ test("notificationsFor rings a One-off once, at its time on its date", () => {
 });
 
 test("notificationsFor skips a One-off whose moment has passed", () => {
-  assert.deepEqual(notificationsFor([portage], new Date(2026, 10, 14, 7, 16)), []);
+  assert.deepEqual(notificationsFor([portage], [], new Date(2026, 10, 14, 7, 16)), []);
 });
 
 test("alarmNote says a One-off rings only on its date", () => {
-  assert.equal(alarmNote(portage), "Rings at 7:15 AM on Sat 14 Nov, in the Android app.");
+  assert.equal(alarmNote(portage, false), "Rings at 7:15 AM on Sat 14 Nov, in the Android app.");
 });
 
 test("widgetAlarms leaves out One-offs, since the widget lists weekly alarms", () => {
-  assert.deepEqual(widgetAlarms([portage]), []);
+  assert.deepEqual(widgetAlarms([portage], [], NOW), []);
 });
 
 // Due 8 Nov, then every 3 days: 11, 14, 17 Nov and on.
@@ -173,7 +198,7 @@ const everyThree = {
 };
 
 test("notificationsFor rings an Every N days Habit once on each due day ahead, from today's if still to come", () => {
-  const rings = notificationsFor([everyThree], new Date(2026, 10, 8, 7, 0));
+  const rings = notificationsFor([everyThree], [], new Date(2026, 10, 8, 7, 0));
 
   assert.equal(rings.length, 10);
   assert.deepEqual(
@@ -187,30 +212,31 @@ test("notificationsFor rings an Every N days Habit once on each due day ahead, f
 });
 
 test("notificationsFor skips today's ring of an Every N days Habit once its time has passed", () => {
-  const [first] = notificationsFor([everyThree], new Date(2026, 10, 8, 8, 0));
+  const [first] = notificationsFor([everyThree], [], new Date(2026, 10, 8, 8, 0));
 
   assert.deepEqual(first?.schedule.at, new Date(2026, 10, 11, 7, 15));
 });
 
 test("notificationsFor rings an N× a month Habit every day", () => {
-  const [notification, ...rest] = notificationsFor([
-    { ...wake, target: { type: "monthly", count: 2, days: [] } },
-  ]);
+  const [notification, ...rest] = notificationsFor(
+    [{ ...wake, target: { type: "monthly", count: 2, days: [] } }],
+    [],
+  );
 
   assert.equal(rest.length, 0);
   assert.deepEqual(notification?.schedule.on, { hour: 7, minute: 15, second: 0 });
 });
 
 test("alarmNote names an Every N days or N× a month Habit's days", () => {
-  assert.equal(alarmNote(everyThree), "Rings at 7:15 AM every 3 days, in the Android app.");
+  assert.equal(alarmNote(everyThree, false), "Rings at 7:15 AM every 3 days, in the Android app.");
   assert.equal(
-    alarmNote({ ...wake, target: { type: "monthly", count: 2, days: [] } }),
+    alarmNote({ ...wake, target: { type: "monthly", count: 2, days: [] } }, false),
     "Rings at 7:15 AM every day, in the Android app.",
   );
 });
 
 test("widgetAlarms leaves out an Every N days Habit, since its days don't repeat weekly", () => {
-  assert.deepEqual(widgetAlarms([everyThree]), []);
+  assert.deepEqual(widgetAlarms([everyThree], [], NOW), []);
 });
 
 test.each([
@@ -218,5 +244,5 @@ test.each([
   ["at or after its time today", wake, new Date(2026, 10, 6, 7, 15), false],
   ["with no alarm", makeHabit(), new Date(2026, 10, 6, 6, 0), false],
 ] as const)("ringsLaterToday: a Habit %s", (_name, habit, now, expected) => {
-  assert.equal(ringsLaterToday(habit, now), expected);
+  assert.equal(ringsLaterToday(habit, [], now), expected);
 });

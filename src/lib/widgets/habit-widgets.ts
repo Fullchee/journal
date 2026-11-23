@@ -8,6 +8,7 @@ import {
   type Durations,
   type Habit,
   type Priority,
+  type RestPeriod,
 } from "@/core";
 
 import type { HabitsBody } from "@/lib/data/habits";
@@ -75,8 +76,12 @@ const activePlaces = (habits: Habit[]) =>
   normalizePlaces(habits.filter((habit) => habit.active).flatMap((habit) => habit.places));
 
 /** Today's due Habits still open, in Today's order, plus the Quick Settings tile's timed Habit. */
-export function habitWidgets(body: HabitsBody, now: Date): HabitWidgets {
-  const due = dueToday(body.habits, body.counts ?? {}, body.durations ?? {}, now)
+export function habitWidgets(body: HabitsBody, restPeriods: RestPeriod[], now: Date): HabitWidgets {
+  const due = dueToday(
+    body.habits,
+    { counts: body.counts ?? {}, durations: body.durations ?? {}, restPeriods },
+    now,
+  )
     .filter(({ day }) => day.status === "empty")
     .map(({ habit }) => widgetHabit(habit));
 

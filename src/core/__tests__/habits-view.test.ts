@@ -46,11 +46,11 @@ test("checksSince counts back Toronto Days, even late in a Vancouver evening", (
   assert.equal(checksSince(new Date("2026-11-04T23:30:00-08:00")), "2026-10-30");
 });
 
-test("blankHabit starts a daily seed of the given kind, starting today", () => {
+test("blankHabit starts a daily Habit of the given kind, never a tree, starting today", () => {
   const blank = blankHabit("good");
   assert.deepEqual(
-    [blank.kind, blank.stage, blank.target.type, blank.record, blank.startDate],
-    ["good", "seed", "daily", "check", torontoDay(new Date())],
+    [blank.kind, blank.trees, blank.target.type, blank.record, blank.startDate],
+    ["good", [], "daily", "check", torontoDay(new Date())],
   );
 });
 
@@ -377,8 +377,8 @@ test("Habit parses a server Habit, including a blank cue type", () => {
   assert.deepEqual(Habit.parse(habit), habit);
 });
 
-test("Habit rejects a stage this app doesn't know", () => {
-  assert.equal(Habit.safeParse({ ...makeHabit(), stage: "forest" }).success, false);
+test("Habit rejects a tree span without its start", () => {
+  assert.equal(Habit.safeParse({ ...makeHabit(), trees: [{ end: null }] }).success, false);
 });
 
 const portage = makeHabit({

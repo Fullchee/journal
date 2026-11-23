@@ -43,7 +43,10 @@ describe("due days in a Season", () => {
   });
 
   test("Today leaves out a Habit outside its Season", () => {
-    assert.deepEqual(dueToday([dragonBoat], {}, {}, noonOn("2026-10-21")), []);
+    assert.deepEqual(
+      dueToday([dragonBoat], { counts: {}, durations: {}, restPeriods: [] }, noonOn("2026-10-21")),
+      [],
+    );
   });
 });
 

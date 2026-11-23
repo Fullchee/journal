@@ -31,9 +31,10 @@ test("a One-off has Done but no Skip", () => {
 });
 
 test("notificationsFor puts the Habit's buttons on its notification", () => {
-  const [notification] = notificationsFor([
-    { ...makeHabit({ id: "walk" }), alarm: { time: "07:15", kind: "persistent" } },
-  ]);
+  const [notification] = notificationsFor(
+    [{ ...makeHabit({ id: "walk" }), alarm: { time: "07:15", kind: "persistent" } }],
+    [],
+  );
 
   assert.deepEqual(
     notification?.actions?.map(({ id }) => id),

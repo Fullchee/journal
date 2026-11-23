@@ -14,7 +14,6 @@ import {
   KINDS,
   PRIORITIES,
   RECORD_STYLES,
-  STAGES,
   TARGET_TYPES,
   torontoDay,
   type Habit,
@@ -148,7 +147,6 @@ const GARDEN = {
   type: "habit",
   name: "Scrolling on the laptop",
   kind: "bad",
-  stage: "seed",
   record: "check",
   description: "Most nights, on the couch.",
   startDate: "2026-11-01",
@@ -189,8 +187,8 @@ test("the owner adds a habit with a generated id", async () => {
   assert.deepEqual([res.status, await res.json()], [201, { id: habit.id }]);
   assert.match(habit.id, /^scrolling-on-the-laptop-[0-9a-f]{6}$/);
   assert.deepEqual(
-    [habit.kind, habit.stage, habit.description, habit.startDate, habit.cueType, habit.target],
-    ["bad", "seed", "Most nights, on the couch.", "2026-11-01", "action", GARDEN.target],
+    [habit.kind, habit.trees, habit.description, habit.startDate, habit.cueType, habit.target],
+    ["bad", [], "Most nights, on the couch.", "2026-11-01", "action", GARDEN.target],
   );
   assert.equal("usualFrequency" in habit, false);
 });
@@ -248,7 +246,7 @@ test("the owner saves a good Habit's Tiny version trimmed, and an edit keeps it"
   const saved = await habitNamed(env, RUN.name);
   assert.equal(saved.tinyVersion, "Put on running shoes");
 
-  await post(env, OWNER, { type: "habit", id: saved.id, stage: "sprout" });
+  await post(env, OWNER, { type: "habit", id: saved.id, priority: "low" });
   assert.equal((await habitNamed(env, RUN.name)).tinyVersion, "Put on running shoes");
 });
 
@@ -416,27 +414,30 @@ test("a Reference Habit drops its alarm", async () => {
   assert.equal((await habitNamed(env, GARDEN.name)).alarm, null);
 });
 
-test("the owner edits a habit's stage by id", async () => {
-  const env = makeEnv();
-  await post(env, OWNER, {
-    ...GARDEN,
-    id: "up",
-    name: "Out of bed at alarm",
-    stage: "tree",
-  });
-  const habit = await habitNamed(env, "Out of bed at alarm");
-  assert.deepEqual([habit.id, habit.stage], ["up", "tree"]);
-});
-
 test("an edit that names only some fields keeps the others", async () => {
   const env = makeEnv();
   await post(env, OWNER, { ...GARDEN, id: "up" });
-  await post(env, OWNER, { type: "habit", id: "up", stage: "sprout" });
+  await post(env, OWNER, { type: "habit", id: "up", priority: "low" });
   const habit = await habitNamed(env, GARDEN.name);
   assert.deepEqual(
-    [habit.stage, habit.description, habit.target],
-    ["sprout", GARDEN.description, GARDEN.target],
+    [habit.priority, habit.description, habit.target],
+    ["low", GARDEN.description, GARDEN.target],
   );
+});
+
+test("an edit never sets the tree fields: only a tree answer does", async () => {
+  const env = makeEnv();
+
+  const edit = {
+    type: "habit",
+    id: "up",
+    trees: [{ start: "2026-11-01", end: null }],
+    treeAskFrom: "2027-01-01",
+  };
+
+  assert.equal((await post(env, OWNER, edit)).status, 204);
+  const habit = await habitNamed(env, "Out of bed at alarm");
+  assert.deepEqual([habit.trees, habit.treeAskFrom], [[], null]);
 });
 
 test("a habit defaults to normal priority and active, and keeps what the owner sets", async () => {
@@ -493,7 +494,6 @@ const INVALID_HABIT_CHANGES: [string, Json][] = [
   ["blank_name", { ...GARDEN, name: " " }],
   ["bad_kind", { ...GARDEN, kind: "break" }],
   ["bad_kind_without_record", { type: "habit", name: "X", kind: "break" }],
-  ["bad_stage", { ...GARDEN, stage: "forest" }],
   ["bad_priority", { ...GARDEN, priority: "urgent" }],
   ["bad_cue_type", { ...GARDEN, cueType: "smell" }],
   ["stacked_without_habit", { type: "habit", name: "X", cueType: "stacked" }],
@@ -566,12 +566,6 @@ const ACCEPTED_VALUES = [
     KINDS,
     (kind) => ({ kind }),
     (h) => h.kind,
-  ),
-  ...accepts(
-    "stage",
-    STAGES.map((s) => s.id),
-    (stage) => ({ stage }),
-    (h) => h.stage,
   ),
   ...accepts(
     "priority",
@@ -747,7 +741,7 @@ test("a habit is not auto-logged until the owner says so, and keeps the flag thr
   await post(env, OWNER, GARDEN);
   const { id, autoLogged } = await habitNamed(env, GARDEN.name);
   await post(env, OWNER, { type: "habit", id, autoLogged: true });
-  await post(env, OWNER, { type: "habit", id, stage: "sprout" });
+  await post(env, OWNER, { type: "habit", id, priority: "low" });
   assert.deepEqual([autoLogged, (await habitNamed(env, GARDEN.name)).autoLogged], [false, true]);
 });
 
@@ -910,7 +904,8 @@ test("a saved draft reads back field for field, on insert and on update", async 
     usualWhen: "18:30",
     places: ["Gym", "Home"],
     kind: "good",
-    stage: "sprout",
+    trees: [],
+    treeAskFrom: null,
     priority: "high",
     active: false,
     autoLogged: true,
@@ -934,7 +929,14 @@ test("a saved draft reads back field for field, on insert and on update", async 
 
   await post(env, OWNER, { type: "habit", ...draft });
   const saved = await habitNamed(env, "Walk");
-  const edited = { ...saved, stage: "plant", alarm: null, target: { ...saved.target, days: [5] } };
+
+  const edited = {
+    ...saved,
+    priority: "low" as const,
+    alarm: null,
+    target: { ...saved.target, days: [5] },
+  };
+
   await post(env, OWNER, { type: "habit", ...edited });
 
   assert.deepEqual(saved, { ...draft, id: saved.id });
@@ -947,7 +949,8 @@ const DEFAULTS: [keyof Habit, Json][] = [
   ["usualWhen", ""],
   ["places", []],
   ["kind", "good"],
-  ["stage", "seed"],
+  ["trees", []],
+  ["treeAskFrom", null],
   ["priority", "normal"],
   ["active", true],
   ["startDate", torontoDay(new Date())],

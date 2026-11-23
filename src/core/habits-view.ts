@@ -13,16 +13,19 @@ export const Kind = z.enum(KINDS);
 
 export type Kind = z.infer<typeof Kind>;
 
-export const STAGES = [
-  { id: "seed", label: "Seed", icon: "🌱", hint: "Just started; needs daily attention" },
-  { id: "sprout", label: "Sprout", icon: "🌿", hint: "Taking hold" },
-  { id: "plant", label: "Plant", icon: "🪴", hint: "Mostly steady" },
-  { id: "tree", label: "Tree", icon: "🌳", hint: "Automatic; hidden from the tracker" },
-] as const;
+const STAGE_IDS = ["seed", "sprout", "plant", "tree"] as const;
 
-export const Stage = z.enum(STAGES.map((s) => s.id));
+/** A recurring good Habit's Stage is read from its Strength and its tree answers, never stored (ADR 0016). */
+export type Stage = (typeof STAGE_IDS)[number];
 
-export type Stage = z.infer<typeof Stage>;
+export const STAGE_LABELS = {
+  seed: "Seed",
+  sprout: "Sprout",
+  plant: "Plant",
+  tree: "Tree",
+} as const satisfies Record<Stage, string>;
+
+export const STAGES = STAGE_IDS.map((id) => ({ id, label: STAGE_LABELS[id] }));
 
 export const PRIORITIES = [
   { id: "high", label: "High" },
@@ -113,6 +116,11 @@ const Alarm = z.object({ time: z.string(), kind: z.enum(ALARM_KINDS) });
 export type Alarm = z.infer<typeof Alarm>;
 
 /** A pickable Goal; `state` lets the form mark a retired one. */
+/** One stretch as a tree: from the Day I answered yes; `end` is the Day I tapped Slipped, null until then. */
+export const TreeSpan = z.object({ start: z.string(), end: z.nullable(z.string()) });
+
+export type TreeSpan = z.infer<typeof TreeSpan>;
+
 export const Goal = z.object({
   id: z.number(),
   title: z.string(),
@@ -130,7 +138,10 @@ export const Habit = z.object({
   /** Check-in places where the Habit can be done; empty means anywhere (`fitsPlace`). */
   places: z.array(z.string()),
   kind: Kind,
-  stage: Stage,
+  /** Each time I said yes to "Do you do this without thinking?", earliest first. */
+  trees: z.array(TreeSpan),
+  /** The card doesn't ask the tree question before this Day; null when Not yet was never tapped. */
+  treeAskFrom: z.nullable(z.string()),
   priority: Priority,
   active: z.boolean(),
   /** Logged by an import, such as Hevy workouts, instead of by hand; Today leaves it out. */
@@ -295,8 +306,6 @@ export const newHabitDraft = (kind: Kind): Draft => ({
   cueType: kind === "good" ? "time" : "",
 });
 
-export const stageOf = (stage: Stage) => STAGES.find((s) => s.id === stage);
-
 export const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -395,7 +404,8 @@ export const blankHabit = (kind: Kind): Draft => ({
   usualWhen: "",
   places: [],
   kind,
-  stage: "seed",
+  trees: [],
+  treeAskFrom: null,
   priority: "normal",
   active: true,
   autoLogged: false,

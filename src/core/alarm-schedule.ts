@@ -130,7 +130,7 @@ export function reschedulePlan(
     const quietToday = today.silenced.includes(habit.id) || isLoggedToday(habit, today, now);
     const from = habitRingsFrom(habit, now, quiet, quietToday);
 
-    return from === null ? [] : plan(notificationsFor([habit], from), from);
+    return from === null ? [] : plan(notificationsFor([habit], restPeriods, from), from);
   });
 
   return {
@@ -140,6 +140,8 @@ export function reschedulePlan(
     ],
     widgetAlarms: widgetAlarms(
       habits.filter(({ seasons }) => isInSeason(seasons, torontoDay(now))),
+      restPeriods,
+      now,
     ),
   };
 }

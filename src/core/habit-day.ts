@@ -10,7 +10,6 @@ import {
 } from "./calendar";
 import {
   isTimed,
-  stageOf,
   type Counts,
   type DurationEntry,
   type Durations,
@@ -58,8 +57,8 @@ export interface HabitDay<Timed extends TimedDay | null = TimedDay | null> {
 export interface HabitWeekSummary {
   /** Done days and counts in the Monday-to-Sunday week; a missed day adds nothing. */
   total: number;
-  /** What a collapsed Habit shows: name, stage and this week's progress; a Backlog Habit has no week to count. */
-  row: { name: string; stage: string; progress: string; over: boolean };
+  /** What a collapsed Habit shows: name and this week's progress; a Backlog Habit has no week to count. */
+  row: { name: string; progress: string; over: boolean };
 }
 
 export interface HabitDays<Timed extends TimedDay | null = TimedDay | null> {
@@ -276,7 +275,6 @@ export function habitDays(habit: Habit, { counts, durations }: HabitRecords): Ha
         total: totalIn(reached, habit.id, weekOf(day)),
         row: {
           name: habit.name,
-          stage: stageOf(habit.stage)?.label ?? habit.stage,
           progress: habit.active ? rowProgress(habit, reached, periodTotal, day) : "Backlog",
           // A `bad` Habit is over when it happens more often than its ceiling.
           over: habit.active && habit.kind === "bad" && periodTotal > periodTarget(habit, day),

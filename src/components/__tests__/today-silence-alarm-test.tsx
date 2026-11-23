@@ -48,6 +48,7 @@ const mockTracker: TrackerState = { data: undefined, isError: false };
 jest.mock("@/lib/data/streaks", () => ({
   ...jest.requireActual<object>("@/lib/data/streaks"),
   useHabitStreaks: () => () => null,
+  useRestPeriods: () => [],
 }));
 
 jest.mock("@/lib/data/check-ins", () => ({

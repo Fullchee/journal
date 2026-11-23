@@ -247,6 +247,17 @@ describe("Habits tab", () => {
     expect(screen).toHaveSearchParams({});
   });
 
+  it("filters by the Stage read from each Habit's records", async () => {
+    fakeApi({
+      ...HABITS_ROUTES,
+      "/api/streaks": () => ({ counts: {}, durations: {}, skips: {}, restPeriods: [], notes: {} }),
+    });
+    await renderRouter(APP_DIR, { initialUrl: "/habits?stage=seed" });
+
+    expect(await screen.findByRole("button", { name: /^Walk, Seed,/ })).toBeOnTheScreen();
+    expect(screen.queryByRole("button", { name: /^Phone in bed,/ })).not.toBeOnTheScreen();
+  });
+
   it("clears one filter by picking All", async () => {
     await renderAt("/habits?kind=bad");
     await screen.findByRole("heading", { name: "Problems" });
@@ -521,7 +532,6 @@ describe("Habit editor", () => {
     await userEvent.press(chip("Notify", "Persistent notification"));
     await userEvent.press(screen.getByLabelText("Time: 8:00 AM"));
     await userEvent.press(chip("Goals this habit serves", "Steady energy"));
-    await userEvent.press(chip("Stage", "Sprout"));
     await userEvent.press(chip("Priority", "High"));
     await userEvent.press(screen.getByLabelText(/^Started: /));
     await userEvent.paste(screen.getByLabelText("Description"), "# Stretch");
@@ -535,7 +545,8 @@ describe("Habit editor", () => {
       usualWhen: "07:30",
       places: ["Gym", "Pool"],
       kind: "good",
-      stage: "sprout",
+      trees: [],
+      treeAskFrom: null,
       priority: "high",
       active: true,
       autoLogged: true,
@@ -881,7 +892,6 @@ describe("Habit editor", () => {
       "After what?",
       "Places",
       "Goals this habit serves",
-      "Stage",
       "Priority",
       "Description",
     ];
@@ -903,7 +913,7 @@ describe("Habit editor", () => {
 
     expect(screen.getByLabelText("Description")).toBeOnTheScreen();
 
-    for (const field of ["Why", "After what?", "Places", "Kind", "Record", "Stage", "Priority"])
+    for (const field of ["Why", "After what?", "Places", "Kind", "Record", "Priority"])
       expect(screen.queryByLabelText(field)).not.toBeOnTheScreen();
     expect(screen.queryByLabelText(/^Started: /)).not.toBeOnTheScreen();
     expect(screen.queryByRole("heading", { name: "Habit loop" })).not.toBeOnTheScreen();

@@ -1,39 +1,48 @@
 import assert from "node:assert/strict";
 import { filterHabits, filtersFromParams, type HabitFilters } from "@/core/habit-filters";
+import type { Habit, Stage } from "@/core/habits-view";
 import { makeHabit } from "./helpers/habit";
+
+// Stage comes from records, so each test names it per id; a Habit missing here has none.
+const stages = (byId: Record<string, Stage>) => (habit: Habit) => byId[habit.id] ?? null;
+
+const noStage = stages({});
 
 // With no params every filter is unset.
 const blankFilters = () => filtersFromParams(new URLSearchParams());
 
 test("filterHabits with blank filters keeps every habit", () => {
-  const habits = [makeHabit({ id: "a" }), makeHabit({ id: "b", stage: "tree" })];
-  assert.equal(filterHabits(habits, blankFilters()).length, 2);
+  const habits = [makeHabit({ id: "a" }), makeHabit({ id: "b" })];
+  assert.equal(filterHabits(habits, blankFilters(), noStage).length, 2);
 });
 
 test("filterHabits matches enum columns", () => {
   const habits = [
     makeHabit({ id: "a" }),
-    makeHabit({ id: "b", stage: "tree", priority: "high", active: false, record: "count" }),
+    makeHabit({ id: "b", priority: "high", active: false, record: "count" }),
   ];
 
   assert.deepEqual(
-    filterHabits(habits, { ...blankFilters(), stage: "tree" }).map((h) => h.id),
+    filterHabits(habits, { ...blankFilters(), stage: "tree" }, stages({ b: "tree" })).map(
+      (h) => h.id,
+    ),
     ["b"],
   );
+  assert.deepEqual(filterHabits(habits, { ...blankFilters(), stage: "seed" }, noStage), []);
   assert.deepEqual(
-    filterHabits(habits, { ...blankFilters(), priority: "normal" }).map((h) => h.id),
+    filterHabits(habits, { ...blankFilters(), priority: "normal" }, noStage).map((h) => h.id),
     ["a"],
   );
   assert.deepEqual(
-    filterHabits(habits, { ...blankFilters(), active: "no" }).map((h) => h.id),
+    filterHabits(habits, { ...blankFilters(), active: "no" }, noStage).map((h) => h.id),
     ["b"],
   );
   assert.deepEqual(
-    filterHabits(habits, { ...blankFilters(), record: "count" }).map((h) => h.id),
+    filterHabits(habits, { ...blankFilters(), record: "count" }, noStage).map((h) => h.id),
     ["b"],
   );
   assert.deepEqual(
-    filterHabits(habits, { ...blankFilters(), targetType: "weekly" }).map((h) => h.id),
+    filterHabits(habits, { ...blankFilters(), targetType: "weekly" }, noStage).map((h) => h.id),
     [],
   );
 });
@@ -46,7 +55,7 @@ test("filterHabits matches links, dates and text case-insensitively", () => {
   ];
 
   const ids = (over: Partial<HabitFilters>) =>
-    filterHabits(habits, { ...blankFilters(), ...over }).map((h) => h.id);
+    filterHabits(habits, { ...blankFilters(), ...over }, noStage).map((h) => h.id);
 
   assert.deepEqual(ids({ stackedAfter: "has" }), ["b"]);
   assert.deepEqual(ids({ stackedAfter: "none" }), ["a", "c"]);
@@ -58,7 +67,7 @@ test("filterHabits matches kind", () => {
   const habits = [makeHabit({ id: "a" }), makeHabit({ id: "b", kind: "bad" })];
 
   const ids = (over: Partial<HabitFilters>) =>
-    filterHabits(habits, { ...blankFilters(), ...over }).map((h) => h.id);
+    filterHabits(habits, { ...blankFilters(), ...over }, noStage).map((h) => h.id);
 
   assert.deepEqual(ids({ kind: "bad" }), ["b"]);
 });

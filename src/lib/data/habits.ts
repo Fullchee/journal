@@ -31,6 +31,7 @@ import {
   type ImportedEntry,
   type Reschedule,
   type EntryRef,
+  type TreeAnswer,
 } from "@/core";
 
 import { showUndoToast } from "@/ui";
@@ -354,6 +355,7 @@ const ONLINE_ONLY = { networkMode: "always", retry: false } as const;
 type HabitChange =
   | ({ type: "habit" } & Draft)
   | { type: "delete-habit"; id: string }
+  | { type: "tree"; habit: string; answer: TreeAnswer }
   | { type: "delete-duration"; entry: number }
   | ({ type: "add-duration" } & NewDuration)
   | ({ type: "reschedule" } & Pick<NewReschedule, "habit" | "to" | "cause"> & { note?: string })
@@ -406,6 +408,18 @@ export function useSaveHabit() {
   return useMutation({
     ...ONLINE_ONLY,
     mutationFn: saveHabit,
+    onSuccess: () => invalidateHabits(client),
+  });
+}
+
+/** Online only: the answer to the tree question, or Slipped; the server refuses one the card wouldn't offer. */
+export function useAnswerTree() {
+  const client = useQueryClient();
+
+  return useMutation({
+    ...ONLINE_ONLY,
+    mutationFn: ({ habit, answer }: { habit: string; answer: TreeAnswer }) =>
+      postChange({ type: "tree", habit, answer }),
     onSuccess: () => invalidateHabits(client),
   });
 }

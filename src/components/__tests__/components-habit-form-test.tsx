@@ -14,6 +14,8 @@ jest.mock("@/lib/data/check-ins", () => ({ useCheckInPlaces: () => ["Home", "Gym
 
 jest.mock("@/lib/data/data-provider", () => ({ useIsOnline: () => true }));
 
+jest.mock("@/lib/data/streaks", () => ({ useRestPeriods: () => [] }));
+
 jest.mock("@/lib/image-upload", () => ({ pickImage: jest.fn(), uploadImage: jest.fn() }));
 
 jest.mock("uniwind", () =>

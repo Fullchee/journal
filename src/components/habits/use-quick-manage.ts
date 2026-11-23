@@ -1,17 +1,18 @@
-import type { Habit, Stage } from "@/core";
+import type { Habit, TreeAnswer } from "@/core";
 import { showUndoToast } from "@/ui";
 
-import { useSaveHabit } from "@/lib/data/habits";
+import { useAnswerTree, useSaveHabit } from "@/lib/data/habits";
 
 const MANAGE_TOAST = "habit-manage";
 
 /**
- * One-tap Stage and Backlog changes from the Habit card. Each save toasts with an Undo that saves the Habit as it
- * was. A Habit is a full Draft, so its other fields and Circle link stay as they are. A failed save shows through
- * `isError`.
+ * One-tap changes from the Habit card: Backlog, and the tree answers. A Backlog save toasts with an Undo that saves
+ * the Habit as it was; a Habit is a full Draft, so its other fields and Circle link stay as they are. A failed save
+ * shows through `isError`.
  */
 export function useQuickManage() {
   const { mutateAsync, isPending, isError } = useSaveHabit();
+  const tree = useAnswerTree();
 
   // The card that saved may be gone by now, so a failed Undo reports in a toast that offers it again.
   function undo(before: Habit) {
@@ -40,8 +41,8 @@ export function useQuickManage() {
   }
 
   return {
-    setStage: (habit: Habit, stage: Stage) => {
-      void save(habit, { ...habit, stage }, `Stage: ${stage}`);
+    answerTree: (habit: Habit, answer: TreeAnswer) => {
+      tree.mutate({ habit: habit.id, answer });
     },
     toggleBacklog: (habit: Habit) => {
       void save(
@@ -50,7 +51,7 @@ export function useQuickManage() {
         habit.active ? "Moved to Backlog" : "Made active",
       );
     },
-    isPending,
-    isError,
+    isPending: isPending || tree.isPending,
+    isError: isError || tree.isError,
   };
 }

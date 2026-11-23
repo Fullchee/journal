@@ -6,7 +6,6 @@ import {
   Kind,
   Priority,
   RecordStyle,
-  Stage,
   TARGET_TYPES,
   targetCountRange,
   UsualWhen,
@@ -22,6 +21,7 @@ import {
   MISSED,
   optOutLogs,
   Season,
+  TreeSpan,
   type OptOutLog,
   type RestPeriod,
   type Skip,
@@ -50,7 +50,8 @@ const COLUMNS = {
   usual_when: (h: Draft) => h.usualWhen,
   places: (h: Draft) => JSON.stringify(h.places),
   kind: (h: Draft) => h.kind,
-  stage: (h: Draft) => h.stage,
+  trees: (h: Draft) => JSON.stringify(h.trees),
+  tree_ask_from: (h: Draft) => h.treeAskFrom,
   priority: (h: Draft) => h.priority,
   active: (h: Draft) => (h.active ? 1 : 0),
   auto_logged: (h: Draft) => (h.autoLogged ? 1 : 0),
@@ -97,6 +98,8 @@ const StoredDays = z.array(z.number());
 
 const StoredSeasons = z.array(Season);
 
+const StoredTrees = z.array(TreeSpan);
+
 const toHabit = (row: HabitRow, goals: Map<string, number[]>): Habit => ({
   id: row.id,
   name: row.name,
@@ -104,7 +107,8 @@ const toHabit = (row: HabitRow, goals: Map<string, number[]>): Habit => ({
   usualWhen: row.usual_when,
   places: StoredStrings.parse(JSON.parse(row.places)),
   kind: row.kind,
-  stage: row.stage,
+  trees: StoredTrees.parse(JSON.parse(row.trees)),
+  treeAskFrom: row.tree_ask_from,
   priority: row.priority,
   active: row.active === 1,
   autoLogged: row.auto_logged === 1,
@@ -301,7 +305,8 @@ const DraftFields = z.object({
   usualWhen: UsualWhen,
   places: Places,
   kind: Kind,
-  stage: Stage,
+  trees: z.array(TreeSpan),
+  treeAskFrom: z.nullable(IsoDate),
   priority: Priority,
   active: z.boolean(),
   autoLogged: z.boolean(),
@@ -320,8 +325,11 @@ const DraftFields = z.object({
   tinyVersion: z.string().check(z.maxLength(MAX_NAME)),
 });
 
-/** A Habit change as the client sends it: any field may be missing until readHabit fills the defaults. */
-export const HabitChange = z.partial(DraftFields);
+/**
+ * A Habit change as the client sends it: any field may be missing until readHabit fills the defaults. The tree
+ * fields change only through a tree answer, so an edit keeps the saved ones.
+ */
+export const HabitChange = z.partial(z.omit(DraftFields, { trees: true, treeAskFrom: true }));
 
 export type HabitChange = z.infer<typeof HabitChange>;
 
@@ -370,8 +378,25 @@ const cleanSeasons = ({ target, seasons }: Pick<DraftFields, "target" | "seasons
     ? []
     : seasons.toSorted((a, b) => a.start.localeCompare(b.start));
 
+/** Stores a Habit's tree answers; false when no Habit has that id. */
+export async function updateTrees(
+  env: Env,
+  id: string,
+  { trees, treeAskFrom }: Pick<Habit, "trees" | "treeAskFrom">,
+) {
+  const { meta } = await env.DB.prepare(
+    "UPDATE habits SET trees = ?, tree_ask_from = ? WHERE id = ?",
+  )
+    .bind(JSON.stringify(trees), treeAskFrom, id)
+    .run();
+
+  return meta.changes > 0;
+}
+
 /** Returns the cleaned Habit fields, or null when the change is invalid. A missing field takes the new-Habit form's default. */
-export function readHabit(change: HabitChange): Draft | null {
+export function readHabit(
+  change: HabitChange & Partial<Pick<DraftFields, "trees" | "treeAskFrom">>,
+): Draft | null {
   const defaults = blankHabit(change.kind ?? "good");
   const stacked = change.stackedAfter !== undefined && change.stackedAfter !== null;
 

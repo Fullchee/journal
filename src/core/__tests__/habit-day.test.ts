@@ -289,47 +289,37 @@ test("the week counts each done day of a timed Habit as 1", () => {
 type WeekRow = [name: string, over: Partial<Habit>, total: number, row: object];
 
 const WEEKS: WeekRow[] = [
-  [
-    "a daily good Habit",
-    { stage: "sprout" },
-    2,
-    { name: "Up", stage: "Sprout", progress: "2 of 7 this week", over: false },
-  ],
+  ["a daily good Habit", {}, 2, { name: "Up", progress: "2 of 7 this week", over: false }],
   [
     "a weekly good Habit",
     { target: weekly(3) },
     2,
-    { name: "Up", stage: "Seed", progress: "2 of 3 this week", over: false },
+    { name: "Up", progress: "2 of 3 this week", over: false },
   ],
-  [
-    "a days Habit",
-    { target: mwf },
-    1,
-    { name: "Up", stage: "Seed", progress: "1 of 3 this week", over: false },
-  ],
+  ["a days Habit", { target: mwf }, 1, { name: "Up", progress: "1 of 3 this week", over: false }],
   [
     "a bad Habit at its ceiling",
     { kind: "bad", target: weekly(2) },
     2,
-    { name: "Up", stage: "Seed", progress: "2 this week (at most 2)", over: false },
+    { name: "Up", progress: "2 this week (at most 2)", over: false },
   ],
   [
     "a bad Habit over its ceiling",
     { kind: "bad", target: weekly(1) },
     2,
-    { name: "Up", stage: "Seed", progress: "2 this week (at most 1)", over: true },
+    { name: "Up", progress: "2 this week (at most 1)", over: true },
   ],
   [
     "a good Habit past its target",
     { target: weekly(1) },
     2,
-    { name: "Up", stage: "Seed", progress: "2 of 1 this week", over: false },
+    { name: "Up", progress: "2 of 1 this week", over: false },
   ],
   [
     "a Backlog Habit",
     { kind: "bad", active: false, target: weekly(1) },
     2,
-    { name: "Up", stage: "Seed", progress: "Backlog", over: false },
+    { name: "Up", progress: "Backlog", over: false },
   ],
 ];
 
@@ -377,17 +367,17 @@ const MONTH_ROWS: [name: string, over: Partial<Habit>, row: object][] = [
   [
     "an N× a month good Habit counts its month",
     { target: monthly(4) },
-    { name: "Up", stage: "Seed", progress: "3 of 4 this month", over: false },
+    { name: "Up", progress: "3 of 4 this month", over: false },
   ],
   [
     "an N× a month bad Habit over its ceiling",
     { kind: "bad", target: monthly(2) },
-    { name: "Up", stage: "Seed", progress: "3 this month (at most 2)", over: true },
+    { name: "Up", progress: "3 this month (at most 2)", over: true },
   ],
   [
     "an Every N days Habit done on today's due day names the next one",
     everyThree,
-    { name: "Up", stage: "Seed", progress: "Next due Sat, Nov 7", over: false },
+    { name: "Up", progress: "Next due Sat, Nov 7", over: false },
   ],
 ];
 
@@ -485,13 +475,6 @@ test("withoutEntry on a date or Habit with no entries leaves an empty list", () 
   assert.deepEqual(withoutEntry({}, { date: "2026-11-02", habit: "yt", id: 1 }), {
     "2026-11-02": { yt: [] },
   });
-});
-
-test("a week row names a stage the app does not know by its id", () => {
-  // SAFETY: a newer server may send a stage this app has no label for; the cast stands in for it.
-  const habit = makeHabit({ stage: "elder" as Habit["stage"] });
-
-  assert.equal(days(habit).week(MONDAY).row.stage, "elder");
 });
 
 const oneOff = (counts: Counts = {}) =>

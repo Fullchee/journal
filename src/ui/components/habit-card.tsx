@@ -4,7 +4,7 @@ import {
   habitDays,
   loopSentence,
   scheduleLabel,
-  STAGES,
+  STAGE_LABELS,
   streakLabel,
   strengthLabel,
   type Counts,
@@ -15,6 +15,7 @@ import {
   type Skips,
   type Stage,
   type Streak,
+  type TreeAnswer,
 } from "@/core";
 import { CalendarPlus, ChevronDown, ChevronUp, Pencil } from "lucide-react-native";
 import type { ReactNode } from "react";
@@ -39,6 +40,10 @@ export interface HabitCardProps {
   streak?: Streak | null;
   /** The Strength, 0 to 1, for an expanded recurring Habit; null before any period counts. */
   strength?: number | null;
+  /** Read from the Habit's records; null for a Habit without one, or before its records load. */
+  stage?: Stage | null;
+  /** The card asks "Do you do this without thinking?". */
+  asksTree?: boolean;
   /** Habit edits are online only; checks and counts queue. */
   offline?: boolean;
   /** The description, already rendered as Markdown by the app. */
@@ -51,15 +56,15 @@ export interface HabitCardProps {
   onCount: (date: string, count: number) => void;
   onOpenDay: (date: string) => void;
   onEdit: () => void;
-  /** Saves a new Stage at once; without it, the card shows no Stage chips. */
-  onStage?: (stage: Stage) => void;
+  /** Saves a tree answer or Slipped at once; without it, the card offers neither. */
+  onTree?: (answer: TreeAnswer) => void;
   /** Moves an active Habit to Backlog, or a Backlog one back; without it, no Backlog button. */
   onBacklog?: () => void;
   /** Opens the back-fill calendar; without it, no "Log a past day". */
   onPastDays?: () => void;
-  /** A Stage or Backlog save is on its way, so a second tap waits. */
+  /** A tree answer or Backlog save is on its way, so a second tap waits. */
   saving?: boolean;
-  /** The last Stage or Backlog save failed. */
+  /** The last tree answer or Backlog save failed. */
   saveFailed?: boolean;
 }
 
@@ -109,22 +114,45 @@ function StrengthBar({ strength }: { strength: number }) {
   );
 }
 
-// A Tree, a Backlog Habit or a Reference Habit has no day to log.
-const isLogged = (habit: Habit) =>
-  habit.active && habit.stage !== "tree" && habit.target.type !== "none";
+// A Backlog Habit or a Reference Habit has no day to log; a tree still logs, so its Strength keeps counting hits.
+const isLogged = (habit: Habit) => habit.active && habit.target.type !== "none";
+
+// Asked once Strength reaches 95% at 66 days; only a yes makes a tree (ADR 0016).
+function TreeQuestion({
+  disabled,
+  onTree,
+}: {
+  disabled: boolean;
+  onTree: (answer: TreeAnswer) => void;
+}) {
+  return (
+    <View className="gap-2">
+      <Text>Do you do this without thinking?</Text>
+      <View className="flex-row flex-wrap gap-2">
+        <Button size="sm" disabled={disabled} onPress={() => onTree("yes")}>
+          <Text>Yes</Text>
+        </Button>
+        <Button variant="outline" size="sm" disabled={disabled} onPress={() => onTree("not-yet")}>
+          <Text>Not yet</Text>
+        </Button>
+      </View>
+    </View>
+  );
+}
 
 type ManageRowProps = Pick<
   HabitCardProps,
-  "habit" | "onStage" | "onBacklog" | "onPastDays" | "saving" | "saveFailed"
-> & { offline: boolean };
+  "habit" | "onTree" | "onBacklog" | "onPastDays" | "saving" | "saveFailed"
+> & { offline: boolean; tree: boolean };
 
-// One-tap Stage and Backlog changes; the owner sets the Stage, the tracker never does.
+// One-tap Backlog changes, and Slipped for a tree: it rings and shows on Today again.
 function ManageRow({
   habit,
+  tree,
   offline,
   saving = false,
   saveFailed = false,
-  onStage,
+  onTree,
   onBacklog,
   onPastDays,
 }: ManageRowProps) {
@@ -133,36 +161,14 @@ function ManageRow({
   return (
     <View className="gap-2">
       <Text variant="muted">Manage</Text>
-      {onStage && (
-        <View
-          role="group"
-          aria-label={`Stage of ${habit.name}`}
-          className="flex-row flex-wrap gap-2"
-        >
-          {STAGES.map((stage) => {
-            const selected = habit.stage === stage.id;
-
-            return (
-              <Pressable
-                key={stage.id}
-                role="button"
-                aria-selected={selected}
-                disabled={disabled}
-                className={cn(
-                  "min-h-11 justify-center rounded-full border px-3",
-                  selected
-                    ? "border-primary bg-primary active:bg-primary/85"
-                    : "border-input bg-background active:bg-accent",
-                  disabled && "opacity-50",
-                )}
-                onPress={() => onStage(stage.id)}
-              >
-                <Text className={cn("text-sm", selected && "text-primary-foreground")}>
-                  {stage.label}
-                </Text>
-              </Pressable>
-            );
-          })}
+      {tree && onTree && (
+        <View className="items-start gap-1">
+          <Text variant="muted">
+            A tree doesn't ring or show on Today. Slipped brings both back.
+          </Text>
+          <Button variant="outline" size="sm" disabled={disabled} onPress={() => onTree("slipped")}>
+            <Text>Slipped</Text>
+          </Button>
         </View>
       )}
       <View className="flex-row flex-wrap gap-2">
@@ -185,6 +191,7 @@ function ManageRow({
 
 interface HabitRowProps {
   habit: Habit;
+  stage: Stage | null;
   row: HabitWeekSummary["row"];
   expanded: boolean;
   streak: Streak | null;
@@ -193,28 +200,35 @@ interface HabitRowProps {
 }
 
 // TalkBack reads the row as one button, so its label carries everything the row shows.
-function habitRowLabel(name: string, row: HabitRowProps["row"], streak: Streak | null) {
-  const parts = [row.name, row.stage, row.progress];
+function habitRowLabel(
+  name: string,
+  stage: Stage | null,
+  row: HabitRowProps["row"],
+  streak: Streak | null,
+) {
+  const parts = [row.name, stage === null ? "" : STAGE_LABELS[stage], row.progress];
 
   if (streak) parts.push(streakLabel(streak), freezesLabel(streak), freezeNote(name, streak) ?? "");
 
   return parts.filter((part) => part !== "").join(", ");
 }
 
-function HabitRow({ habit, row, expanded, streak, onToggle, onOpen }: HabitRowProps) {
+function HabitRow({ habit, stage, row, expanded, streak, onToggle, onOpen }: HabitRowProps) {
   return (
     <View className="flex-row items-center gap-3">
       <Pressable
         role="button"
-        aria-label={habitRowLabel(habit.name, row, streak)}
+        aria-label={habitRowLabel(habit.name, stage, row, streak)}
         className="active:bg-accent flex-1 rounded-md"
         onPress={onOpen}
       >
         <Text className="font-sans-medium text-lg">{row.name}</Text>
         <View className="flex-row flex-wrap gap-x-3">
-          <Text className={cn("font-caption text-label", STAGE_TEXT[habit.stage])}>
-            {row.stage}
-          </Text>
+          {stage !== null && (
+            <Text className={cn("font-caption text-label", STAGE_TEXT[stage])}>
+              {STAGE_LABELS[stage]}
+            </Text>
+          )}
           <Text
             className={cn(
               "text-sm",
@@ -256,8 +270,9 @@ function HabitFacts({
 
 type HabitDetailsProps = Omit<
   HabitCardProps,
-  "counts" | "durations" | "expanded" | "streak" | "onToggle" | "onOpen"
+  "counts" | "durations" | "expanded" | "streak" | "stage" | "asksTree" | "onToggle" | "onOpen"
 > & {
+  tree: boolean;
   days: HabitDays;
   streak: Streak | null;
 };
@@ -266,6 +281,7 @@ type HabitDetailsProps = Omit<
 function HabitDetails({
   habit,
   days,
+  tree,
   skips,
   today,
   streak,
@@ -295,7 +311,7 @@ function HabitDetails({
       )}
       {streak && <StreakGrid habit={habit} streak={streak} now={today} />}
       {strength !== null && <StrengthBar strength={strength} />}
-      <ManageRow habit={habit} offline={offline} {...manage} />
+      <ManageRow habit={habit} tree={tree} offline={offline} {...manage} />
       <Button
         variant="outline"
         className="self-start"
@@ -310,7 +326,7 @@ function HabitDetails({
   );
 }
 
-/** One Habit in the tracker: name, stage and this week's progress, expanding to its details and week. */
+/** One Habit in the tracker: name, Stage and this week's progress, expanding to its details and week. */
 export function HabitCard({
   habit,
   counts,
@@ -319,6 +335,8 @@ export function HabitCard({
   today,
   expanded,
   streak = null,
+  stage = null,
+  asksTree = false,
   offline = false,
   description,
   nameOf,
@@ -328,6 +346,7 @@ export function HabitCard({
   onCount,
   onOpenDay,
   onEdit,
+  saving = false,
   ...manage
 }: HabitCardProps) {
   const days = habitDays(habit, { counts, durations });
@@ -338,12 +357,17 @@ export function HabitCard({
     <View className="bg-card border-border gap-3 rounded-lg border p-4">
       <HabitRow
         habit={habit}
+        stage={stage}
         row={row}
         expanded={expanded}
         streak={streak}
         onToggle={onToggle}
         onOpen={onOpen}
       />
+
+      {asksTree && manage.onTree && (
+        <TreeQuestion disabled={offline || saving} onTree={manage.onTree} />
+      )}
 
       {isLogged(habit) && (
         <HabitToday
@@ -358,6 +382,7 @@ export function HabitCard({
         <HabitDetails
           habit={habit}
           days={days}
+          tree={stage === "tree"}
           skips={skips}
           today={today}
           streak={streak}
@@ -368,6 +393,7 @@ export function HabitCard({
           onCount={onCount}
           onOpenDay={onOpenDay}
           onEdit={onEdit}
+          saving={saving}
           {...manage}
         />
       )}

@@ -1,6 +1,8 @@
 import {
   MISSED,
   RESCHEDULE_CAUSES,
+  TREE_ANSWERS,
+  answerTree,
   canFixStartDate,
   torontoDay,
   type Goal,
@@ -33,6 +35,7 @@ import {
   readRecords,
   removeDurations,
   updateHabit,
+  updateTrees,
   writeCheck,
   writeSkip,
 } from "@worker/lib/habit-records";
@@ -69,9 +72,17 @@ const ImportDurations = z.object({
   entries: z.array(DurationEntry).check(z.minLength(1), z.maxLength(MAX_IMPORTED_ENTRIES)),
 });
 
+// The answer to "Do you do this without thinking?", or Slipped on a tree.
+const TreeChange = z.object({
+  type: z.literal("tree"),
+  habit: HabitId,
+  answer: z.enum(TREE_ANSWERS),
+});
+
 const Change = z.discriminatedUnion("type", [
   Check,
   HabitEdit,
+  TreeChange,
   z.object({ type: z.literal("delete-habit"), id: HabitId }),
   z.object({ type: z.literal("delete-duration"), entry: z.int() }),
   AddDuration,
@@ -234,6 +245,17 @@ async function applyHabit(env: Env, change: z.infer<typeof HabitEdit>): Promise<
   return isNew ? { id } : true;
 }
 
+// The answer is checked against the Habit's own History, as its card reads it; false when the card wouldn't offer it.
+async function applyTree(env: Env, { habit: id, answer }: z.infer<typeof TreeChange>) {
+  const [habit] = await readHabits(env, "WHERE id = ?", id);
+
+  if (habit === undefined) return false;
+  const now = new Date();
+  const answered = answerTree(habit, answer, await readRecords(env, habit.startDate, now), now);
+
+  return answered !== null && updateTrees(env, id, answered);
+}
+
 async function applyDelete(env: Env, id: string) {
   await env.DB.prepare(
     "UPDATE habits SET stacked_after = NULL, cue_type = '' WHERE stacked_after = ?",
@@ -262,6 +284,10 @@ function applyChange(env: Env, change: Change): Promise<Applied> {
 
     case "habit": {
       return applyHabit(env, change);
+    }
+
+    case "tree": {
+      return applyTree(env, change);
     }
 
     case "delete-habit": {

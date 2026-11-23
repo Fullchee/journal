@@ -48,7 +48,7 @@ const streakHistoryQuery = queryOptions({
   meta: { persist: true },
 });
 
-/** The Rest periods for the alarm schedule; empty before the first load. */
+/** The Rest periods, which decide alarms and whether a Habit is still a tree; empty before the first load. */
 export function useRestPeriods(): RestPeriod[] {
   const { data } = useQuery({ ...streakHistoryQuery, select: (history) => history.restPeriods });
 

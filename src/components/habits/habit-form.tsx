@@ -1,7 +1,6 @@
 import {
   KIND_COPY,
   PRIORITIES,
-  STAGES,
   WEEKDAYS,
   alarmNote,
   canOptOut,
@@ -11,6 +10,7 @@ import {
   dueDateLabel,
   hasHistory,
   isCountedTarget,
+  isTree,
   torontoDay,
   isOneOff,
   loopSentence,
@@ -18,12 +18,12 @@ import {
   samePlace,
   scheduleSummary,
   stackCandidates,
-  stageOf,
   targetCountRange,
   toggleDay,
   withPast,
   withTargetType,
   type CountedTargetType,
+  type Alarm,
   type CueType,
   type Draft,
   type Goal,
@@ -38,6 +38,7 @@ import { useCSSVariable } from "uniwind";
 import { AddImageButton, useAddImage } from "@/components/add-image";
 import { pickAlarmSound, useAlarmSound } from "@/lib/alarms/alarm-sound";
 import { useCheckInPlaces } from "@/lib/data/check-ins";
+import { useRestPeriods } from "@/lib/data/streaks";
 import { ChoiceChips, TextField, type Choice } from "@/components/habits/form-fields";
 import { SeasonFields } from "@/components/habits/season-fields";
 import { TinyVersionField } from "@/components/habits/tiny-version-field";
@@ -310,6 +311,15 @@ function TargetCount({ draft, update, type }: SectionProps & { type: CountedTarg
   );
 }
 
+// A tree doesn't ring, and Rest periods decide whether the Habit is still one.
+function AlarmNote({ draft, alarm }: { draft: Draft; alarm: Alarm }) {
+  const restPeriods = useRestPeriods();
+  // eslint-disable-next-line eslint-react/purity -- whether the Habit is a tree today reads the clock
+  const tree = isTree(draft, restPeriods, new Date());
+
+  return <Text variant="muted">{alarmNote({ ...draft, alarm }, tree)}</Text>;
+}
+
 // A Habit's time lives in `usualWhen` as HH:MM, and in its alarm too when it notifies.
 function Time({ draft, update }: SectionProps) {
   const time = habitTime(draft);
@@ -351,7 +361,7 @@ function Time({ draft, update }: SectionProps) {
           update({ usualWhen: time, alarm: kind === "off" ? null : { time, kind } })
         }
       />
-      {draft.alarm && <Text variant="muted">{alarmNote({ ...draft, alarm: draft.alarm })}</Text>}
+      {draft.alarm && <AlarmNote draft={draft} alarm={draft.alarm} />}
       {draft.alarm?.kind === "alarm" && <AlarmSound />}
     </>
   );
@@ -576,13 +586,6 @@ function Status({ draft, update }: SectionProps) {
     <>
       <SectionTitle>Status</SectionTitle>
       <ChoiceChips
-        label="Stage"
-        options={STAGES}
-        isSelected={(id) => draft.stage === id}
-        onPick={(stage) => update({ stage })}
-      />
-      <Text variant="muted">{stageOf(draft.stage)?.hint}</Text>
-      <ChoiceChips
         label="Priority"
         options={PRIORITIES}
         isSelected={(id) => draft.priority === id}
@@ -592,7 +595,7 @@ function Status({ draft, update }: SectionProps) {
   );
 }
 
-// Stage and Priority always hold a value, and a Scheduled cue shows in the Frequency block, so neither counts.
+// Priority always holds a value, and a Scheduled cue shows in the Frequency block, so neither counts.
 function filledInMore(draft: Draft) {
   const shared = [draft.goals.length > 0, draft.description.trim() !== ""];
 

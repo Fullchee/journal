@@ -53,6 +53,7 @@ import {
   type HabitCheck,
   type HabitsBody,
 } from "@/lib/data/habits";
+import { useRestPeriods } from "@/lib/data/streaks";
 
 // Minutes typed now were just spent, so the entry starts that long ago, but never before midnight.
 const startedAgo = (now: Date, minutes: number) =>
@@ -126,7 +127,8 @@ function DueHabits({ body: fetched }: { body: HabitsBody }) {
   const today = new Date();
   const date = torontoDay(today);
   const records = { counts: body.counts ?? {}, durations: body.durations ?? {} };
-  const rows = dueToday(body.habits, records.counts, records.durations, today);
+  const restPeriods = useRestPeriods();
+  const rows = dueToday(body.habits, { ...records, restPeriods }, today);
   const tinyDay = isTinyDay(useCheckIns().data?.checkIns ?? [], today);
   const listed = new Set(rows.map((row) => row.habit.id));
   const open = rows.filter((row) => row.day.status === "empty");
@@ -273,6 +275,7 @@ function DueRow({
   const { mutate: addDuration } = useAddDuration();
   const isOnline = useIsOnline();
   const silenced = useSilencedAlarms();
+  const restPeriods = useRestPeriods();
 
   const props: HabitDueRowProps = {
     habit,
@@ -297,7 +300,7 @@ function DueRow({
     ...(!isOneOff(habit) && { onSkip }),
     ...(canSilence() &&
       !loggedToday &&
-      ringsLaterToday(habit, today) && {
+      ringsLaterToday(habit, restPeriods, today) && {
         alarm: {
           silenced: silenced.includes(habit.id),
           onSilence: () => toggleSilenced(habit.id),

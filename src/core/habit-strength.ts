@@ -1,11 +1,13 @@
-import { daysFrom, monthDaysOf, shiftDay } from "./calendar";
+import { daysFrom, monthDaysOf, shiftDay, torontoDay } from "./calendar";
 import {
   habitHistory,
   type HistoryMark,
+  type HistoryPeriod,
   type HistoryUnit,
   type LoggedPeriod,
 } from "./habit-history";
 import { habitDayReader, type StreakRecords } from "./habit-day";
+import { isTreeOn, treeSpans } from "./habit-tree";
 import { isTimed, type Habit, type TimedHabit } from "./habits-view";
 
 // Loop scores a monthly Habit over an average month.
@@ -106,6 +108,30 @@ function badCompletions(
   });
 }
 
+// A tree's period with nothing logged is frozen like a Skip: logging every automatic Habit would be routine input.
+function goodCompletions(
+  habit: Habit,
+  records: StreakRecords,
+  { unit, periods }: { unit: HistoryUnit; periods: HistoryPeriod[] },
+  now: Date,
+): Completion[] {
+  const spans = treeSpans(habit, records.restPeriods, torontoDay(now));
+
+  const logged = (day: string) =>
+    (records.counts[day]?.[habit.id] ?? 0) !== 0 ||
+    (records.durations[day]?.[habit.id] ?? []).length > 0;
+
+  const frozen = (start: string) => {
+    const days = PERIOD_DAY_LIST[unit](start);
+
+    return days.some((day) => isTreeOn(spans, day)) && days.every((day) => !logged(day));
+  };
+
+  return periods.map(({ start, mark }) =>
+    mark === "missed" && frozen(start) ? null : MARK_COMPLETION[mark],
+  );
+}
+
 /** One History period, graded: a good Habit by its mark, a bad one by whether it stayed within its limit. */
 export interface GradedPeriod {
   start: string;
@@ -118,7 +144,7 @@ export function gradedHistory(habit: Habit, records: StreakRecords, now: Date) {
 
   const completions =
     history.kind === "good"
-      ? history.periods.map(({ mark }) => MARK_COMPLETION[mark])
+      ? goodCompletions(habit, records, history, now)
       : badCompletions(habit, records, history.unit, history.periods);
 
   const periods: GradedPeriod[] = history.periods.map(({ start }, index) => ({

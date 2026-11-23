@@ -1,6 +1,7 @@
 import { clockLabel, dayOfWeek, shiftDay, torontoDay } from "./calendar";
 import type { CheckIn } from "./check-in-view";
 import { habitDays, type HabitDay } from "./habit-day";
+import { isTree } from "./habit-tree";
 import { withOptOutDays } from "./opt-out";
 import {
   dayMonthLabel,
@@ -12,6 +13,7 @@ import {
   type Durations,
   type Habit,
 } from "./habits-view";
+import type { RestPeriod } from "./rest-mode";
 
 /**
  * `time` is the Habit's time of day as HH:MM, or null when it has none.
@@ -52,20 +54,28 @@ function byDue(a: DueHabit, b: DueHabit) {
 const isOptOutOn = ({ optOutFrom }: Habit, day: string) => optOutFrom !== null && optOutFrom <= day;
 
 /**
- * Today's tracked good Habits and One-offs, leaving out auto-logged ones: overdue One-offs first, then by time of day, with the ones already settled (done or missed) last.
+ * Today's tracked good Habits and One-offs, leaving out auto-logged ones and trees: overdue One-offs first, then by time of day, with the ones already settled (done or missed) last.
  * A `weekly` Habit stops being due once its week is full, so a Habit done today stays listed either way.
  */
 export function dueToday(
   habits: Habit[],
-  counts: Counts,
-  durations: Durations,
+  {
+    counts,
+    durations,
+    restPeriods,
+  }: { counts: Counts; durations: Durations; restPeriods: RestPeriod[] },
   today = new Date(),
 ): DueHabit[] {
   const records = withOptOutDays(habits, { counts, durations }, today);
 
   return habits
     .filter(
-      (habit) => habit.active && !habit.autoLogged && habit.kind === "good" && !isReference(habit),
+      (habit) =>
+        habit.active &&
+        !habit.autoLogged &&
+        habit.kind === "good" &&
+        !isReference(habit) &&
+        !isTree(habit, restPeriods, today),
     )
     .flatMap((habit) => {
       const day = habitDays(habit, records).on(today);

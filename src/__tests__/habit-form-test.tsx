@@ -14,6 +14,8 @@ jest.mock("@/lib/data/check-ins", () => ({ useCheckInPlaces: () => ["Home", "Gym
 
 jest.mock("@/lib/data/data-provider", () => ({ useIsOnline: () => true }));
 
+jest.mock("@/lib/data/streaks", () => ({ useRestPeriods: () => [] }));
+
 jest.mock("uniwind", () =>
   jest.requireActual<typeof RouteMocks>("../../jest/route-mocks").mockUniwind(),
 );
@@ -49,8 +51,10 @@ describe("HabitForm", () => {
 
     await userEvent.press(more());
 
-    for (const field of ["After what?", "Places", "Stage", "Priority", "Description"])
+    for (const field of ["After what?", "Places", "Priority", "Description"])
       expect(screen.getByLabelText(field)).toBeOnTheScreen();
+
+    expect(screen.queryByLabelText("Stage")).not.toBeOnTheScreen();
 
     for (const dropped of ["Why", "I will…", "Obstacles", "Replaces bad habit"])
       expect(screen.queryByLabelText(dropped)).not.toBeOnTheScreen();

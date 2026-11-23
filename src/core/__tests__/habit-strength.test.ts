@@ -133,6 +133,42 @@ describe("habitStrength", () => {
   });
 });
 
+describe("a tree's Strength", () => {
+  const tree = makeHabit({ startDate: START, trees: [{ start: day(3), end: null }] });
+
+  test("a day with nothing logged leaves it as it was", () => {
+    expect(strengthOf("DDD.", tree)).toBeCloseTo(strengthOf("DDD", daily) ?? 0);
+    expect(strengthOf("DDD..", tree)).toBeCloseTo(strengthOf("DDD", daily) ?? 0);
+  });
+
+  test("a logged day is a hit, and a Not done is a miss", () => {
+    expect(strengthOf("DDDD.", tree)).toBeCloseTo(strengthOf("DDDD", daily) ?? 0);
+    expect(strengthOf("DDDx.", tree)).toBeCloseTo(strengthOf("DDDx.", daily) ?? 0);
+  });
+
+  test("an unlogged day before the yes or after Slipped is still a miss", () => {
+    const slipped = makeHabit({ ...tree, trees: [{ start: day(3), end: day(4) }] });
+
+    expect(strengthOf("DD.D..", slipped)).toBeCloseTo(strengthOf("DD.D..", daily) ?? 0);
+    expect(strengthOf("DDD...", slipped)).toBeCloseTo(strengthOf("DDDx.", daily) ?? 0);
+  });
+
+  test("a week with nothing logged leaves it as it was, but a logged Duration counts", () => {
+    const twice = makeHabit({
+      startDate: START,
+      target: { type: "weekly", count: 2, days: [] },
+      trees: [{ start: day(7), end: null }],
+    });
+
+    const durations: Durations = { [day(8)]: { up: [entry(1, 10)] } };
+
+    expect(strengthOf("DD..... ....... .", twice)).toBeCloseTo(strengthOf("DD..... .", twice) ?? 0);
+    expect(strengthOf("DD..... ....... .", twice, { durations })).toBeLessThan(
+      strengthOf("DD..... .", twice) ?? 0,
+    );
+  });
+});
+
 describe("a bad Habit's Strength", () => {
   const weed = makeHabit({ startDate: START, kind: "bad", record: "count" });
 

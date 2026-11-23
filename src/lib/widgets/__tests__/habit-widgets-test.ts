@@ -24,18 +24,20 @@ describe("habitWidgets", () => {
     const walk = habit({ id: "walk", name: "Walk" });
     const meds = habit({ id: "meds", name: "Meds" });
 
-    expect(habitWidgets(body([walk, meds], { counts: { [TODAY]: { meds: 1 } } }), NOW)).toEqual({
-      date: TODAY,
-      due: [{ id: "walk", name: "Walk", tick: true, places: [], time: null, priority: "normal" }],
-      places: [],
-      timed: null,
-    });
+    expect(habitWidgets(body([walk, meds], { counts: { [TODAY]: { meds: 1 } } }), [], NOW)).toEqual(
+      {
+        date: TODAY,
+        due: [{ id: "walk", name: "Walk", tick: true, places: [], time: null, priority: "normal" }],
+        places: [],
+        timed: null,
+      },
+    );
   });
 
   it("gives a timed Habit no tick, since it logs minutes", () => {
     const read = timedHabit({ id: "read", name: "Read" });
 
-    expect(habitWidgets(body([read]), NOW).due).toMatchObject([
+    expect(habitWidgets(body([read]), [], NOW).due).toMatchObject([
       { id: "read", name: "Read", tick: false },
     ]);
   });
@@ -49,7 +51,7 @@ describe("habitWidgets", () => {
       priority: "high",
     });
 
-    expect(habitWidgets(body([lift]), NOW).due).toEqual([
+    expect(habitWidgets(body([lift]), [], NOW).due).toEqual([
       { id: "lift", name: "Lift", tick: true, places: ["Gym"], time: "07:30", priority: "high" },
     ]);
   });
@@ -59,7 +61,7 @@ describe("habitWidgets", () => {
     const stretch = habit({ id: "stretch", places: [" gym ", "Office"] });
     const shelved = habit({ id: "shelved", places: ["Library"], active: false });
 
-    expect(habitWidgets(body([lift, stretch, shelved]), NOW).places).toEqual([
+    expect(habitWidgets(body([lift, stretch, shelved]), [], NOW).places).toEqual([
       "Gym",
       "Home",
       "Office",
@@ -69,7 +71,7 @@ describe("habitWidgets", () => {
   it("reads a list fetched without checks as nothing done yet", () => {
     const walk = habit({ id: "walk", name: "Walk" });
 
-    expect(habitWidgets({ habits: [walk] }, NOW).due).toHaveLength(1);
+    expect(habitWidgets({ habits: [walk] }, [], NOW).due).toHaveLength(1);
   });
 });
 
@@ -83,14 +85,14 @@ describe("the Quick Settings tile's Habit", () => {
       [TODAY]: { meditate: [entry("06:30")], read: [entry("07:15")] },
     };
 
-    expect(habitWidgets(body([meditate, read], { durations }), NOW).timed).toEqual({
+    expect(habitWidgets(body([meditate, read], { durations }), [], NOW).timed).toEqual({
       id: "read",
       name: "Read",
     });
   });
 
   it("is the first timed Habit when none was logged this week", () => {
-    expect(habitWidgets(body([meditate, read]), NOW).timed).toEqual({
+    expect(habitWidgets(body([meditate, read]), [], NOW).timed).toEqual({
       id: "meditate",
       name: "Meditate",
     });
@@ -102,14 +104,14 @@ describe("the Quick Settings tile's Habit", () => {
     const walk = habit({ id: "walk", name: "Walk" });
     const durations = { [TODAY]: { hevy: [entry("08:00")], shelved: [entry("09:00")] } };
 
-    expect(habitWidgets(body([hevy, shelved, walk, read], { durations }), NOW).timed).toEqual({
+    expect(habitWidgets(body([hevy, shelved, walk, read], { durations }), [], NOW).timed).toEqual({
       id: "read",
       name: "Read",
     });
   });
 
   it("is none without a timed Habit", () => {
-    expect(habitWidgets({ habits: [habit()] }, NOW).timed).toBeNull();
+    expect(habitWidgets({ habits: [habit()] }, [], NOW).timed).toBeNull();
   });
 });
 

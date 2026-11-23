@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 
 import { useTodayHabits } from "@/lib/data/habits";
+import { useRestPeriods } from "@/lib/data/streaks";
 import { habitWidgets } from "@/lib/widgets/habit-widgets";
 
 // eslint-disable-next-line no-restricted-imports -- Expo local modules live outside src, where no @/ alias reaches
@@ -12,11 +13,12 @@ import JournalAndroid from "../../../modules/journal-android";
  */
 export function useHabitWidgets() {
   const { data } = useTodayHabits();
+  const restPeriods = useRestPeriods();
 
   useEffect(() => {
     if (!data) return;
-    const pushed = habitWidgets(data, new Date());
+    const pushed = habitWidgets(data, restPeriods, new Date());
 
     JournalAndroid.setHabits(JSON.stringify(pushed));
-  }, [data]);
+  }, [data, restPeriods]);
 }

@@ -4,6 +4,8 @@ import {
   MAX_REST_DAYS,
   filterHabits,
   filtersFromParams,
+  asksTreeQuestion,
+  habitStage,
   habitStrength,
   inTracker,
   isAnswered,
@@ -126,12 +128,12 @@ function OneOffs({ oneOffs, counts, today }: { oneOffs: Habit[]; counts: Counts;
 // Each card keeps its own save, so a pending or failed save shows on the card that made it.
 function ManagedHabitCard(props: HabitCardProps) {
   const { habit } = props;
-  const { setStage, toggleBacklog, isPending, isError } = useQuickManage();
+  const { answerTree, toggleBacklog, isPending, isError } = useQuickManage();
 
   return (
     <HabitCard
       {...props}
-      onStage={(stage) => setStage(habit, stage)}
+      onTree={(answer) => answerTree(habit, answer)}
       onBacklog={() => toggleBacklog(habit)}
       onPastDays={() => openHistory(habit.id)}
       saving={isPending}
@@ -152,7 +154,8 @@ function HabitList({ body, filters }: { body: HabitsBody; filters: HabitFilters 
   const durations = body.durations ?? {};
   const streakOf = useHabitStreaks(body, today);
   const records = useHabitRecords(body);
-  const shown = filterHabits(body.habits.filter(inTracker), filters);
+  const stageOf = (habit: Habit) => records && habitStage(habit, records, today);
+  const shown = filterHabits(body.habits.filter(inTracker), filters, stageOf);
   const tracked = shown.filter((habit) => habit.active);
   const backlog = shown.filter((habit) => !habit.active);
   const nameOf = (id: string) => body.habits.find((habit) => habit.id === id)?.name ?? id;
@@ -177,6 +180,8 @@ function HabitList({ body, filters }: { body: HabitsBody; filters: HabitFilters 
       today={today}
       expanded={expanded.has(habit.id)}
       streak={streakOf(habit)}
+      stage={stageOf(habit)}
+      asksTree={records !== null && asksTreeQuestion(habit, records, today)}
       strength={
         records !== null && expanded.has(habit.id) ? habitStrength(habit, records, today) : null
       }
@@ -195,7 +200,7 @@ function HabitList({ body, filters }: { body: HabitsBody; filters: HabitFilters 
   return (
     <View className="gap-3">
       <OneOffs
-        oneOffs={filterHabits(body.habits.filter(isOneOff), filters)}
+        oneOffs={filterHabits(body.habits.filter(isOneOff), filters, stageOf)}
         counts={counts}
         today={torontoDay(today)}
       />

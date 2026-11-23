@@ -18,7 +18,11 @@ test("dueToday lists due Habits and sinks the ones settled today", () => {
     makeHabit({ id: "c", name: "C" }),
   ];
 
-  const rows = dueToday(habits, { [DAY]: { a: 1, b: MISSED } }, {}, TODAY);
+  const rows = dueToday(
+    habits,
+    { counts: { [DAY]: { a: 1, b: MISSED } }, durations: {}, restPeriods: [] },
+    TODAY,
+  );
 
   assert.deepEqual(names(rows), ["C", "A", "B"]);
   assert.deepEqual(
@@ -36,7 +40,12 @@ test("dueToday sorts by time of day, with untimed Habits after timed ones", () =
     makeHabit({ id: "noon", name: "Noon", usualWhen: "12:15" }),
   ];
 
-  assert.deepEqual(names(dueToday(habits, {}, {}, TODAY)), ["Early", "Noon", "Late", "None"]);
+  assert.deepEqual(names(dueToday(habits, { counts: {}, durations: {}, restPeriods: [] }, TODAY)), [
+    "Early",
+    "Noon",
+    "Late",
+    "None",
+  ]);
 });
 
 test("dueToday leaves out Backlog, auto-logged, Reference, bad and off-day Habits", () => {
@@ -49,7 +58,25 @@ test("dueToday leaves out Backlog, auto-logged, Reference, bad and off-day Habit
     makeHabit({ id: "wed", name: "Wed", target: { type: "days", count: 0, days: [3] } }),
   ];
 
-  assert.deepEqual(names(dueToday(habits, {}, {}, TODAY)), ["Wed"]);
+  assert.deepEqual(names(dueToday(habits, { counts: {}, durations: {}, restPeriods: [] }, TODAY)), [
+    "Wed",
+  ]);
+});
+
+test("dueToday leaves out a tree until a Rest mode day after its yes brings it back", () => {
+  const tree = makeHabit({ name: "Tree", trees: [{ start: "2026-10-01", end: null }] });
+
+  assert.deepEqual(dueToday([tree], { counts: {}, durations: {}, restPeriods: [] }, TODAY), []);
+  assert.deepEqual(
+    names(
+      dueToday(
+        [tree],
+        { counts: {}, durations: {}, restPeriods: [{ start: "2026-10-20", end: "2026-10-21" }] },
+        TODAY,
+      ),
+    ),
+    ["Tree"],
+  );
 });
 
 test("dueToday keeps a weekly Habit done today after its week fills", () => {
@@ -58,12 +85,22 @@ test("dueToday keeps a weekly Habit done today after its week fills", () => {
   const full = { "2026-11-02": { w: 1 }, [DAY]: { w: 1 } };
   const fullEarlier = { "2026-11-02": { w: 1 }, "2026-11-03": { w: 1 } };
 
-  assert.deepEqual(names(dueToday([weekly], full, {}, TODAY)), ["W"]);
-  assert.deepEqual(dueToday([weekly], fullEarlier, {}, TODAY), []);
+  assert.deepEqual(
+    names(dueToday([weekly], { counts: full, durations: {}, restPeriods: [] }, TODAY)),
+    ["W"],
+  );
+  assert.deepEqual(
+    dueToday([weekly], { counts: fullEarlier, durations: {}, restPeriods: [] }, TODAY),
+    [],
+  );
 });
 
 test("dueToday keeps a missed day's count and leaves it undone", () => {
-  const [row] = dueToday([makeHabit()], { [DAY]: { up: MISSED } }, {}, TODAY);
+  const [row] = dueToday(
+    [makeHabit()],
+    { counts: { [DAY]: { up: MISSED } }, durations: {}, restPeriods: [] },
+    TODAY,
+  );
 
   assert.deepEqual([row?.day.count, row?.day.status], [MISSED, "missed"]);
 });
@@ -72,7 +109,10 @@ test("dueToday reads a timed Habit as done once its minutes reach the bar", () =
   const timed = makeHabit({ id: "t", record: "duration", targetMinutes: 30 });
   const durations = { [DAY]: { t: [{ id: 1, startTime: "08:00", minutes: 30 }] } };
 
-  assert.equal(dueToday([timed], {}, durations, TODAY)[0]?.day.status, "done");
+  assert.equal(
+    dueToday([timed], { counts: {}, durations, restPeriods: [] }, TODAY)[0]?.day.status,
+    "done",
+  );
 });
 
 test("habitTime reads usual when, and null when it is blank", () => {
@@ -120,7 +160,7 @@ test("dueToday lists overdue One-offs first, oldest first, each with its due dat
     oneOff("lastWeek", "2026-10-28"),
   ];
 
-  const rows = dueToday(habits, {}, {}, TODAY);
+  const rows = dueToday(habits, { counts: {}, durations: {}, restPeriods: [] }, TODAY);
 
   assert.deepEqual(names(rows), ["lastWeek", "monday", "early", "today"]);
   assert.deepEqual(
@@ -135,26 +175,36 @@ test("dueToday lists overdue One-offs first, oldest first, each with its due dat
 });
 
 test("dueToday puts an overdue One-off before a plain Habit, whichever the list names first", () => {
-  const rows = dueToday([oneOff("monday", "2026-11-02"), makeHabit({ name: "Up" })], {}, {}, TODAY);
+  const rows = dueToday(
+    [oneOff("monday", "2026-11-02"), makeHabit({ name: "Up" })],
+    { counts: {}, durations: {}, restPeriods: [] },
+    TODAY,
+  );
 
   assert.deepEqual(names(rows), ["monday", "Up"]);
 });
 
 test("dueToday reads the current date by default", () => {
-  assert.deepEqual(dueToday([], {}, {}), []);
+  assert.deepEqual(dueToday([], { counts: {}, durations: {}, restPeriods: [] }), []);
 });
 
 test("dueToday leaves out a One-off before its date or once answered", () => {
   const habits = [oneOff("later", "2026-11-05"), oneOff("answered", "2026-11-02")];
 
-  assert.deepEqual(dueToday(habits, { "2026-11-02": { answered: MISSED } }, {}, TODAY), []);
+  assert.deepEqual(
+    dueToday(
+      habits,
+      { counts: { "2026-11-02": { answered: MISSED } }, durations: {}, restPeriods: [] },
+      TODAY,
+    ),
+    [],
+  );
 });
 
 test("dueToday sinks a One-off done today with the settled Habits", () => {
   const rows = dueToday(
     [oneOff("trip", "2026-11-02"), makeHabit()],
-    { [DAY]: { trip: 1 } },
-    {},
+    { counts: { [DAY]: { trip: 1 } }, durations: {}, restPeriods: [] },
     TODAY,
   );
 
@@ -170,25 +220,36 @@ test("dueToday sinks a One-off done today with the settled Habits", () => {
 test("dueBox shows an overdue One-off's weekday instead of its time", () => {
   const [monday] = dueToday(
     [{ ...oneOff("monday", "2026-11-02"), alarm: { time: "07:00", kind: "alarm" } }],
-    {},
-    {},
+    { counts: {}, durations: {}, restPeriods: [] },
     TODAY,
   );
 
-  const [daily] = dueToday([makeHabit({ usualWhen: "07:00" })], {}, {}, TODAY);
+  const [daily] = dueToday(
+    [makeHabit({ usualWhen: "07:00" })],
+    { counts: {}, durations: {}, restPeriods: [] },
+    TODAY,
+  );
 
   assert.equal(monday && dueBox(monday, TODAY), "Mon");
   assert.equal(daily && dueBox(daily, TODAY), "7:00 AM");
 });
 
 test("dueBox leaves a Habit with no time of day empty", () => {
-  const [any] = dueToday([makeHabit({ usualWhen: "" })], {}, {}, TODAY);
+  const [any] = dueToday(
+    [makeHabit({ usualWhen: "" })],
+    { counts: {}, durations: {}, restPeriods: [] },
+    TODAY,
+  );
 
   assert.equal(any && dueBox(any, TODAY), null);
 });
 
 test("dueBox shows the day and month once the weekday is a week or more ago", () => {
-  const [old] = dueToday([oneOff("old", "2026-10-28")], {}, {}, TODAY);
+  const [old] = dueToday(
+    [oneOff("old", "2026-10-28")],
+    { counts: {}, durations: {}, restPeriods: [] },
+    TODAY,
+  );
 
   assert.equal(old && dueBox(old, TODAY), "28 Oct");
 });

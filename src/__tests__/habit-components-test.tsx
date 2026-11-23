@@ -1,6 +1,6 @@
 import { habitDays, shiftDay, torontoDay, type DurationEntry, type Habit } from "@/core";
 import { HabitCard, HabitDueRow, HabitWeek } from "@/ui";
-import { act, fireEvent, render, screen, userEvent, within } from "@testing-library/react-native";
+import { act, fireEvent, render, screen, userEvent } from "@testing-library/react-native";
 
 // eslint-disable-next-line no-restricted-imports -- jest/ sits outside src, so no @/ alias reaches it
 import { habit } from "../../jest/fixtures";
@@ -514,9 +514,9 @@ describe("HabitCard", () => {
     );
   });
 
-  it("logs nothing for a Tree or a Backlog Habit", async () => {
-    await render(<HabitCard {...cardProps} expanded habit={habit({ stage: "tree" })} />);
-    expect(screen.queryByRole("checkbox")).not.toBeOnTheScreen();
+  it("still logs a tree, but nothing for a Backlog Habit", async () => {
+    await render(<HabitCard {...cardProps} expanded stage="tree" habit={habit()} />);
+    expect(screen.getAllByRole("checkbox").length).toBeGreaterThan(0);
 
     await render(<HabitCard {...cardProps} expanded={false} habit={habit({ active: false })} />);
     expect(screen.getByText("Backlog")).toBeOnTheScreen();
@@ -531,6 +531,7 @@ describe("HabitCard", () => {
         {...cardProps}
         expanded={false}
         habit={habit()}
+        stage="seed"
         onOpen={onOpen}
         onToggle={onToggle}
       />,
@@ -557,11 +558,14 @@ describe("HabitCard", () => {
       repair: null,
     };
 
-    await render(<HabitCard {...cardProps} expanded={false} habit={habit()} streak={streak} />);
+    await render(
+      <HabitCard {...cardProps} expanded={false} habit={habit()} stage="sprout" streak={streak} />,
+    );
 
+    expect(screen.getByText("Sprout")).toBeOnTheScreen();
     expect(
       screen.getByRole("button", {
-        name: /^Walk, Seed, 0 of 7 this week, 4 days · longest 9, 1 Freeze, Used 1 Freeze on Walk\./,
+        name: /^Walk, Sprout, 0 of 7 this week, 4 days · longest 9, 1 Freeze, Used 1 Freeze on Walk\./,
       }),
     ).toBeOnTheScreen();
   });
@@ -585,7 +589,14 @@ describe("HabitCard", () => {
     expect(screen.getByRole("button", { name: "Edit Walk" })).toBeDisabled();
   });
 
-  const manageProps = { onStage: jest.fn(), onBacklog: jest.fn(), onPastDays: jest.fn() };
+  it("shows no Stage for a Habit without one, or before its records load", async () => {
+    await render(<HabitCard {...cardProps} expanded={false} habit={habit()} />);
+
+    expect(screen.getByRole("button", { name: "Walk, 0 of 7 this week" })).toBeOnTheScreen();
+    expect(screen.queryByText("Seed")).not.toBeOnTheScreen();
+  });
+
+  const manageProps = { onTree: jest.fn(), onBacklog: jest.fn(), onPastDays: jest.fn() };
 
   it("shows Manage only on an expanded card", async () => {
     const { rerender } = await render(
@@ -602,42 +613,73 @@ describe("HabitCard", () => {
     await render(<HabitCard {...cardProps} expanded habit={habit()} />);
 
     expect(screen.getByText("Manage")).toBeOnTheScreen();
-    expect(screen.queryByLabelText("Stage of Walk")).not.toBeOnTheScreen();
     expect(screen.queryByRole("button", { name: "Move to Backlog" })).not.toBeOnTheScreen();
     expect(screen.queryByRole("button", { name: "Log a past day" })).not.toBeOnTheScreen();
   });
 
-  it("selects the current Stage and hands each tap to its handler", async () => {
-    const props = {
-      onStage: jest.fn(),
-      onBacklog: jest.fn(),
-      onPastDays: jest.fn(),
-    };
+  it("hands each Manage tap to its handler, with no Stage picker", async () => {
+    const props = { onTree: jest.fn(), onBacklog: jest.fn(), onPastDays: jest.fn() };
 
-    await render(
-      <HabitCard
-        {...cardProps}
-        {...props}
-        expanded
-        habit={habit({ kind: "bad", stage: "plant" })}
-      />,
-    );
-    const stages = within(screen.getByLabelText("Stage of Walk"));
-    const sprout = stages.getByRole("button", { name: "Sprout" });
-    const backlog = screen.getByRole("button", { name: "Move to Backlog" });
-    const pastDays = screen.getByRole("button", { name: "Log a past day" });
+    await render(<HabitCard {...cardProps} {...props} expanded stage="plant" habit={habit()} />);
 
-    expect(stages.getByRole("button", { name: "Plant" })).toBeSelected();
-    expect(sprout).not.toBeSelected();
-    expect(stages.getAllByRole("button")).toHaveLength(4);
+    expect(screen.queryByRole("button", { name: "Plant" })).not.toBeOnTheScreen();
+    expect(screen.queryByRole("button", { name: "Slipped" })).not.toBeOnTheScreen();
 
-    await act(() => userEvent.press(sprout));
-    await act(() => userEvent.press(backlog));
-    await act(() => userEvent.press(pastDays));
+    await act(() => userEvent.press(screen.getByRole("button", { name: "Move to Backlog" })));
+    await act(() => userEvent.press(screen.getByRole("button", { name: "Log a past day" })));
 
-    expect(props.onStage).toHaveBeenCalledWith("sprout");
     expect(props.onBacklog).toHaveBeenCalled();
     expect(props.onPastDays).toHaveBeenCalled();
+    expect(props.onTree).not.toHaveBeenCalled();
+  });
+
+  it("asks the tree question on the collapsed card and hands Yes and Not yet to their handler", async () => {
+    const onTree = jest.fn();
+
+    await render(
+      <HabitCard {...cardProps} expanded={false} asksTree onTree={onTree} habit={habit()} />,
+    );
+
+    expect(screen.getByText("Do you do this without thinking?")).toBeOnTheScreen();
+    await userEvent.press(screen.getByRole("button", { name: "Yes" }));
+    await userEvent.press(screen.getByRole("button", { name: "Not yet" }));
+
+    expect(onTree.mock.calls).toEqual([["yes"], ["not-yet"]]);
+  });
+
+  it("asks nothing without a tree handler, and disables the answers offline", async () => {
+    const { rerender } = await render(
+      <HabitCard {...cardProps} expanded={false} asksTree habit={habit()} />,
+    );
+
+    expect(screen.queryByText("Do you do this without thinking?")).not.toBeOnTheScreen();
+
+    await rerender(
+      <HabitCard
+        {...cardProps}
+        {...manageProps}
+        expanded={false}
+        offline
+        asksTree
+        habit={habit()}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Yes" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Not yet" })).toBeDisabled();
+  });
+
+  it("offers Slipped on an expanded tree", async () => {
+    const onTree = jest.fn();
+
+    await render(
+      <HabitCard {...cardProps} expanded stage="tree" onTree={onTree} habit={habit()} />,
+    );
+
+    expect(screen.getByText("Tree")).toBeOnTheScreen();
+    await userEvent.press(screen.getByRole("button", { name: "Slipped" }));
+
+    expect(onTree).toHaveBeenCalledWith("slipped");
   });
 
   it("offers Make active on a Backlog Habit and says when a save failed", async () => {
@@ -655,18 +697,20 @@ describe("HabitCard", () => {
     expect(screen.getByText("Couldn't save. Try again.")).toBeOnTheScreen();
   });
 
-  it("disables Stage and Backlog offline or while a save is pending, but not Log a past day", async () => {
+  it("disables Slipped and Backlog offline or while a save is pending, but not Log a past day", async () => {
     const { rerender } = await render(
-      <HabitCard {...cardProps} {...manageProps} expanded offline habit={habit()} />,
+      <HabitCard {...cardProps} {...manageProps} expanded offline stage="tree" habit={habit()} />,
     );
 
-    expect(screen.getByRole("button", { name: "Seed" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Slipped" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Move to Backlog" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Log a past day" })).toBeEnabled();
 
-    await rerender(<HabitCard {...cardProps} {...manageProps} expanded saving habit={habit()} />);
+    await rerender(
+      <HabitCard {...cardProps} {...manageProps} expanded saving stage="tree" habit={habit()} />,
+    );
 
-    expect(screen.getByRole("button", { name: "Sprout" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Slipped" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Move to Backlog" })).toBeDisabled();
   });
 });

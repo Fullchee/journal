@@ -18,8 +18,17 @@ const practice = makeHabit({
 const NONE = { counts: {}, durations: {} };
 
 test("an Opt-out Habit is planned before its time and done after it, with no tap", () => {
-  const [planned] = dueToday([practice], {}, {}, torontoDate(2026, 10, 14, 8));
-  const [done] = dueToday([practice], {}, {}, torontoDate(2026, 10, 14, 9, 1));
+  const [planned] = dueToday(
+    [practice],
+    { counts: {}, durations: {}, restPeriods: [] },
+    torontoDate(2026, 10, 14, 8),
+  );
+
+  const [done] = dueToday(
+    [practice],
+    { counts: {}, durations: {}, restPeriods: [] },
+    torontoDate(2026, 10, 14, 9, 1),
+  );
 
   assert.deepEqual([planned?.planned, planned?.day.status], [true, "empty"]);
   assert.deepEqual([done?.planned, done?.day.status], [false, "done"]);
@@ -28,8 +37,7 @@ test("an Opt-out Habit is planned before its time and done after it, with no tap
 test("a Habit that isn't Opt-out is never planned", () => {
   const [row] = dueToday(
     [{ ...practice, optOutFrom: null }],
-    {},
-    {},
+    { counts: {}, durations: {}, restPeriods: [] },
     torontoDate(2026, 10, 14, 10),
   );
 
@@ -38,7 +46,12 @@ test("a Habit that isn't Opt-out is never planned", () => {
 
 test("a Skip before the time leaves the day skipped", () => {
   const counts = { [SATURDAY]: { boat: MISSED } };
-  const [row] = dueToday([practice], counts, {}, torontoDate(2026, 10, 14, 10));
+
+  const [row] = dueToday(
+    [practice],
+    { counts, durations: {}, restPeriods: [] },
+    torontoDate(2026, 10, 14, 10),
+  );
 
   assert.deepEqual([row?.planned, row?.day.status], [false, "missed"]);
   assert.deepEqual(

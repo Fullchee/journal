@@ -48,11 +48,16 @@ const inDateRange = (date: string, from: string, to: string) =>
   (from === "" && to === "") ||
   (date !== "" && (from === "" || date >= from) && (to === "" || date <= to));
 
-export const filterHabits = (habits: Habit[], f: HabitFilters) =>
+/** `stageOf` reads each Habit's Stage, which comes from its records; a Habit with none never matches a Stage. */
+export const filterHabits = (
+  habits: Habit[],
+  f: HabitFilters,
+  stageOf: (habit: Habit) => Stage | null,
+) =>
   habits.filter(
     (h) =>
       matches(f.kind, h.kind) &&
-      matches(f.stage, h.stage) &&
+      (f.stage === "" || stageOf(h) === f.stage) &&
       matches(f.priority, h.priority) &&
       (f.active === "" || h.active === (f.active === "yes")) &&
       matches(f.record, h.record) &&

@@ -9,7 +9,7 @@ Every write goes to **production**: the phone app shows it at once. Call the jou
 
 ## Vocabulary
 
-Use the words in `GLOSSARY.md`. Read it before drafting a Habit or Goal: it defines kind, stage, target, record and cue.
+Use the words in `GLOSSARY.md`. Read it before drafting a Habit or Goal: it defines kind, Stage, target, record and cue.
 
 ## Steps
 
@@ -46,7 +46,7 @@ Fields and defaults come from `blankHabit` in `src/core/habits-view.ts`. The one
 
 - `name`, `description` (Markdown: put any if-then plan or obstacle note here); `usualWhen`: `"HH:MM"` or `""` (the API refuses free text); `places`: Check-in places, empty for anywhere
 - `cueType`, what it comes after: `time` (needs `usualWhen` or an alarm), `stacked` (with `stackedAfter`), `action`, `emotion`, `people` or `""`
-- `kind`: `good` or `bad`. `stage`: `seed`, `sprout`, `plant`, `tree`. `priority`: `high`, `normal`, `low`. `active`: false puts it in the Backlog. `autoLogged`: true keeps an imported Habit off Today.
+- `kind`: `good` or `bad`. Stage is never sent: it is read from Strength, and only the owner's tap on the card makes a tree (`{"type": "tree", "habit", "answer": "yes" | "not-yet" | "slipped"}`, refused unless the card offers it). `priority`: `high`, `normal`, `low`. `active`: false puts it in the Backlog. `autoLogged`: true keeps an imported Habit off Today.
 - `target`: `{type: "daily" | "weekly" | "days" | "once" | "none", count: 1-7, days: [0-6]}`. `none` makes a Reference Habit; `once` a One-off due on `startDate`.
 - `record`: `check`, `count` or `duration` (needs `targetMinutes`: 1-1440). `goals`: Goal ids. `alarm`: `null` or `{time: "HH:MM", kind: "alarm" | "persistent"}`.
 

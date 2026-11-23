@@ -102,6 +102,10 @@ export * from "./habit-history";
 
 export * from "./habit-strength";
 
+export * from "./habit-tree";
+
+export * from "./habit-stage";
+
 export * from "./habit-calendar";
 
 export * from "./work/hit-rate";
