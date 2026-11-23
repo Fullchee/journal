@@ -1,6 +1,5 @@
 import {
   checksSince,
-  dueDateLabel,
   isoAt,
   MISSED,
   shiftDay,
@@ -263,29 +262,6 @@ const hidden = { includeHiddenElements: true };
 const noonAgo = (days: number) => isoAt(ago(days), 12 * 60);
 
 describe("Streaks on Today", () => {
-  it("shows a Repair prompt while the latest break can be repaired", async () => {
-    // 5 done days, then 3 missed: 2 Freezes, and the third, 3 days ago, breaks the Streak until 7 days later.
-    const counts = Object.fromEntries([10, 9, 8, 7, 6].map((days) => [ago(days), { walk: 1 }]));
-
-    serveToday(counts);
-    await renderRouter(APP_DIR);
-
-    const closesOn = dueDateLabel(ago(-4));
-
-    expect(
-      await screen.findByText(`Walk on 2 days by ${closesOn} brings back its 5-day Streak.`),
-    ).toBeOnTheScreen();
-  });
-
-  it("shows no Repair prompt once the window has closed", async () => {
-    serveToday(Object.fromEntries([20, 19, 18].map((days) => [ago(days), { walk: 1 }])));
-    await renderRouter(APP_DIR);
-
-    await screen.findByText("Walk");
-
-    expect(screen.queryByText(/brings back/)).not.toBeOnTheScreen();
-  });
-
   it("shows the Check-in Streak on the Check-in card", async () => {
     serveToday({}, [noonAgo(1), noonAgo(2), noonAgo(2)]);
     await renderRouter(APP_DIR);

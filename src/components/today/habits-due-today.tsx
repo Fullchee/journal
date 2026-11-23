@@ -40,7 +40,6 @@ import { HabitDayDetail, type DayDetail } from "@/components/habits/habit-day-de
 import { NavRow } from "@/components/nav-row";
 import { Section } from "@/components/screen";
 import { SeasonCircleOffers, WhoYoullSee } from "@/components/today/circle-rows";
-import { RepairPrompts } from "@/components/today/repair-prompts";
 import { SeasonNudges } from "@/components/today/season-nudges";
 import { canSilence, toggleSilenced, useSilencedAlarms } from "@/lib/alarms/silenced-alarms";
 import { useCheckIns } from "@/lib/data/check-ins";
@@ -165,7 +164,6 @@ function DueHabits({ body: fetched }: { body: HabitsBody }) {
 
   return (
     <>
-      <RepairPrompts body={body} today={today} />
       <SeasonNudges body={body} today={today} />
       <SeasonCircleOffers body={body} today={today} />
       {rows.length === 0 && <Text variant="muted">Nothing due today.</Text>}

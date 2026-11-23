@@ -10,7 +10,6 @@ import {
   habitStreak,
   hasStreak,
   reachedMilestone,
-  repairPrompt,
   streakGrid,
   streakLabel,
   weekSlot,
@@ -490,27 +489,5 @@ describe("milestones", () => {
     [8, 0, null],
   ])("from %i to %i reaches %p", (before, after, expected) => {
     assert.equal(reachedMilestone(before, after), expected);
-  });
-});
-
-describe("the Repair prompt", () => {
-  const repair = { brokeOn: "2026-11-09", closesOn: "2026-11-16", restores: 20, doneDays: 0 };
-
-  test("names the 2 days, the last day and the Streak it brings back", () => {
-    assert.equal(
-      repairPrompt("Run", { unit: "day", repair }),
-      "Run on 2 days by Mon 16 Nov brings back its 20-day Streak.",
-    );
-  });
-
-  test("says once more after the first done day, in weeks for an N-a-week Habit", () => {
-    assert.equal(
-      repairPrompt("Swim", { unit: "week", repair: { ...repair, restores: 4, doneDays: 1 } }),
-      "Swim once more by Mon 16 Nov brings back its 4-week Streak.",
-    );
-  });
-
-  test("is gone without a Repair", () => {
-    assert.equal(repairPrompt("Run", { unit: "day", repair: null }), null);
   });
 });

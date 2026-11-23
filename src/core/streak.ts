@@ -1,6 +1,6 @@
 import { daysFrom, mondayOf, monthDaysOf, shiftDay, torontoDay } from "./calendar";
 import { dueBySchedule, habitDayReader, type DayReading, type StreakRecords } from "./habit-day";
-import { dueDateLabel, TRACKED_TARGET_TYPES, type Habit } from "./habits-view";
+import { TRACKED_TARGET_TYPES, type Habit } from "./habits-view";
 import { restPeriodOn, type RestPeriod } from "./rest-mode";
 
 const STARTING_FREEZES = 2;
@@ -361,15 +361,6 @@ const MILESTONES = [7, 30, 100, 365];
 /** The highest milestone a Streak passed going from `before` to `after`, or null. */
 export const reachedMilestone = (before: number, after: number) =>
   MILESTONES.findLast((milestone) => before < milestone && milestone <= after) ?? null;
-
-/** Today's Repair prompt; "once more" after the first of the 2 done days. Never worded as a loss. */
-export function repairPrompt(name: string, { unit, repair }: Pick<Streak, "unit" | "repair">) {
-  if (repair === null) return null;
-
-  const times = repair.doneDays === 0 ? `on ${REPAIR_DONE_DAYS} days` : "once more";
-
-  return `${name} ${times} by ${dueDateLabel(repair.closesOn)} brings back its ${repair.restores}-${unit} Streak.`;
-}
 
 const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? "" : "s"}`;
 
