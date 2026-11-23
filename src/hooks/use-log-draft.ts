@@ -1,4 +1,12 @@
-import { loggableHabits, logForm, openEntries, type LogDraft, type LogItem } from "@/core";
+import {
+  loggableHabits,
+  logForm,
+  openEntries,
+  withEntry,
+  type LogDraft,
+  type LogEntry,
+  type LogItem,
+} from "@/core";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 
@@ -84,10 +92,11 @@ export function useLogDraft({ replace = false } = {}) {
     }
   };
 
-  const open = async (text: string) => {
+  // `entry` holds times the owner picked, such as a Check-in's start and end for what they were doing.
+  const open = async (text: string, entry: LogEntry = {}) => {
     setState({ status: "drafting" });
     showReceipt(null);
-    const draft = await draftLog(text);
+    const draft = withEntry(await draftLog(text), entry);
 
     if (draft.type === "unclear") {
       setState({ status: "unclear", text: draft.text });

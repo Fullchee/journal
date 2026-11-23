@@ -12,6 +12,7 @@ import {
   torontoTime,
 } from "./calendar";
 import { amountLabel } from "./check-in-mood";
+import type { LogEntry } from "./log-api";
 import { minutesPast18, Night } from "./sleep-summary";
 
 type Half = "upper" | "lower";
@@ -526,6 +527,9 @@ export interface CheckInDraft {
   score: number;
   place: string;
   doing: string;
+  /** "HH:MM" or ""; what was done is logged, not stored on the Check-in. */
+  doingStart: string;
+  doingEnd: string;
   tense: number | null;
   low: number | null;
   tired: number | null;
@@ -548,6 +552,8 @@ export function draftOf(c: CheckIn): CheckInDraft {
     score: c.score,
     place: c.place,
     doing: c.doing,
+    doingStart: "",
+    doingEnd: "",
     tense: c.tense,
     low: c.low,
     tired: c.tired,
@@ -558,6 +564,19 @@ export function draftOf(c: CheckIn): CheckInDraft {
     inControl: c.inControl,
     parts: c.parts,
   };
+}
+
+const DAY_MINUTES = 24 * 60;
+
+/**
+ * What "What were you doing?"'s start and end say about its log entry, on the Check-in's Day.
+ * An end before the start ran past midnight; a missing time or a zero-length span says nothing.
+ */
+export function doingSpan({ when, doingStart, doingEnd }: CheckInDraft): LogEntry {
+  if (doingStart === "" || doingEnd === "") return {};
+  const minutes = (minutesOf(doingEnd) - minutesOf(doingStart) + DAY_MINUTES) % DAY_MINUTES;
+
+  return minutes === 0 ? {} : { date: when.slice(0, 10), start_time: doingStart, minutes };
 }
 
 /** A datetime-local value shows only digits, so the form names its day; a half-typed value names none. */

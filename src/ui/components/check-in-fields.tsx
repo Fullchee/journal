@@ -244,6 +244,8 @@ interface FieldProps {
   partNames: PartRef[];
   /** Left out offline: a Part is created on the server, so "New part…" is disabled. */
   newPart?: NewPartSlot | undefined;
+  /** "What were you doing?" also goes to the log box, so it asks when it started and ended. */
+  logsDoing?: boolean;
   onChange: (draft: CheckInDraft) => void;
 }
 
@@ -253,6 +255,7 @@ interface EditorProps {
   habitNames: (place: string) => string[];
   partNames: PartRef[];
   newPart?: NewPartSlot | undefined;
+  logsDoing?: boolean;
   set: (patch: Partial<CheckInDraft>) => void;
 }
 
@@ -319,15 +322,37 @@ function PlaceEditor({ draft, places, habitNames, set }: EditorProps) {
   );
 }
 
-function DoingEditor({ draft, habitNames, set }: EditorProps) {
+function DoingEditor({ draft, habitNames, logsDoing = false, set }: EditorProps) {
   return (
-    <PickOrOther
-      label="Other activity"
-      options={habitNames(draft.place)}
-      value={draft.doing}
-      placeholder="walked 20 min, read a book"
-      onPick={(doing) => set({ doing })}
-    />
+    <View className="gap-2">
+      <PickOrOther
+        label="Other activity"
+        options={habitNames(draft.place)}
+        value={draft.doing}
+        placeholder="walked 20 min, read a book"
+        onPick={(doing) => set({ doing })}
+      />
+      {logsDoing && draft.doing !== "" && (
+        <View className="flex-row flex-wrap gap-4">
+          <View className="gap-1">
+            <Text variant="muted">Started</Text>
+            <TimeField
+              label="Started"
+              value={draft.doingStart}
+              onChange={(doingStart) => set({ doingStart })}
+            />
+          </View>
+          <View className="gap-1">
+            <Text variant="muted">Ended</Text>
+            <TimeField
+              label="Ended"
+              value={draft.doingEnd}
+              onChange={(doingEnd) => set({ doingEnd })}
+            />
+          </View>
+        </View>
+      )}
+    </View>
   );
 }
 

@@ -1,6 +1,7 @@
 import {
   LEVELS,
   ZONES,
+  doingSpan,
   draftOf,
   patchForFields,
   blankCheckIn,
@@ -11,6 +12,7 @@ import {
   type CheckInDraft,
   type CheckInPatch,
   type EditField,
+  type LogEntry,
   type PartRef,
   type Zone,
 } from "@/core";
@@ -241,8 +243,8 @@ interface CheckInCardProps {
   /** Saves (or queues) a new Check-in at `checkedInAt` and returns the id its details save against. */
   onCheckIn: (score: number, checkedInAt: string) => string;
   onUpdate: (checkIn: string, patch: CheckInPatch) => void;
-  /** "What were you doing?" also goes to the log box. */
-  onDoingSent?: (text: string) => void;
+  /** "What were you doing?" also goes to the log box, with the times it started and ended. */
+  onDoingSent?: (text: string, span: LogEntry) => void;
   /** The Place guess for a Check-in at `at`; left out offline. */
   guessPlace?: (at: string) => Promise<string | null>;
   /** The zone the Android widget asked for (`?zone=`); its plate stays marked until a half is picked. */
@@ -329,7 +331,8 @@ function CheckInCard({
 
     if (Object.keys(patch).length > 0) onUpdate(o.id, patch);
 
-    if (patch.doing !== undefined && patch.doing !== "") onDoingSent?.(patch.doing);
+    if (patch.doing !== undefined && patch.doing !== "")
+      onDoingSent?.(patch.doing, doingSpan({ ...o.draft, when: when ?? o.draft.when }));
     close("Saved.");
   };
 
@@ -377,6 +380,7 @@ function CheckInCard({
             habitNames={habitNames}
             partNames={partNames}
             newPart={newPart}
+            logsDoing={onDoingSent !== undefined}
             onChange={(draft) => {
               if (draft.place !== open.draft.place) placePickedRef.current.add(open.id);
               setOpen({ ...open, draft });

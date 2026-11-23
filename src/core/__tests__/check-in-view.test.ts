@@ -16,6 +16,7 @@ import {
   periodStep,
   shiftPeriod,
   blankCheckIn,
+  doingSpan,
   draftOf,
   listOf,
   patchForFields,
@@ -637,4 +638,19 @@ test("blankCheckIn takes its zone from the score and leaves every detail empty",
 
 test("whenOf gives a padded local datetime-local value", () => {
   assert.equal(whenOf(torontoDate(2026, 0, 5, 9, 7)), "2026-01-05T09:07");
+});
+
+test("doingSpan logs the activity on the Check-in's Day from its start and end", () => {
+  const draft = { ...draftOf(CARD), doingStart: "13:15", doingEnd: "14:00" };
+  assert.deepEqual(doingSpan(draft), { date: "2026-11-03", start_time: "13:15", minutes: 45 });
+});
+
+test("doingSpan runs an end before the start past midnight", () => {
+  const draft = { ...draftOf(CARD), doingStart: "23:30", doingEnd: "00:15" };
+  assert.equal(doingSpan(draft).minutes, 45);
+});
+
+test("doingSpan says nothing without both times or with no length", () => {
+  assert.deepEqual(doingSpan({ ...draftOf(CARD), doingStart: "13:15" }), {});
+  assert.deepEqual(doingSpan({ ...draftOf(CARD), doingStart: "13:15", doingEnd: "13:15" }), {});
 });

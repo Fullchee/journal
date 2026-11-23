@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { HabitDetails, LogDraft, Logged } from "@/core/log-api";
+import { HabitDetails, LogDraft, Logged, withEntry } from "@/core/log-api";
 
 test("LogDraft parses proposed entries, one with no known Habit", () => {
   const draft = {
@@ -97,4 +97,43 @@ test("HabitDetails parses a partial guess", () => {
   assert.deepEqual(HabitDetails.parse(details), details);
   assert.deepEqual(HabitDetails.parse({}), {});
   assert.equal(HabitDetails.safeParse({ cue_type: "smell" }).success, false);
+});
+
+const SPAN = { date: "2026-11-03", start_time: "14:00", minutes: 90 };
+
+test("withEntry puts picked times over each drafted entry", () => {
+  const draft = LogDraft.parse({
+    type: "entries",
+    entries: [{ habit: "walk", minutes: 20, note: "loop" }],
+  });
+
+  assert.deepEqual(withEntry(draft, SPAN), {
+    type: "entries",
+    entries: [{ habit: "walk", note: "loop", ...SPAN }],
+  });
+});
+
+test("withEntry puts picked times on a new Habit's entry", () => {
+  const draft = LogDraft.parse({
+    type: "create",
+    habit: {
+      name: "Evening walk",
+      kind: "good",
+      record: "duration",
+      target_minutes: 20,
+      target_type: "weekly",
+      target_count: 3,
+      target_days: [],
+    },
+    entry: { note: "loop" },
+  });
+
+  assert.deepEqual(withEntry(draft, SPAN), { ...draft, entry: { note: "loop", ...SPAN } });
+});
+
+test("withEntry leaves a One-off and an unclear sentence alone", () => {
+  const unclear = { type: "unclear", text: "Which Habit?" } as const;
+  const oneOff = { type: "one-off", one_off: { name: "Go", usual_when: "" }, text: "" } as const;
+  assert.equal(withEntry(unclear, SPAN), unclear);
+  assert.equal(withEntry(LogDraft.parse(oneOff), SPAN).type, "one-off");
 });

@@ -86,8 +86,47 @@ it('saves only the details filled and sends "What were you doing?" to the log bo
   await userEvent.press(screen.getByRole("button", { name: "Save details" }));
 
   expect(onUpdate).toHaveBeenCalledWith("client-1", { place: "Gym", doing: "lifted" });
-  expect(onDoingSent).toHaveBeenCalledWith("lifted");
+  expect(onDoingSent).toHaveBeenCalledWith("lifted", {});
   expect(screen.queryByRole("button", { name: "Save details" })).not.toBeOnTheScreen();
+});
+
+// The clock dialog reads a Date's local fields, so a local 14:00 picks "14:00".
+const pickClock = async (label: string, hour: number, minute: number) => {
+  pickOnAndroid(undefined, new Date(2026, 10, 3, hour, minute));
+  await userEvent.press(screen.getByLabelText(new RegExp(`^${label}: `)));
+};
+
+it('sends when "What were you doing?" started and ended, on the Check-in\'s Day', async () => {
+  const { onDoingSent } = await renderCard({ defaultOpen: { id: "client-1", score: 6 } });
+
+  expect(screen.queryByText("Started")).not.toBeOnTheScreen();
+  await userEvent.press(chip("What were you doing?", "Walk"));
+  await pickClock("Started", 14, 0);
+  await pickClock("Ended", 15, 30);
+  await userEvent.press(screen.getByRole("button", { name: "Save details" }));
+
+  expect(onDoingSent).toHaveBeenCalledWith("Walk", {
+    date: torontoDay(new Date()),
+    start_time: "14:00",
+    minutes: 90,
+  });
+});
+
+it("asks when the activity started only where it goes to the log box", async () => {
+  await render(
+    <CheckInCard
+      places={PLACES}
+      habitNames={() => ["Walk"]}
+      partNames={[]}
+      onCheckIn={() => "client-1"}
+      onUpdate={jest.fn()}
+      defaultOpen={{ id: "client-1", score: 6 }}
+    />,
+  );
+
+  await userEvent.press(chip("What were you doing?", "Walk"));
+
+  expect(screen.queryByText("Started")).not.toBeOnTheScreen();
 });
 
 it("saves who is in control and the parts present by reference", async () => {

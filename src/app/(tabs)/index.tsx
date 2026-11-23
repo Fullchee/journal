@@ -145,8 +145,8 @@ function CheckInSection({ zone }: { zone?: Zone | undefined }) {
         newPart={isOnline ? newPartButton : undefined}
         onCheckIn={checkIn}
         onUpdate={updateCheckIn}
-        onDoingSent={(text) => {
-          if (isOnline) void open(text);
+        onDoingSent={(text, span) => {
+          if (isOnline) void open(text, span);
         }}
         {...(isOnline ? { guessPlace: guessNear } : {})}
         {...(zone === undefined ? {} : { zone })}

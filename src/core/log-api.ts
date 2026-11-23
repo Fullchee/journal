@@ -83,3 +83,21 @@ export const Logged = z.object({ type: z.literal("logged"), text: z.string(), ac
 export type Logged = z.infer<typeof Logged>;
 
 export const LOG_FAILED = "Couldn't reach the log box. Check your connection and try again.";
+
+/** Times the owner picked outweigh the model's reading of the sentence; a One-off is a plan, so it has none. */
+export function withEntry(draft: LogDraft, entry: LogEntry): LogDraft {
+  switch (draft.type) {
+    case "entries": {
+      return { ...draft, entries: draft.entries.map((e) => ({ ...e, ...entry })) };
+    }
+
+    case "create": {
+      return { ...draft, entry: { ...draft.entry, ...entry } };
+    }
+
+    case "one-off":
+    case "unclear": {
+      return draft;
+    }
+  }
+}
