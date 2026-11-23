@@ -1,7 +1,7 @@
 import { ReviewAnswer } from "@/core";
 import { authorizedBody } from "@worker/lib/auth";
 import { authorizedDay, Day } from "@worker/lib/day";
-import { confirmReview, readReview } from "@worker/lib/evening-review";
+import { confirmReview, readDayNotes, readReview } from "@worker/lib/evening-review";
 import type { PagesContext } from "@worker/lib/env";
 import { json } from "@worker/lib/json";
 import * as z from "zod/mini";
@@ -12,7 +12,10 @@ const Confirm = z.object({ day: Day, answers: z.array(ReviewAnswer) });
 export async function onRequestGet({ request, env }: PagesContext) {
   const day = await authorizedDay(request, env);
 
-  return day instanceof Response ? day : json(await readReview(env, day));
+  if (day instanceof Response) return day;
+  const [review, notes] = await Promise.all([readReview(env, day), readDayNotes(env, day)]);
+
+  return json({ ...review, notes });
 }
 
 export async function onRequestPost({ request, env }: PagesContext) {

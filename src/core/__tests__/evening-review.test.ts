@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   canSkip,
   defaultAnswer,
+  reviewNoteLine,
   reviewOutcomes,
   suggestedCause,
   type ReviewEvent,
@@ -97,4 +98,11 @@ test("a cause on a Duration Habit's event logs nothing", () => {
 
 test("a removed event answered done logs nothing", () => {
   assert.deepEqual(reviewOutcomes([event({ removed: true })], [{ eventId: "e1", done: true }]), []);
+});
+
+test("a note reads under its Habit's name", () => {
+  assert.equal(
+    reviewNoteLine({ name: "Side projects", note: "Android wrapper" }),
+    "Side projects: Android wrapper",
+  );
 });

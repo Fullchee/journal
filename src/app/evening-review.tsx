@@ -3,10 +3,12 @@ import {
   clockLabel,
   defaultAnswer,
   dueDateLabel,
+  reviewNoteLine,
   suggestedCause,
   torontoDay,
   type ReviewAnswer,
   type ReviewEvent,
+  type ReviewNote,
 } from "@/core";
 import { Button, Text } from "@/ui";
 import { useQuery } from "@tanstack/react-query";
@@ -108,6 +110,23 @@ function Review({ day, events }: { day: string; events: ReviewEvent[] }) {
   );
 }
 
+function DayNotes({ notes }: { notes: ReviewNote[] }) {
+  if (notes.length === 0) return null;
+
+  return (
+    <Section title="Notes">
+      <View role="list" className="gap-1">
+        {notes.map((note, index) => (
+          // eslint-disable-next-line eslint-react/no-array-index-key -- read-only lines that never reorder, and the same line can repeat
+          <Text key={index} role="listitem">
+            {reviewNoteLine(note)}
+          </Text>
+        ))}
+      </View>
+    </Section>
+  );
+}
+
 const FAILURE_TEXT = {
   "not-connected": "Google Calendar isn't connected. Run scripts/setup-google-calendar.sh.",
   unreachable: "Couldn't reach Google Calendar.",
@@ -154,6 +173,7 @@ export default function EveningReview() {
         {dueDateLabel(day)}
       </Text>
       {body()}
+      {review.data && <DayNotes notes={review.data.notes} />}
     </Screen>
   );
 }

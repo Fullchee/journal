@@ -58,15 +58,27 @@ const ReviewEvent = z.object({
 
 export type ReviewEvent = z.infer<typeof ReviewEvent>;
 
+/** A note logged on the Day, under its Habit's name. */
+const ReviewNote = z.object({ name: z.string(), note: z.string() });
+
+export type ReviewNote = z.infer<typeof ReviewNote>;
+
+const ReviewNotes = z.array(ReviewNote);
+
+/** The review page's body; the notes come from D1, so a calendar failure still shows them. */
 export const EveningReviewBody = z.union([
   z.object({
     status: z.literal("ok"),
     day: z.string(),
     reviewed: z.boolean(),
     events: z.array(ReviewEvent),
+    notes: ReviewNotes,
   }),
-  z.object({ status: z.enum(["not-connected", "unreachable"]) }),
+  z.object({ status: z.enum(["not-connected", "unreachable"]), notes: ReviewNotes }),
 ]);
+
+/** "Side projects: Android wrapper". */
+export const reviewNoteLine = ({ name, note }: ReviewNote) => `${name}: ${note}`;
 
 /** What I said about one event; `cause` turns a not-done answer into a Skip. */
 export const ReviewAnswer = z.object({

@@ -214,6 +214,7 @@ test("a Day with no links reads no calendar and stays open", async () => {
     day: DAY,
     reviewed: false,
     events: [],
+    notes: [],
   });
   assert.equal((await confirm(env)).status, 204);
   assert.equal(calendarCalls, 0);
@@ -262,6 +263,7 @@ test("the review lists the Day's linked instances in Toronto time, removed ones 
         ownCalendar: false,
       },
     ],
+    notes: [],
   });
 });
 
@@ -273,7 +275,14 @@ test("a bad day is refused, and a calendar failure passes through", async () => 
   await link(env, "t-gym", "gym-series");
   calendarDown = true;
 
-  assert.deepEqual(await readJson(await reviewGet(env, DAY)), { status: "unreachable" });
+  await env.DB.exec(
+    `INSERT INTO habit_checks (date, habit, count, note) VALUES ('${DAY}', 't-sit', 2, 'Body scan'), ('2026-11-13', 't-gym', 1, 'Next day')`,
+  );
+
+  assert.deepEqual(await readJson(await reviewGet(env, DAY)), {
+    status: "unreachable",
+    notes: [{ name: "Sit", note: "Body scan" }],
+  });
 
   const res = await confirm(env);
 

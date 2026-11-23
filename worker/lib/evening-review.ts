@@ -8,11 +8,12 @@ import {
   type CalendarLink,
   type ReviewAnswer,
   type ReviewEvent,
+  type ReviewNote,
   type ReviewOutcome,
 } from "@/core";
 import { listSeriesInstances, type CalendarResult } from "./calendar";
 import type { Env } from "./env";
-import { addDurations, writeCheck, writeSkip } from "./habit-records";
+import { addDurations, readHabits, readNotes, writeCheck, writeSkip } from "./habit-records";
 
 interface LinkRow {
   calendar_id: string;
@@ -143,6 +144,14 @@ export async function readReview(env: Env, day: string, fetcher: typeof fetch = 
   return events.status === "ok"
     ? { status: "ok" as const, day, reviewed, events: events.value }
     : events;
+}
+
+/** The Day's notes, each under its Habit's name, in the Habits' order. */
+export async function readDayNotes(env: Env, day: string): Promise<ReviewNote[]> {
+  const [notes, habits] = await Promise.all([readNotes(env, day), readHabits(env)]);
+  const byHabit = notes[day] ?? {};
+
+  return habits.flatMap(({ id, name }) => (byHabit[id] ?? []).map((note) => ({ name, note })));
 }
 
 // The review is an automatic source: its Skips and counts never override a Day already answered.

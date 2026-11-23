@@ -1,4 +1,4 @@
-import type { ReviewEvent } from "@/core";
+import type { ReviewEvent, ReviewNote } from "@/core";
 import { QueryClient } from "@tanstack/react-query";
 import { renderRouter, screen, waitFor, within } from "expo-router/testing-library";
 import { userEvent } from "@testing-library/react-native";
@@ -74,12 +74,15 @@ const DELETED_RUN = event({
   removed: true,
 });
 
-const ok = (events: ReviewEvent[], reviewed = false) => ({
+const ok = (events: ReviewEvent[], reviewed = false, notes: ReviewNote[] = []) => ({
   status: "ok",
   day: DAY,
   reviewed,
   events,
+  notes,
 });
+
+const NOTE: ReviewNote = { name: "Side projects", note: "Android wrapper" };
 
 const serve = (review: Respond, routes: Record<string, Respond> = {}) =>
   fakeApi({ [`/api/evening-review?day=${DAY}`]: review, ...routes });
@@ -207,9 +210,26 @@ it.each([
   ["not-connected", "Google Calendar isn't connected. Run scripts/setup-google-calendar.sh."],
   ["unreachable", "Couldn't reach Google Calendar."],
 ])("explains a %s calendar", async (status, text) => {
-  serve(reply({ status }));
+  serve(reply({ status, notes: [] }));
   await open();
   expect(await screen.findByText(text)).toBeOnTheScreen();
+  expect(screen.queryByText("Notes")).not.toBeOnTheScreen();
+});
+
+it("lists the Day's notes beside the events", async () => {
+  serve(reply(ok([SIT], false, [NOTE, NOTE])));
+  await open();
+
+  expect(await screen.findByText("Notes")).toBeOnTheScreen();
+  expect(screen.getAllByText("Side projects: Android wrapper")).toHaveLength(2);
+});
+
+it("lists the Day's notes when the calendar can't be reached", async () => {
+  serve(reply({ status: "unreachable", notes: [NOTE] }));
+  await open();
+
+  expect(await screen.findByText("Couldn't reach Google Calendar.")).toBeOnTheScreen();
+  expect(screen.getByText("Side projects: Android wrapper")).toBeOnTheScreen();
 });
 
 it("offers Try again when the review can't load", async () => {
