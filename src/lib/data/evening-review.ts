@@ -83,3 +83,15 @@ export function useConfirmReview() {
       ]),
   });
 }
+
+/** Deletes an unlinked event from Google Calendar, then rereads the Day so its row goes. */
+export function useDeleteEvent(day: string) {
+  const client = useQueryClient();
+
+  return useMutation({
+    ...ONLINE_ONLY,
+    mutationFn: (eventId: string) =>
+      apiFetch("/api/evening-review", { method: "DELETE", body: { eventId } }),
+    onSuccess: () => client.invalidateQueries({ queryKey: ["evening-review", day] }),
+  });
+}

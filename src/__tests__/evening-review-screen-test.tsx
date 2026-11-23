@@ -1,4 +1,4 @@
-import type { ReviewEvent, ReviewNote } from "@/core";
+import type { OtherEvent, ReviewEvent, ReviewNote } from "@/core";
 import { QueryClient } from "@tanstack/react-query";
 import { renderRouter, screen, waitFor, within } from "expo-router/testing-library";
 import { userEvent } from "@testing-library/react-native";
@@ -74,13 +74,27 @@ const DELETED_RUN = event({
   removed: true,
 });
 
-const ok = (events: ReviewEvent[], reviewed = false, notes: ReviewNote[] = []) => ({
+const ok = (
+  events: ReviewEvent[],
+  reviewed = false,
+  notes: ReviewNote[] = [],
+  others: OtherEvent[] = [],
+) => ({
   status: "ok",
   day: DAY,
   reviewed,
   events,
+  others,
   notes,
 });
+
+const LUNCH: OtherEvent = {
+  eventId: "lunch",
+  summary: "Lunch with Sam",
+  time: { start: "12:00", end: "13:00" },
+};
+
+const HOLIDAY: OtherEvent = { eventId: "holiday", summary: "", time: null };
 
 const NOTE: ReviewNote = { name: "Side projects", note: "Android wrapper" };
 
@@ -196,13 +210,59 @@ it("says a confirmed day is confirmed", async () => {
   expect(await screen.findByText("This day is confirmed.")).toBeOnTheScreen();
 });
 
-it("points to a Habit's page when the day has no linked events", async () => {
+it("says so when the day has no events", async () => {
   serve(reply(ok([])));
   await open();
+  expect(await screen.findByText("No events on this day.")).toBeOnTheScreen();
+});
+
+it("lists the Day's other events, even on a confirmed day", async () => {
+  serve(reply(ok([], true, [], [LUNCH, HOLIDAY])));
+  await open();
+
+  expect(await screen.findByText("Other events")).toBeOnTheScreen();
+  expect(screen.getByText("12:00 PM–1:00 PM")).toBeOnTheScreen();
+  expect(screen.getByText("(No title)")).toBeOnTheScreen();
+  expect(screen.getByText("All day")).toBeOnTheScreen();
+  expect(screen.getByText("This day is confirmed.")).toBeOnTheScreen();
+  expect(screen.queryByText("No events on this day.")).not.toBeOnTheScreen();
+});
+
+it("deletes an event I didn't do at once, then drops its row", async () => {
+  let others = [LUNCH, HOLIDAY];
+
+  const { writes } = serve(() => ok([], false, [], others), {
+    "DELETE /api/evening-review": () => {
+      others = [HOLIDAY];
+    },
+  });
+
+  await open();
+
+  await userEvent.press(
+    await screen.findByRole("button", { name: "Didn't do Lunch with Sam: delete it" }),
+  );
+
+  await waitFor(() => expect(screen.queryByText("Lunch with Sam")).not.toBeOnTheScreen());
+  expect(screen.getByRole("button", { name: "Didn't do (No title): delete it" })).toBeOnTheScreen();
+  expect(writes).toEqual([
+    { path: "/api/evening-review", method: "DELETE", body: { eventId: "lunch" } },
+  ]);
+});
+
+it("says so when a delete fails", async () => {
+  serve(reply(ok([GYM], false, [], [LUNCH])), {
+    "DELETE /api/evening-review": reply(new ApiError(503, { status: "unreachable" })),
+  });
+  await open();
+
+  expect(await screen.findByText("Confirm day")).toBeOnTheScreen();
+
+  await userEvent.press(
+    screen.getByRole("button", { name: "Didn't do Lunch with Sam: delete it" }),
+  );
   expect(
-    await screen.findByText(
-      "No linked events on this day. Link a calendar series from a Habit's page.",
-    ),
+    await screen.findByText("Couldn't delete. Check the connection and try again."),
   ).toBeOnTheScreen();
 });
 

@@ -6,12 +6,13 @@ import {
   torontoDay,
   torontoTime,
   type CalendarLink,
+  type OtherEvent,
   type ReviewAnswer,
   type ReviewEvent,
   type ReviewNote,
   type ReviewOutcome,
 } from "@/core";
-import { listSeriesInstances, type CalendarResult } from "./calendar";
+import { listDayEvents, listSeriesInstances, type CalendarResult } from "./calendar";
 import type { Env } from "./env";
 import { addDurations, readHabits, readNotes, writeCheck, writeSkip } from "./habit-records";
 
@@ -144,6 +145,35 @@ export async function readReview(env: Env, day: string, fetcher: typeof fetch = 
   return events.status === "ok"
     ? { status: "ok" as const, day, reviewed, events: events.value }
     : events;
+}
+
+/** The Day's primary-calendar events that no Calendar link covers, read from Google. */
+export async function readOtherEvents(
+  env: Env,
+  day: string,
+  linkedIds: Set<string>,
+  fetcher: typeof fetch = fetch,
+): Promise<CalendarResult<OtherEvent[]>> {
+  const listed = await listDayEvents(env, { start: isoAt(day, 0), end: isoAt(day, 1440) }, fetcher);
+
+  if (listed.status !== "ok") return listed;
+
+  return {
+    status: "ok",
+    value: listed.value.flatMap(({ eventId, summary, time }): OtherEvent[] => {
+      // A timed event that started before midnight belongs to the Day before (ADR 0013).
+      if (linkedIds.has(eventId) || (time !== null && torontoDay(time.start) !== day)) return [];
+
+      return [
+        {
+          eventId,
+          summary,
+          time:
+            time === null ? null : { start: torontoTime(time.start), end: torontoTime(time.end) },
+        },
+      ];
+    }),
+  };
 }
 
 /** The Day's notes, each under its Habit's name, in the Habits' order. */

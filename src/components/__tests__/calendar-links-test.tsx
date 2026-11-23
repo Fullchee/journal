@@ -174,25 +174,15 @@ describe("CalendarLinks", () => {
 });
 
 describe("EveningReviewRow", () => {
-  const EVENING = new Date("2026-11-12T22:30:00Z");
-  const AFTERNOON = new Date("2026-11-12T20:00:00Z");
-
-  it("opens the Evening review in the evening once a Habit is linked", async () => {
-    serve(reply(body([GYM_LINK])));
-
-    await show(<EveningReviewRow now={EVENING} />);
+  it("opens the Evening review in the evening", async () => {
+    await show(<EveningReviewRow now={new Date("2026-11-12T22:30:00Z")} />);
 
     expect(await screen.findByRole("link", { name: /Evening review/ })).toBeOnTheScreen();
   });
 
-  it.each([
-    ["before 5 PM", [GYM_LINK], AFTERNOON],
-    ["with no links", [], EVENING],
-  ])("stays hidden %s", async (_when, links, now) => {
-    serve(reply(body(links)));
+  it("stays hidden before 5 PM", async () => {
+    await show(<EveningReviewRow now={new Date("2026-11-12T20:00:00Z")} />);
 
-    await show(<EveningReviewRow now={now} />);
-
-    await waitFor(() => expect(screen.toJSON()).toBeNull());
+    expect(screen.toJSON()).toBeNull();
   });
 });

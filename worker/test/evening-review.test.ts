@@ -17,6 +17,7 @@ const accessFetch = fetch;
 let items: Json[] = [];
 let calendarDown = false;
 let calendarCalls = 0;
+let deleted: string[] = [];
 
 // Google answers from `items`; Access certs still come from the helper.
 jest
@@ -32,6 +33,12 @@ jest
 
     if (calendarDown) return new Response("", { status: 503 });
 
+    if (init.method === "DELETE") {
+      deleted.push(url);
+
+      return new Response(null, { status: 204 });
+    }
+
     if (url.includes("/users/me/calendarList"))
       return Response.json({ items: [{ id: "me@x", summary: "Me", accessRole: "owner" }] });
 
@@ -42,6 +49,7 @@ beforeEach(() => {
   items = [];
   calendarDown = false;
   calendarCalls = 0;
+  deleted = [];
 });
 
 async function connected() {
@@ -206,7 +214,7 @@ test("deleting a Habit deletes its links", async () => {
   assert.deepEqual(await rows(env, "SELECT * FROM habit_calendar_links"), []);
 });
 
-test("a Day with no links reads no calendar and stays open", async () => {
+test("confirming a Day with no links reads no calendar and leaves it open", async () => {
   const env = await connected();
 
   assert.deepEqual(await readJson(await reviewGet(env, DAY)), {
@@ -214,8 +222,10 @@ test("a Day with no links reads no calendar and stays open", async () => {
     day: DAY,
     reviewed: false,
     events: [],
+    others: [],
     notes: [],
   });
+  calendarCalls = 0;
   assert.equal((await confirm(env)).status, 204);
   assert.equal(calendarCalls, 0);
   assert.deepEqual(await rows(env, "SELECT * FROM evening_reviews"), []);
@@ -263,8 +273,71 @@ test("the review lists the Day's linked instances in Toronto time, removed ones 
         ownCalendar: false,
       },
     ],
+    others: [],
     notes: [],
   });
+});
+
+test("the review lists the Day's unlinked events, all-day ones without a time", async () => {
+  const env = await connected();
+
+  await link(env, "t-gym", "gym-series");
+  items = [
+    instance("g1", "gym-series", "2026-11-12T19:00:00-05:00", "2026-11-12T20:30:00-05:00"),
+    {
+      id: "lunch",
+      summary: "Lunch with Sam",
+      start: { dateTime: "2026-11-12T12:00:00-05:00" },
+      end: { dateTime: "2026-11-12T13:00:00-05:00" },
+    },
+    { id: "holiday", start: { date: DAY }, end: { date: "2026-11-13" } },
+  ];
+
+  const body = await readJson<{ others: Json }>(await reviewGet(env, DAY));
+
+  assert.deepEqual(body.others, [
+    { eventId: "lunch", summary: "Lunch with Sam", time: { start: "12:00", end: "13:00" } },
+    { eventId: "holiday", summary: "", time: null },
+  ]);
+});
+
+test("the other events' calendar failure passes through with the notes", async () => {
+  const env = await connected();
+
+  calendarDown = true;
+
+  assert.deepEqual(await readJson(await reviewGet(env, DAY)), {
+    status: "unreachable",
+    notes: [],
+  });
+});
+
+const deleteEvent = (env: Env, body: Json) =>
+  eveningReview.onRequestDelete({
+    env,
+    params: {},
+    request: apiRequest("DELETE", "https://x/api/evening-review", { email: OWNER, body }),
+  });
+
+test("deleting an event removes it from the primary calendar", async () => {
+  const env = await connected();
+
+  assert.equal((await deleteEvent(env, { eventId: "lunch 1" })).status, 204);
+  assert.deepEqual(deleted, [
+    "https://www.googleapis.com/calendar/v3/calendars/primary/events/lunch%201",
+  ]);
+});
+
+test("a bad delete is refused, and a calendar failure passes through", async () => {
+  const env = await connected();
+
+  assert.equal((await deleteEvent(env, {})).status, 400);
+
+  calendarDown = true;
+  const res = await deleteEvent(env, { eventId: "lunch" });
+
+  assert.equal(res.status, 503);
+  assert.deepEqual(await readJson(res), { status: "unreachable" });
 });
 
 test("a bad day is refused, and a calendar failure passes through", async () => {

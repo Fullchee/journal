@@ -106,7 +106,8 @@ async function withCalendar<T>(
 
       if (!res.ok) throw new Error(`calendar ${res.status}`);
 
-      return expectJson(res, schema);
+      // A delete answers 204 with no body.
+      return res.status === 204 ? schema.parse(undefined) : expectJson(res, schema);
     });
 
     return { status: "ok", value };
@@ -330,4 +331,52 @@ export const listRecurringSeries = (
       .toSorted((a, b) =>
         b.count === a.count ? a.summary.localeCompare(b.summary) : b.count - a.count,
       );
+  });
+
+/** One event on the primary calendar; an all-day one has no `time`. */
+export interface DayEvent {
+  eventId: string;
+  summary: string;
+  time: Interval | null;
+}
+
+/** The primary calendar's events in `range`, as Google orders them. */
+export const listDayEvents = (
+  env: CalendarEnv,
+  range: TimeRange,
+  fetcher: typeof fetch,
+): Promise<CalendarResult<DayEvent[]>> =>
+  withCalendar(env, fetcher, async (get) => {
+    const params = new URLSearchParams({
+      timeMin: range.start,
+      timeMax: range.end,
+      singleEvents: "true",
+      orderBy: "startTime",
+      maxResults: MAX_RESULTS,
+    });
+
+    const { items } = await get(`/calendars/primary/events?${params.toString()}`, InstanceList);
+
+    return items.map((item) => {
+      const start = item.start?.dateTime;
+      const end = item.end?.dateTime;
+
+      return {
+        eventId: item.id,
+        summary: item.summary ?? "",
+        time: start === undefined || end === undefined ? null : { start, end },
+      };
+    });
+  });
+
+/** Removes one event, or one instance of a series, from the primary calendar. */
+export const deleteEvent = (
+  env: CalendarEnv,
+  eventId: string,
+  fetcher: typeof fetch = fetch,
+): Promise<CalendarResult<void>> =>
+  withCalendar(env, fetcher, async (get) => {
+    await get(`/calendars/primary/events/${encodeURIComponent(eventId)}`, z.unknown(), {
+      method: "DELETE",
+    });
   });

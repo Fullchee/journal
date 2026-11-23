@@ -58,6 +58,18 @@ const ReviewEvent = z.object({
 
 export type ReviewEvent = z.infer<typeof ReviewEvent>;
 
+/** Toronto clocks "HH:MM". */
+const EventTime = z.object({ start: z.string(), end: z.string() });
+
+/** An event on my primary calendar that no Calendar link covers; an all-day one has no `time`. */
+const OtherEvent = z.object({
+  eventId: z.string(),
+  summary: z.string(),
+  time: z.nullable(EventTime),
+});
+
+export type OtherEvent = z.infer<typeof OtherEvent>;
+
 /** A note logged on the Day, under its Habit's name. */
 const ReviewNote = z.object({ name: z.string(), note: z.string() });
 
@@ -72,6 +84,7 @@ export const EveningReviewBody = z.union([
     day: z.string(),
     reviewed: z.boolean(),
     events: z.array(ReviewEvent),
+    others: z.array(OtherEvent),
     notes: ReviewNotes,
   }),
   z.object({ status: z.enum(["not-connected", "unreachable"]), notes: ReviewNotes }),
@@ -88,6 +101,8 @@ export const ReviewAnswer = z.object({
 });
 
 export type ReviewAnswer = z.infer<typeof ReviewAnswer>;
+
+export const DeleteEvent = z.object({ eventId: z.string() });
 
 /** The answer an event gets when I leave it alone, as the review starts it and the next morning applies it. */
 export const defaultAnswer = (event: ReviewEvent): ReviewAnswer => ({

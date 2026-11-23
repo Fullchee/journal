@@ -6,6 +6,7 @@ import {
   reviewNoteLine,
   suggestedCause,
   torontoDay,
+  type OtherEvent,
   type ReviewAnswer,
   type ReviewEvent,
   type ReviewNote,
@@ -19,7 +20,7 @@ import { View } from "react-native";
 import { ChoiceRow, type Choice } from "@/components/choice-row";
 import { Screen, Section } from "@/components/screen";
 import { StatusText } from "@/components/status-text";
-import { eveningReviewQuery, useConfirmReview } from "@/lib/data/evening-review";
+import { eveningReviewQuery, useConfirmReview, useDeleteEvent } from "@/lib/data/evening-review";
 
 type Pick = "done" | "no" | "outside" | "avoidance";
 
@@ -110,6 +111,49 @@ function Review({ day, events }: { day: string; events: ReviewEvent[] }) {
   );
 }
 
+const titleOf = ({ summary }: OtherEvent) => (summary === "" ? "(No title)" : summary);
+
+const timeLabel = ({ time }: OtherEvent) =>
+  time === null ? "All day" : `${clockLabel(time.start)}–${clockLabel(time.end)}`;
+
+/** Events no Habit is linked to; "Didn't" deletes one from Google Calendar at once. */
+function OtherEvents({ day, events }: { day: string; events: OtherEvent[] }) {
+  const remove = useDeleteEvent(day);
+
+  if (events.length === 0) return null;
+
+  return (
+    <Section title="Other events">
+      <View role="list">
+        {events.map((event) => (
+          <View
+            key={event.eventId}
+            role="listitem"
+            className="border-border flex-row items-center gap-3 border-b py-2"
+          >
+            <View className="flex-1">
+              <Text className="font-sans-bold">{titleOf(event)}</Text>
+              <Text variant="muted">{timeLabel(event)}</Text>
+            </View>
+            <Button
+              variant="outline"
+              size="sm"
+              accessibilityLabel={`Didn't do ${titleOf(event)}: delete it`}
+              disabled={remove.isPending}
+              onPress={() => remove.mutate(event.eventId)}
+            >
+              <Text>Didn't: delete</Text>
+            </Button>
+          </View>
+        ))}
+      </View>
+      {remove.isError && (
+        <StatusText tone="error">Couldn't delete. Check the connection and try again.</StatusText>
+      )}
+    </Section>
+  );
+}
+
 function DayNotes({ notes }: { notes: ReviewNote[] }) {
   if (notes.length === 0) return null;
 
@@ -125,6 +169,24 @@ function DayNotes({ notes }: { notes: ReviewNote[] }) {
       </View>
     </Section>
   );
+}
+
+function LinkedEvents({
+  day,
+  reviewed,
+  events,
+  others,
+}: {
+  day: string;
+  reviewed: boolean;
+  events: ReviewEvent[];
+  others: OtherEvent[];
+}) {
+  if (reviewed) return <StatusText>This day is confirmed.</StatusText>;
+
+  if (events.length > 0) return <Review day={day} events={events} />;
+
+  return others.length === 0 ? <Text variant="muted">No events on this day.</Text> : null;
 }
 
 const FAILURE_TEXT = {
@@ -155,16 +217,17 @@ export default function EveningReview() {
         </View>
       );
 
-    if (review.data.reviewed) return <StatusText>This day is confirmed.</StatusText>;
-
-    if (review.data.events.length === 0)
-      return (
-        <Text variant="muted">
-          No linked events on this day. Link a calendar series from a Habit's page.
-        </Text>
-      );
-
-    return <Review day={day} events={review.data.events} />;
+    return (
+      <>
+        <LinkedEvents
+          day={day}
+          reviewed={review.data.reviewed}
+          events={review.data.events}
+          others={review.data.others}
+        />
+        <OtherEvents day={day} events={review.data.others} />
+      </>
+    );
   };
 
   return (
