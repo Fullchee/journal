@@ -75,6 +75,7 @@ Put a lesson that only applies to one folder (`worker`, `modules/journal-android
 ### Product and issues
 
 - Design features for zero routine input: a default plus one optional tap, never a weekly entry. The owner rejected a weekly attendance entry (#126, 2026-11-11).
+- Before deciding how a Habit, Check-in or reminder behaves, read `docs/research/habit-tracker-best-practices.md` and cite the finding you follow. If it doesn't cover the question, run `/research` and add the finding there first (#33, 2026-11-22).
 - On the wayfinder map, decide grilling and prototype tickets yourself and record the reasons; the owner gives feedback by installing the app, not per ticket.
 - Close an issue once its work ships to `main`; the owner opens a new ticket for changes, so skip `ready-for-human` for verification (2026-11-10).
 - The owner is the only user, so telemetry keeps every debugging detail (breadcrumbs, console logs, PII) (#129, 2026-11-11).
