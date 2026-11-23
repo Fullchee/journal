@@ -264,32 +264,17 @@ describe("draftOfNewHabit", () => {
 describe("withDetails", () => {
   const details = {
     description: "Ten minutes on the mat",
-    why: "Less back pain",
     usual_when: "07:30",
-    usual_where: "Living room",
-    cue: "I finish my coffee",
     cue_type: "action",
-    routine: "stretch for ten minutes",
-    reward: "feel loose",
-    obstacles: ["no time"],
     goals: [2],
   } as const;
 
-  const filled = () =>
-    withDetails(blankHabit("good"), { ...details, obstacles: ["no time"], goals: [2] });
-
   test("fills every blank field from the model's details", () => {
-    const draft = filled();
+    const draft = withDetails(blankHabit("good"), { ...details, goals: [2] });
 
     assert.equal(draft.description, "Ten minutes on the mat");
-    assert.equal(draft.why, "Less back pain");
     assert.equal(draft.usualWhen, "07:30");
-    assert.equal(draft.usualWhere, "Living room");
-    assert.equal(draft.cue, "I finish my coffee");
     assert.equal(draft.cueType, "action");
-    assert.equal(draft.routine, "stretch for ten minutes");
-    assert.equal(draft.reward, "feel loose");
-    assert.deepEqual(draft.obstacles, ["no time"]);
     assert.deepEqual(draft.goals, [2]);
     assert.equal(draft.stackedAfter, null);
   });
@@ -297,25 +282,23 @@ describe("withDetails", () => {
   test("keeps what the owner already typed", () => {
     const typed: Draft = {
       ...blankHabit("good"),
-      why: "For my kids",
+      description: "My own notes",
       cueType: "emotion",
-      obstacles: ["too tired"],
       goals: [5],
     };
 
-    const draft = withDetails(typed, { ...details, obstacles: ["no time"], goals: [2] });
+    const draft = withDetails(typed, { ...details, goals: [2] });
 
-    assert.equal(draft.why, "For my kids");
+    assert.equal(draft.description, "My own notes");
     assert.equal(draft.cueType, "emotion");
-    assert.equal(draft.cue, "I finish my coffee");
-    assert.deepEqual(draft.obstacles, ["too tired"]);
     assert.deepEqual(draft.goals, [5]);
   });
 
   test("treats a field of only spaces as blank", () => {
     assert.equal(
-      withDetails({ ...blankHabit("good"), why: "  " }, { why: "Less back pain" }).why,
-      "Less back pain",
+      withDetails({ ...blankHabit("good"), description: "  " }, { description: "On the mat" })
+        .description,
+      "On the mat",
     );
   });
 
@@ -323,22 +306,26 @@ describe("withDetails", () => {
     assert.deepEqual(withDetails(blankHabit("bad"), {}), blankHabit("bad"));
   });
 
-  test("a stacked cue fills the Habit it comes after, not the free-text cue", () => {
-    const draft = withDetails(blankHabit("good"), {
-      cue_type: "stacked",
-      stacked_after: "coffee",
-      cue: "after coffee",
-    });
+  test("a stacked cue fills the Habit it comes after", () => {
+    const draft = withDetails(blankHabit("good"), { cue_type: "stacked", stacked_after: "coffee" });
 
     assert.equal(draft.cueType, "stacked");
     assert.equal(draft.stackedAfter, "coffee");
-    assert.equal(draft.cue, "");
   });
 
   test("a stacked cue with no Habit named leaves the Habit it follows empty", () => {
     const draft = withDetails(blankHabit("good"), { cue_type: "stacked" });
 
     assert.equal(draft.stackedAfter, null);
+  });
+
+  test("a stacked cue keeps the Habit the owner already picked", () => {
+    const draft = withDetails(
+      { ...blankHabit("good"), cueType: "stacked", stackedAfter: "tea" },
+      { cue_type: "stacked", stacked_after: "coffee" },
+    );
+
+    assert.equal(draft.stackedAfter, "tea");
   });
 
   test("a non-stacked cue the owner picked ignores the model's stacked Habit", () => {
@@ -351,31 +338,10 @@ describe("withDetails", () => {
     assert.equal(draft.stackedAfter, null);
   });
 
-  test("a cue the owner typed before picking a type keeps the text field, not the model's stacked cue", () => {
-    const draft = withDetails(
-      { ...blankHabit("good"), cue: "I get home" },
-      { cue_type: "stacked", stacked_after: "coffee" },
-    );
-
-    assert.equal(draft.cueType, "");
-    assert.equal(draft.cue, "I get home");
-    assert.equal(draft.stackedAfter, null);
-  });
-
-  test("a cue the owner typed before picking a type takes the model's non-stacked type", () => {
-    const draft = withDetails(
-      { ...blankHabit("good"), cue: "I get home" },
-      { cue_type: "action", cue: "I park" },
-    );
-
-    assert.equal(draft.cueType, "action");
-    assert.equal(draft.cue, "I get home");
-  });
-
   test("passes the fields it doesn't fill through unchanged", () => {
     const draft = withDetails(
       { ...blankHabit("good"), name: "Stretch", autoLogged: true },
-      { why: "Less back pain" },
+      { description: "On the mat" },
     );
 
     assert.equal(draft.name, "Stretch");

@@ -262,16 +262,14 @@ const isShortText = (value: string | undefined): value is string =>
 /** A One-off as a new Habit, or null when a field doesn't check out; it comes from the client, so nothing is trusted. */
 export function oneOffHabit(oneOff: ModelOneOff | null, today: string): Habit | null {
   if (oneOff === null) return null;
-  const { name, date, why, usual_when: usualWhen } = oneOff;
+  const { name, date, usual_when: usualWhen } = oneOff;
 
-  if (!isShortText(name) || !isDueDate(date, today) || !isShortText(why) || !isShortText(usualWhen))
-    return null;
+  if (!isShortText(name) || !isDueDate(date, today) || !isShortText(usualWhen)) return null;
 
   // `check`, because only that Record style can be answered Not done.
   const draft = readHabit({
     ...blankHabit("good"),
     name,
-    why: why.trim(),
     usualWhen: usualWhen.trim(),
     startDate: date,
     target: { type: "once", count: 1, days: [] },

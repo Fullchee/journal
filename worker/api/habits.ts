@@ -146,29 +146,17 @@ async function applyImportDurations(env: Env, { habit, entries }: z.infer<typeof
   return { added: await applyWrite(env.DB, addDurations(env.DB, habit, entries, "import")) };
 }
 
-// A replaced habit must be a `bad` habit; neither link may point at the habit itself.
-async function areValidLinks(
-  env: Env,
-  { replaces, stackedAfter }: Pick<Habit, "replaces" | "stackedAfter">,
-  id: string,
-) {
-  const links = [replaces, stackedAfter].filter((link) => link !== null);
+// A stacked Habit comes after another Habit that exists, never after itself.
+async function isValidStack(env: Env, stackedAfter: string | null, id: string) {
+  if (stackedAfter === null) return true;
 
-  if (links.includes(id)) return false;
+  if (stackedAfter === id) return false;
 
-  if (links.length === 0) return true;
+  const { results } = await env.DB.prepare("SELECT id FROM habits WHERE id = ?")
+    .bind(stackedAfter)
+    .all<{ id: string }>();
 
-  const { results } = await env.DB.prepare(
-    `SELECT id, kind FROM habits WHERE id IN (${links.map(() => "?").join(", ")})`,
-  )
-    .bind(...links)
-    .all<{ id: string; kind: Habit["kind"] }>();
-
-  const kinds = new Map(results.map((row) => [row.id, row.kind]));
-
-  return (
-    links.every((link) => kinds.has(link)) && (replaces === null || kinds.get(replaces) === "bad")
-  );
+  return results.length > 0;
 }
 
 // Every linked Goal must exist; the change is rejected otherwise.
@@ -235,7 +223,8 @@ async function applyHabit(env: Env, change: z.infer<typeof HabitEdit>): Promise<
   if (habit === null || (await movesOneOff(env, saved, habit))) return false;
   const id = isNew ? newHabitId(habit.name) : given;
 
-  if (!(await areValidLinks(env, habit, id)) || !(await validGoals(env, habit.goals))) return false;
+  if (!(await isValidStack(env, habit.stackedAfter, id)) || !(await validGoals(env, habit.goals)))
+    return false;
 
   const save = isNew ? insertHabit : updateHabit;
 
@@ -246,7 +235,6 @@ async function applyHabit(env: Env, change: z.infer<typeof HabitEdit>): Promise<
 }
 
 async function applyDelete(env: Env, id: string) {
-  await env.DB.prepare("UPDATE habits SET replaces = NULL WHERE replaces = ?").bind(id).run();
   await env.DB.prepare(
     "UPDATE habits SET stacked_after = NULL, cue_type = '' WHERE stacked_after = ?",
   )

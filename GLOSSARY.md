@@ -34,7 +34,7 @@ The app's vocabulary. Use these terms word for word in code, UI copy and docs.
   _Avoid_: location, geocode
 - **Session brief** — a walkthrough of the week's Check-ins, written for my coach: highs, lows, patterns, what helped, and one thing to raise. Part of the Health plan layer. Not the Weekly retro, which is my own reflection and feeds the quarterly review.
   _Avoid_: coaching summary, weekly report
-- **Habit** — an action or how-to: a name, description, a felt **why**, usual when and spot, its **Places**, a **kind**, a **stage**, a **Frequency**, a **cue**, a **record** style and the Goals it serves. Checked off in the Habit tracker. The only type for actions and how-tos, One-offs included.
+- **Habit** — an action or how-to: a name, description, usual when, its **Places**, a **kind**, a **stage**, a **Frequency**, a **cue**, a **record** style and the Goals it serves. The felt why lives on the Goal it serves. Checked off in the Habit tracker. The only type for actions and how-tos, One-offs included.
   _Avoid_: routine, goal, practice, tool, guide, strategy, technique
 - **Places** — the Check-in places where a Habit can be done, such as Home or Gym, picked from the same list as "Where were you?". No Places means anywhere. Different from the Habit's usual **spot** (such as Bedroom or Smart phone), which is free text in the habit loop sentence.
   _Avoid_: location, context, tag
@@ -60,7 +60,7 @@ The app's vocabulary. Use these terms word for word in code, UI copy and docs.
   _Avoid_: level, phase
 - **Frequency** — how often a Habit is due: every day, N times a week on any days, N times a month on any days, fixed weekdays, every N days, once (a One-off) or never (a Reference Habit). A bad Habit's Frequency is called its **limit**. **N× a month** counts the Toronto calendar month, as N× a week counts the Monday-to-Sunday week, so its Streak and History count months. **Every N days** is due on the start date and every N days after it, like fixed weekdays; doing it on another day moves nothing.
   _Avoid_: target, schedule
-- **Cue** — what sets a Habit off, from Duhigg's habit loop: **Scheduled** (its time of day), a stacked Habit, a previous action, an emotional state or people. A Scheduled cue needs a time; a Habit with any other cue may still have a usual time.
+- **Cue** — what a Habit comes after, its anchor (Fogg), asked as "After what?": **Scheduled** (its time of day), a stacked Habit, a previous action, an emotional state or people, from Duhigg's habit loop. A Scheduled cue needs a time; a Habit with any other cue may still have a usual time.
   _Avoid_: trigger
 - **One-off** — a Habit due once: one thing I plan to do for myself on one date, such as a run or a portaging trip. It holds a name, a date and an optional why, without the habit loop. It shows on Today from its date and stays **overdue** until I mark it done or not done, or Reschedule it.
   _Avoid_: task, to-do, errand, event

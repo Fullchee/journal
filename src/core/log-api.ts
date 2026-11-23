@@ -33,21 +33,14 @@ export const NewHabit = z.object({
 
 export type NewHabit = z.infer<typeof NewHabit>;
 
-const Strings = z.array(z.string());
 const NullableId = z.nullable(z.string());
 const GoalIds = z.array(z.number());
 
-/** POST /api/habits/draft: the model's habit-loop guesses for a new Habit; any field it couldn't guess is missing. */
+/** POST /api/habits/draft: the model's guesses for a new Habit; any field it couldn't guess is missing. */
 export const HabitDetails = z.object({
   description: z.optional(z.string()),
-  why: z.optional(z.string()),
   usual_when: z.optional(UsualWhen),
-  usual_where: z.optional(z.string()),
-  cue: z.optional(z.string()),
   cue_type: z.optional(CueType),
-  routine: z.optional(z.string()),
-  reward: z.optional(z.string()),
-  obstacles: z.optional(Strings),
   stacked_after: z.optional(NullableId),
   goals: z.optional(GoalIds),
 });
@@ -58,7 +51,6 @@ export type HabitDetails = z.infer<typeof HabitDetails>;
 const NewOneOff = z.object({
   name: z.string(),
   date: z.string(),
-  why: z.string(),
   usual_when: UsualWhen,
 });
 

@@ -32,7 +32,6 @@ import {
 import * as z from "zod/mini";
 import type { D1, D1Statement, Env, SqlValue } from "./env";
 import { MAX_BODY_BYTES } from "./note-body";
-import { normalizeObstacles, Obstacles } from "./obstacles";
 
 export const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const HABIT_ID = /^[\da-z-]{1,32}$/;
@@ -48,9 +47,7 @@ export const HabitId = z.string().check(z.regex(HABIT_ID));
 const COLUMNS = {
   name: (h: Draft) => h.name,
   description: (h: Draft) => h.description,
-  why: (h: Draft) => h.why,
   usual_when: (h: Draft) => h.usualWhen,
-  usual_where: (h: Draft) => h.usualWhere,
   places: (h: Draft) => JSON.stringify(h.places),
   kind: (h: Draft) => h.kind,
   stage: (h: Draft) => h.stage,
@@ -60,12 +57,7 @@ const COLUMNS = {
   opt_out_from: (h: Draft) => h.optOutFrom,
   usual_minutes: (h: Draft) => h.usualMinutes,
   start_date: (h: Draft) => h.startDate,
-  cue: (h: Draft) => h.cue,
   cue_type: (h: Draft) => h.cueType,
-  routine: (h: Draft) => h.routine,
-  reward: (h: Draft) => h.reward,
-  obstacles: (h: Draft) => JSON.stringify(h.obstacles),
-  replaces: (h: Draft) => h.replaces,
   stacked_after: (h: Draft) => h.stackedAfter,
   target_type: (h: Draft) => h.target.type,
   target_count: (h: Draft) => h.target.count,
@@ -109,9 +101,7 @@ const toHabit = (row: HabitRow, goals: Map<string, number[]>): Habit => ({
   id: row.id,
   name: row.name,
   description: row.description,
-  why: row.why,
   usualWhen: row.usual_when,
-  usualWhere: row.usual_where,
   places: StoredStrings.parse(JSON.parse(row.places)),
   kind: row.kind,
   stage: row.stage,
@@ -121,12 +111,7 @@ const toHabit = (row: HabitRow, goals: Map<string, number[]>): Habit => ({
   optOutFrom: row.opt_out_from,
   usualMinutes: row.usual_minutes,
   startDate: row.start_date,
-  cue: row.cue,
   cueType: row.cue_type,
-  routine: row.routine,
-  reward: row.reward,
-  obstacles: StoredStrings.parse(JSON.parse(row.obstacles)),
-  replaces: row.replaces,
   stackedAfter: row.stacked_after,
   target: {
     type: row.target_type,
@@ -313,9 +298,7 @@ const SeasonChange = z
 const DraftFields = z.object({
   name: Name,
   description: Description,
-  why: z.string(),
   usualWhen: UsualWhen,
-  usualWhere: z.string(),
   places: Places,
   kind: Kind,
   stage: Stage,
@@ -325,12 +308,7 @@ const DraftFields = z.object({
   optOutFrom: z.nullable(IsoDate),
   usualMinutes: z.nullable(z.number()),
   startDate: z.union([z.literal(""), IsoDate]),
-  cue: z.string(),
   cueType: z.union([CueType, z.literal("")]),
-  routine: z.string(),
-  reward: z.string(),
-  obstacles: Obstacles,
-  replaces: z.nullable(HabitId),
   stackedAfter: z.nullable(HabitId),
   target: TargetChange,
   record: RecordStyle,
@@ -411,7 +389,6 @@ export function readHabit(change: HabitChange): Draft | null {
   return {
     ...data,
     name: data.name.trim(),
-    obstacles: normalizeObstacles(data.obstacles),
     places: normalizePlaces(data.places),
     target: cleanTarget(target),
     targetMinutes: record === "duration" ? targetMinutes : null,
@@ -734,6 +711,6 @@ export const deleteUnusedHabit = (db: D1, habit: string) =>
         "AND NOT EXISTS (SELECT 1 FROM habit_reschedules WHERE habit = ?1) " +
         "AND NOT EXISTS (SELECT 1 FROM habit_skips WHERE habit = ?1) " +
         "AND NOT EXISTS (SELECT 1 FROM habit_calendar_links WHERE habit = ?1) " +
-        "AND NOT EXISTS (SELECT 1 FROM habits WHERE replaces = ?1 OR stacked_after = ?1)",
+        "AND NOT EXISTS (SELECT 1 FROM habits WHERE stacked_after = ?1)",
     )
     .bind(habit);

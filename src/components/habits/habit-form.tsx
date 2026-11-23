@@ -1,6 +1,5 @@
 import {
   KIND_COPY,
-  OBSTACLES,
   PRIORITIES,
   STAGES,
   WEEKDAYS,
@@ -16,9 +15,6 @@ import {
   isOneOff,
   loopSentence,
   normalizePlaces,
-  obstacleSuggestions,
-  replaceCandidates,
-  replacedBy,
   samePlace,
   scheduleSummary,
   stackCandidates,
@@ -34,7 +30,7 @@ import {
   type Habit,
 } from "@/core";
 import { Button, Icon, Switch, Text, DateField, TimeField } from "@/ui";
-import { ChevronDown, ChevronRight, Minus, Plus, X } from "lucide-react-native";
+import { ChevronDown, ChevronRight, Minus, Plus } from "lucide-react-native";
 import { useState, type ReactNode } from "react";
 import { ActivityIndicator, Pressable, View } from "react-native";
 import { useCSSVariable } from "uniwind";
@@ -93,9 +89,6 @@ const COUNT_COPY: Record<
 };
 
 const DEFAULT_TIME = "08:00";
-
-// The obstacle chips offer this many suggestions, most used first.
-const SUGGESTED_OBSTACLES = 8;
 
 const NONE = "";
 
@@ -183,60 +176,30 @@ function Basics({ draft, update, detailsStatus }: SectionProps & { detailsStatus
   );
 }
 
-function Why({ draft, update }: SectionProps) {
-  return (
-    <TextField
-      label="Why"
-      multiline
-      rows={3}
-      placeholder="Why this matters to me"
-      value={draft.why}
-      onChangeText={(why) => update({ why })}
-    />
-  );
-}
-
-// A stacked cue names another Habit, a Scheduled cue is the schedule's time, and every other type uses the free-text cue.
-function CueDetail({ draft, update, habits }: SectionProps & { habits: Habit[] }) {
-  if (draft.cueType === "stacked")
-    return (
-      <HabitPicker
-        label="Comes after habit"
-        habits={stackCandidates(
-          habits.filter((habit) => habit.id !== draft.id),
-          draft.id,
-        )}
-        value={draft.stackedAfter}
-        onPick={(stackedAfter) => update({ stackedAfter })}
-      />
-    );
-
-  if (draft.cueType === "time") return null;
-
-  return (
-    <TextField
-      label={KIND_COPY[draft.kind].cue}
-      value={draft.cue}
-      maxLength={200}
-      onChangeText={(cue) => update({ cue })}
-    />
-  );
-}
-
-// What sets the Habit off: a cue type and its detail.
+// What the Habit comes after: a stacked cue names the Habit, and a Scheduled cue's time is in the Frequency block.
 function Cue({ draft, update, habits }: SectionProps & { habits: Habit[] }) {
   const pickCue = (cueType: CueType) =>
-    update(cueType === "stacked" ? { cueType, cue: "" } : { cueType, stackedAfter: null });
+    update(cueType === "stacked" ? { cueType } : { cueType, stackedAfter: null });
 
   return (
     <>
       <ChoiceChips
-        label="Cue"
+        label="After what?"
         options={cueChoices(draft.kind, draft.cueType)}
         isSelected={(id) => draft.cueType === id}
         onPick={pickCue}
       />
-      <CueDetail draft={draft} update={update} habits={habits} />
+      {draft.cueType === "stacked" && (
+        <HabitPicker
+          label="Comes after habit"
+          habits={stackCandidates(
+            habits.filter((habit) => habit.id !== draft.id),
+            draft.id,
+          )}
+          value={draft.stackedAfter}
+          onPick={(stackedAfter) => update({ stackedAfter })}
+        />
+      )}
       {cueMissing(draft) === "stacked" && (
         <MissingAlert>Choose the habit this one comes after.</MissingAlert>
       )}
@@ -245,7 +208,6 @@ function Cue({ draft, update, habits }: SectionProps & { habits: Habit[] }) {
 }
 
 function HabitLoop({ draft, update, habits }: SectionProps & { habits: Habit[] }) {
-  const copy = KIND_COPY[draft.kind];
   const nameOf = (id: string) => habits.find((habit) => habit.id === id)?.name ?? id;
   const sentence = loopSentence(draft, nameOf);
 
@@ -253,15 +215,9 @@ function HabitLoop({ draft, update, habits }: SectionProps & { habits: Habit[] }
     <>
       <SectionTitle>Habit loop</SectionTitle>
       <Cue draft={draft} update={update} habits={habits} />
-      <TextField
-        label={copy.routine}
-        value={draft.routine}
-        maxLength={200}
-        onChangeText={(routine) => update({ routine })}
-      />
       <Places draft={draft} update={update} />
       <Text variant="muted">
-        {sentence === "" ? "Fill in the loop to see it as a sentence." : sentence}
+        {sentence === "" ? "Pick what it comes after to see it as a sentence." : sentence}
       </Text>
     </>
   );
@@ -317,77 +273,6 @@ function Places({ draft, update }: SectionProps) {
       )}
     </>
   );
-}
-
-function Obstacles({ draft, update, habits }: SectionProps & { habits: Habit[] }) {
-  const [text, setText] = useState("");
-
-  const add = (name: string) => {
-    const obstacle = name.trim().toLowerCase();
-
-    if (obstacle !== "" && !draft.obstacles.includes(obstacle))
-      update({ obstacles: [...draft.obstacles, obstacle] });
-    setText("");
-  };
-
-  const suggestions = obstacleSuggestions(habits, OBSTACLES)
-    .filter(({ name }) => !draft.obstacles.includes(name))
-    .toSorted((a, b) => b.count - a.count)
-    .slice(0, SUGGESTED_OBSTACLES);
-
-  return (
-    <>
-      <SectionTitle>Obstacles</SectionTitle>
-      <View className="flex-row flex-wrap gap-2">
-        {draft.obstacles.map((obstacle) => (
-          <Pressable
-            key={obstacle}
-            role="button"
-            aria-label={`Remove ${obstacle}`}
-            className="bg-secondary min-h-11 flex-row items-center gap-1 rounded-full px-3 sm:min-h-8"
-            onPress={() => update({ obstacles: draft.obstacles.filter((o) => o !== obstacle) })}
-          >
-            <Text className="text-sm">{obstacle}</Text>
-            <Icon as={X} className="size-4" />
-          </Pressable>
-        ))}
-      </View>
-      <TextField
-        label="Obstacles"
-        placeholder="What gets in the way?"
-        value={text}
-        returnKeyType="done"
-        submitBehavior="submit"
-        onChangeText={setText}
-        onSubmitEditing={() => add(text)}
-      />
-      <ChoiceChips
-        label="Suggestions"
-        options={suggestions.map(({ name }) => ({ id: name, label: name }))}
-        isSelected={() => false}
-        onPick={add}
-      />
-    </>
-  );
-}
-
-// A good Habit names the bad one it replaces; a bad Habit lists the good ones that replace it.
-function Replaces({ draft, update, habits }: SectionProps & { habits: Habit[] }) {
-  if (draft.kind === "good")
-    return (
-      <HabitPicker
-        label="Replaces bad habit"
-        habits={replaceCandidates(habits, draft)}
-        value={draft.replaces}
-        onPick={(replaces) => update({ replaces })}
-      />
-    );
-
-  const replacers = draft.id === undefined ? [] : replacedBy(habits, draft.id);
-
-  return replacers.length > 0 ? (
-    <Text className="text-sm">{`Replaced by: ${replacers.map((habit) => habit.name).join(", ")}`}</Text>
-  ) : null;
 }
 
 function TargetCount({ draft, update, type }: SectionProps & { type: CountedTargetType }) {
@@ -707,22 +592,17 @@ function Status({ draft, update }: SectionProps) {
   );
 }
 
-// Stage and Priority always hold a value, so only fields that can be blank count as filled.
+// Stage and Priority always hold a value, and a Scheduled cue shows in the Frequency block, so neither counts.
 function filledInMore(draft: Draft) {
-  const shared = [draft.why.trim() !== "", draft.goals.length > 0, draft.description.trim() !== ""];
+  const shared = [draft.goals.length > 0, draft.description.trim() !== ""];
 
   if (isOneOff(draft)) return shared.filter(Boolean).length;
 
-  const good = draft.kind === "good";
-
   const loop = [
-    draft.cue.trim() !== "" || draft.stackedAfter !== null,
-    draft.routine.trim() !== "",
+    draft.cueType !== "" && draft.cueType !== "time",
     draft.places.length > 0,
-    good && draft.obstacles.length > 0,
-    good && draft.tinyVersion.trim() !== "",
+    draft.kind === "good" && draft.tinyVersion.trim() !== "",
     draft.seasons.length > 0,
-    good && draft.replaces !== null,
   ];
 
   return [...shared, ...loop].filter(Boolean).length;
@@ -768,7 +648,7 @@ export function HabitForm({
   circle: ReactNode;
 }) {
   const images = useAddImage(draft.description, (description) => update({ description }));
-  // A One-off holds a name, a date and an optional why, without the habit loop (ADR 0012).
+  // A One-off holds a name and a date, without the habit loop (ADR 0012).
   const loop = !isOneOff(draft);
 
   return (
@@ -780,11 +660,9 @@ export function HabitForm({
         <OneOffSchedule draft={draft} update={update} isDateLocked={isDateLocked} />
       )}
       <More filled={filledInMore(draft)}>
-        <Why draft={draft} update={update} />
         {loop && (
           <>
             <HabitLoop draft={draft} update={update} habits={habits} />
-            {draft.kind === "good" && <Obstacles draft={draft} update={update} habits={habits} />}
             <TinyVersionField draft={draft} update={update} />
             <SeasonFields draft={draft} update={update} />
           </>
@@ -803,7 +681,6 @@ export function HabitForm({
           onSelectionChange={images.onSelectionChange}
         />
         <AddImageButton images={images} />
-        {loop && <Replaces draft={draft} update={update} habits={habits} />}
         {circle}
       </More>
     </View>

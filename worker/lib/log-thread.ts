@@ -45,7 +45,6 @@ export const ModelOneOff = z.object({
   name: lenient(z.string()),
   date: lenient(z.string()),
   time: lenient(z.string()),
-  why: lenient(z.string()),
   usual_when: lenient(z.string()),
 });
 

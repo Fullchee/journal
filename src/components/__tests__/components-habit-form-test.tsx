@@ -1,13 +1,6 @@
-import type { Draft, Goal } from "@/core";
+import type { Draft, Goal, Habit } from "@/core";
 import { Text } from "@/ui";
-import {
-  fireEvent,
-  render,
-  screen,
-  userEvent,
-  waitFor,
-  within,
-} from "@testing-library/react-native";
+import { render, screen, userEvent, waitFor, within } from "@testing-library/react-native";
 
 import { HabitForm } from "@/components/habits/habit-form";
 import { pickImage, uploadImage } from "@/lib/image-upload";
@@ -27,14 +20,14 @@ jest.mock("uniwind", () =>
   jest.requireActual<typeof RouteMocks>("../../../jest/route-mocks").mockUniwind(),
 );
 
-const show = async (draft: Draft, extra: { goals?: Goal[] } = {}) => {
+const show = async (draft: Draft, extra: { goals?: Goal[]; habits?: Habit[] } = {}) => {
   const update = jest.fn<undefined, [Partial<Draft>]>();
 
   await render(
     <HabitForm
       draft={draft}
       update={update}
-      habits={[]}
+      habits={extra.habits ?? []}
       goals={extra.goals ?? []}
       isDateLocked={false}
       detailsStatus="idle"
@@ -47,16 +40,6 @@ const show = async (draft: Draft, extra: { goals?: Goal[] } = {}) => {
 };
 
 describe("HabitForm under More", () => {
-  it("picks None to clear the Habit this one replaces", async () => {
-    const update = await show(habit({ replaces: "smoke" }));
-
-    await userEvent.press(
-      within(screen.getByLabelText("Replaces bad habit")).getByRole("button", { name: "None" }),
-    );
-
-    expect(update).toHaveBeenCalledWith({ replaces: null });
-  });
-
   it("saves a good recurring Habit's Tiny version", async () => {
     const update = await show(habit());
 
@@ -87,32 +70,75 @@ describe("HabitForm under More", () => {
     expect(screen.getByText(/ghost/)).toBeOnTheScreen();
   });
 
-  it("ignores an empty obstacle", async () => {
-    const update = await show(habit());
+  it("asks what the Habit comes after, with the bad Habit's time as A time of day", async () => {
+    await show(habit({ kind: "bad" }));
 
-    await fireEvent(screen.getByLabelText("Obstacles"), "submitEditing");
+    const cues = within(screen.getByLabelText("After what?"));
 
-    expect(update).not.toHaveBeenCalled();
+    for (const label of [
+      "A time of day",
+      "Another habit",
+      "Something I did",
+      "A feeling",
+      "Being with people",
+    ])
+      expect(cues.getByRole("button", { name: label })).toBeOnTheScreen();
+    expect(screen.queryByLabelText("Comes after habit")).not.toBeOnTheScreen();
+    expect(screen.getByText("Pick what it comes after to see it as a sentence.")).toBeOnTheScreen();
   });
 
-  it("lists the good Habits that replace a bad one", async () => {
-    const bad = habit({ id: "smoke", kind: "bad" });
-    const update = jest.fn();
+  it("picks Another habit without touching the Habit it comes after", async () => {
+    const update = await show(habit());
 
-    await render(
-      <HabitForm
-        draft={bad}
-        update={update}
-        habits={[habit({ id: "walk", name: "Walk", replaces: "smoke" })]}
-        goals={[]}
-        isDateLocked={false}
-        detailsStatus="idle"
-        circle={null}
-      />,
+    await userEvent.press(screen.getByRole("button", { name: "Another habit" }));
+
+    expect(update).toHaveBeenCalledWith({ cueType: "stacked" });
+  });
+
+  it("clears the Habit it comes after when another cue replaces Another habit", async () => {
+    const update = await show(habit({ cueType: "stacked", stackedAfter: "teeth" }), {
+      habits: [habit({ id: "teeth", name: "Brush teeth" })],
+    });
+
+    await userEvent.press(screen.getByRole("button", { name: "A feeling" }));
+
+    expect(update).toHaveBeenCalledWith({ cueType: "emotion", stackedAfter: null });
+  });
+
+  it("picks the Habit it comes after and reads the loop as a sentence", async () => {
+    const update = await show(habit({ cueType: "stacked", usualWhen: "19:00" }), {
+      habits: [habit({ id: "teeth", name: "Brush teeth" })],
+    });
+
+    expect(screen.getByText("Choose the habit this one comes after.")).toBeOnTheScreen();
+
+    await userEvent.press(
+      within(screen.getByLabelText("Comes after habit")).getByRole("button", {
+        name: "Brush teeth",
+      }),
     );
-    await userEvent.press(screen.getByRole("button", { name: /^More(?: · \d+ filled)?$/ }));
 
-    expect(screen.getByText("Replaced by: Walk")).toBeOnTheScreen();
+    expect(update).toHaveBeenCalledWith({ stackedAfter: "teeth" });
+  });
+
+  it("picks None to clear the Habit it comes after", async () => {
+    const update = await show(habit({ cueType: "stacked", stackedAfter: "teeth" }), {
+      habits: [habit({ id: "teeth", name: "Brush teeth" })],
+    });
+
+    await userEvent.press(
+      within(screen.getByLabelText("Comes after habit")).getByRole("button", { name: "None" }),
+    );
+
+    expect(update).toHaveBeenCalledWith({ stackedAfter: null });
+  });
+
+  it("shows the loop sentence once the Habit has an anchor", async () => {
+    await show(habit({ cueType: "stacked", stackedAfter: "teeth", usualWhen: "19:00" }), {
+      habits: [habit({ id: "teeth", name: "Brush teeth" })],
+    });
+
+    expect(screen.getByText("After “Brush teeth”, I will do “Walk” at 7:00 PM.")).toBeOnTheScreen();
   });
 
   it("steps a weekly count up", async () => {

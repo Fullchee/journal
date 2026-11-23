@@ -38,7 +38,6 @@ const HYPERFOCUS = {
   type: "habit",
   name: "Hyperfocus on the wrong thing",
   description: "Locks me onto a non-priority.",
-  usualWhere: "Work piles up",
   places: ["Library"],
   kind: "bad",
 };
@@ -66,7 +65,6 @@ test("search by text matches Check-in notes and habit descriptions", async () =>
 
 const HABIT_QUERIES: [string, string, string[]][] = [
   ["name_any_case", "HYPERFOCUS", [HYPERFOCUS.name]],
-  ["usual_where", "piles up", [HYPERFOCUS.name]],
   ["places", "library", [HYPERFOCUS.name]],
   ["wildcard_is_literal", "%", []],
 ];

@@ -76,10 +76,8 @@ const STRETCH: LogDraft = {
 const TODAY = torontoDay(new Date());
 
 const STRETCH_DETAILS: HabitDetails = {
-  why: "Less back pain",
+  description: "Hold each stretch for 30 seconds",
   cue_type: "action",
-  cue: "I finish my coffee",
-  obstacles: ["no time"],
 };
 
 function logRoutes(
@@ -145,7 +143,7 @@ const SATURDAY = inDays(6);
 
 const PORTAGING: LogDraft = {
   type: "one-off",
-  one_off: { name: "Go portaging", date: SATURDAY, why: "", usual_when: "" },
+  one_off: { name: "Go portaging", date: SATURDAY, usual_when: "" },
   text: "Go portaging on Saturday.",
 };
 
@@ -162,7 +160,6 @@ describe("log box: One-offs", () => {
     expect(screen.getByLabelText("Name")).toHaveDisplayValue("Go portaging");
     expect(screen.getByLabelText(`Day: ${SATURDAY}`)).toBeOnTheScreen();
 
-    await userEvent.paste(screen.getByLabelText("Why"), "Fresh air");
     await userEvent.press(screen.getByRole("button", { name: "Save" }));
 
     expect(await screen.findByText("Added Go portaging on Saturday 14 Nov.")).toBeOnTheScreen();
@@ -171,7 +168,7 @@ describe("log box: One-offs", () => {
       method: "POST",
       body: {
         text: "go portaging Saturday",
-        one_off: { name: "Go portaging", date: SATURDAY, why: "Fresh air", usual_when: "" },
+        one_off: { name: "Go portaging", date: SATURDAY, usual_when: "" },
       },
     });
 
@@ -199,7 +196,7 @@ describe("log box: One-offs", () => {
     await waitFor(() => expect(posts.at(-1)?.path).toBe("/api/log/one-off"));
     expect(posts.at(-1)?.body).toEqual({
       text: "go portaging Saturday",
-      one_off: { name: "Go portaging", date: sunday, why: "", usual_when: "" },
+      one_off: { name: "Go portaging", date: sunday, usual_when: "" },
     });
   });
 
@@ -207,7 +204,7 @@ describe("log box: One-offs", () => {
     const { writes: posts } = fakeApi(
       logRoutes({
         type: "one-off",
-        one_off: { name: "Call the clinic", why: "", usual_when: "09:00" },
+        one_off: { name: "Call the clinic", usual_when: "09:00" },
         text: "Which day is Call the clinic?",
       }),
     );
@@ -227,7 +224,7 @@ describe("log box: One-offs", () => {
     await waitFor(() => expect(posts.at(-1)?.path).toBe("/api/log/one-off"));
     expect(posts.at(-1)?.body).toEqual({
       text: "call the clinic at 9",
-      one_off: { name: "Call the clinic", date: tomorrow, why: "", usual_when: "09:00" },
+      one_off: { name: "Call the clinic", date: tomorrow, usual_when: "09:00" },
     });
   });
 
@@ -244,7 +241,7 @@ describe("log box: One-offs", () => {
     await waitFor(() => expect(posts.at(-1)?.path).toBe("/api/log/one-off"));
     expect(posts.at(-1)?.body).toEqual({
       text: "go portaging Saturday",
-      one_off: { name: "Go portaging", date: SATURDAY, why: "", usual_when: "07:30" },
+      one_off: { name: "Go portaging", date: SATURDAY, usual_when: "07:30" },
     });
   });
 
@@ -267,7 +264,7 @@ describe("log box: One-offs", () => {
     const { writes: posts } = fakeApi(
       logRoutes({
         type: "one-off",
-        one_off: { name: "Go portaging", date: SATURDAY, why: "", usual_when: "09:00" },
+        one_off: { name: "Go portaging", date: SATURDAY, usual_when: "09:00" },
         text: "Go portaging on Saturday.",
       }),
     );
@@ -280,7 +277,7 @@ describe("log box: One-offs", () => {
     await waitFor(() => expect(posts.at(-1)?.path).toBe("/api/log/one-off"));
     expect(posts.at(-1)?.body).toEqual({
       text: "go portaging Saturday",
-      one_off: { name: "Go canoeing", date: SATURDAY, why: "", usual_when: "" },
+      one_off: { name: "Go canoeing", date: SATURDAY, usual_when: "" },
     });
   });
 
@@ -497,7 +494,7 @@ describe("log box", () => {
 
     fakeApi(logRoutes(PORTAGING));
     await sendFromLogModal("go portaging Saturday");
-    await userEvent.paste(await screen.findByLabelText("Why"), "Fresh air");
+    await userEvent.paste(await screen.findByLabelText("Name"), "Go canoeing");
 
     await userEvent.press(screen.getByRole("button", { name: "Close" }));
 
@@ -563,9 +560,8 @@ describe("log box", () => {
     await sendFromLogModal("started stretching");
     await openMore();
 
-    expect(await screen.findByDisplayValue("Less back pain")).toBeOnTheScreen();
-    expect(screen.getByDisplayValue("I finish my coffee")).toBeOnTheScreen();
-    expect(screen.getByRole("button", { name: "Remove no time" })).toBeOnTheScreen();
+    expect(await screen.findByDisplayValue("Hold each stretch for 30 seconds")).toBeOnTheScreen();
+    expect(screen.getByRole("button", { name: "Something I did" })).toBeSelected();
     expect(screen.queryByText("Filling in details…")).not.toBeOnTheScreen();
     expect(posts.find(({ path }) => path === "/api/habits/draft")?.body).toEqual({
       name: "Stretch",
@@ -590,11 +586,13 @@ describe("log box", () => {
 
     expect(await screen.findByText("Filling in details…")).toBeOnTheScreen();
     await openMore();
-    await userEvent.paste(screen.getByLabelText("Why"), "For my kids");
+    await userEvent.paste(screen.getByLabelText("Description"), "Ten minutes on the mat");
     gate.resolve(undefined);
 
-    expect(await screen.findByDisplayValue("I finish my coffee")).toBeOnTheScreen();
-    expect(screen.getByLabelText("Why")).toHaveDisplayValue("For my kids");
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Something I did" })).toBeSelected(),
+    );
+    expect(screen.getByLabelText("Description")).toHaveDisplayValue("Ten minutes on the mat");
   });
 
   it("says when the details could not be suggested, and Save still works", async () => {

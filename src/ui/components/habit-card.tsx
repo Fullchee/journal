@@ -246,11 +246,9 @@ function HabitFacts({
 }: Pick<HabitCardProps, "habit" | "nameOf" | "goalName">) {
   return (
     <View>
-      <Detail label="Why" value={habit.why} />
       <Detail label="Schedule" value={scheduleLabel(habit)} />
       <Detail label="Tiny version" value={habit.tinyVersion} />
       <Detail label="Habit loop" value={loopSentence(habit, nameOf)} />
-      <Detail label="Obstacles" value={habit.obstacles.join("; ")} />
       <Detail label="Goals" value={habit.goals.map((id) => goalName(id)).join(", ")} />
     </View>
   );

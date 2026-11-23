@@ -84,14 +84,6 @@ function OneOffDraftForm({ text, draft }: { text: string; draft: string | undefi
             onChange={(date) => update({ date })}
           />
         </View>
-        <TextField
-          label="Why"
-          multiline
-          rows={3}
-          placeholder="Optional"
-          value={form.why}
-          onChangeText={(why) => update({ why })}
-        />
         <UsualWhen usualWhen={form.usualWhen} onChange={(usualWhen) => update({ usualWhen })} />
       </ScrollView>
       <LogSaveFooter

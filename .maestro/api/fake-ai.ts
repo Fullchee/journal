@@ -25,15 +25,11 @@ function logPlan(system: string, sentence: string) {
 }
 
 // Matches the opening of worker/lib/habit-details-model.ts's PROMPT.
-const DETAILS_PROMPT = "You fill in the habit-loop plan";
+const DETAILS_PROMPT = "You fill in the details of one new Habit";
 
 const DETAILS = {
-  why: "E2E fake why",
   cue_type: "action",
-  cue: "E2E fake cue",
-  routine: "E2E fake routine",
-  reward: "E2E fake reward",
-  obstacles: ["no time"],
+  description: "E2E fake description",
 };
 
 export function reply(messages: Message[]) {

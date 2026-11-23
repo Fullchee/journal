@@ -4,11 +4,10 @@ import { DraftOneOff, type NewOneOff } from "./log-api";
 export interface OneOffForm {
   name: string;
   date: string;
-  why: string;
   usualWhen: string;
 }
 
-const BLANK: OneOffForm = { name: "", date: "", why: "", usualWhen: "" };
+const BLANK: OneOffForm = { name: "", date: "", usualWhen: "" };
 
 /** The drafted One-off arrives as JSON in `?draft`; one that doesn't parse opens a blank form. */
 export function openOneOff(draft = ""): OneOffForm {
@@ -21,7 +20,7 @@ export function openOneOff(draft = ""): OneOffForm {
   }
 
   return parsed
-    ? { name: parsed.name, date: parsed.date ?? "", why: parsed.why, usualWhen: parsed.usual_when }
+    ? { name: parsed.name, date: parsed.date ?? "", usualWhen: parsed.usual_when }
     : BLANK;
 }
 
@@ -34,9 +33,8 @@ export function oneOffProblem({ name, date }: OneOffForm, today: string): string
   return date < today ? "Pick today or a later day." : null;
 }
 
-export const newOneOffOf = ({ name, date, why, usualWhen }: OneOffForm): NewOneOff => ({
+export const newOneOffOf = ({ name, date, usualWhen }: OneOffForm): NewOneOff => ({
   name: name.trim(),
   date,
-  why: why.trim(),
   usual_when: usualWhen,
 });

@@ -5,7 +5,7 @@ import { readHabits } from "@worker/lib/habit-records";
 import { like } from "@worker/lib/like";
 
 const CHECK_IN_TEXT = ["note", "doing", "thought", PART_NAMES, "place"];
-const HABIT_TEXT = ["name", "description", "usual_where", "places"];
+const HABIT_TEXT = ["name", "description", "places"];
 
 // An empty query matches every row. LIKE ignores case for ASCII letters only, so "école" misses "École".
 function textFilter(columns: string[], q: string) {

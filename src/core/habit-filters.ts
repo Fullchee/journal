@@ -21,7 +21,6 @@ export interface HabitFilters {
   active: "" | "yes" | "no";
   record: RecordStyle | "";
   targetType: Target["type"] | "";
-  replaces: LinkFilter;
   stackedAfter: LinkFilter;
   startFrom: string;
   startTo: string;
@@ -34,7 +33,6 @@ const blankFilters = (): HabitFilters => ({
   active: "",
   record: "",
   targetType: "",
-  replaces: "",
   stackedAfter: "",
   startFrom: "",
   startTo: "",
@@ -59,7 +57,6 @@ export const filterHabits = (habits: Habit[], f: HabitFilters) =>
       (f.active === "" || h.active === (f.active === "yes")) &&
       matches(f.record, h.record) &&
       matches(f.targetType, h.target.type) &&
-      hasLink(f.replaces, h.replaces) &&
       hasLink(f.stackedAfter, h.stackedAfter) &&
       inDateRange(h.startDate, f.startFrom, f.startTo),
   );
@@ -75,7 +72,6 @@ const PICK_IDS: Record<PickFilter, readonly string[]> = {
   priority: PRIORITIES.map((p) => p.id),
   targetType: TRACKED_TARGET_TYPES,
   record: ["check", "count"],
-  replaces: LINK_IDS,
   stackedAfter: LINK_IDS,
 };
 

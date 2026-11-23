@@ -1,16 +1,13 @@
-import { HabitDetails, Kind, OBSTACLES, CUE_TYPES, RecordStyle, obstacleSuggestions } from "@/core";
+import { HabitDetails, Kind, CUE_TYPES, RecordStyle } from "@/core";
 import * as z from "zod/mini";
 import type { Env, Json } from "./env";
 import { Name, readHabits } from "./habit-records";
 import { LOG_MODEL, readModelJson, type JsonModeAi } from "./log-model";
 import { readTime } from "./log-plan";
 import { MAX_TEXT, MessageText } from "./log-thread";
-import { MAX_OBSTACLE, normalizeObstacles } from "./obstacles";
 
-/** The form's maxLength for the cue, routine, reward and where fields. */
-const MAX_LOOP_FIELD = 200;
-
-const MAX_OBSTACLES = 3;
+// Longer than any HH:MM answer, so a rambling reply is dropped before it is parsed.
+const MAX_TIME_TEXT = 200;
 
 // A Scheduled (`time`) cue is the time itself, which `usual_when` carries; Places covers `location`.
 const PICKABLE_IDS = CUE_TYPES.map((c) => c.id).filter((id) => id !== "time" && id !== "location");
@@ -29,60 +26,40 @@ const SCHEMA = {
   type: "object",
   properties: {
     description: { type: "string" },
-    why: { type: "string" },
     usual_when: { type: "string" },
-    usual_where: { type: "string" },
-    cue: { type: "string" },
     cue_type: { type: "string", enum: PICKABLE_IDS },
-    routine: { type: "string" },
-    reward: { type: "string" },
-    obstacles: { type: "array", items: { type: "string" }, maxItems: MAX_OBSTACLES },
     stacked_after: { type: "string" },
     goals: { type: "array", items: { type: "integer" } },
   },
 } satisfies Json;
 
-const PROMPT = `You fill in the habit-loop plan for one new Habit a person is about to create. Reply with JSON only, and leave out any field you can't guess well.
-- why: one short sentence on why it matters to them.
-- cue_type: "stacked" when it comes right after another Habit, else "emotion" (a feeling), "people" (someone around) or "action" (something they just did).
+const PROMPT = `You fill in the details of one new Habit a person is about to create. Reply with JSON only, and leave out any field you can't guess well.
+- cue_type: what the Habit comes after: "stacked" when it comes right after another Habit, else "emotion" (a feeling), "people" (someone around) or "action" (something they just did).
 - stacked_after: with cue_type "stacked" only, the id from "habits" it comes right after. Never invent an id.
-- cue: for any other cue_type, what sets it off, e.g. "I finish dinner".
-- routine and reward: a good Habit reads "After/when <cue>, I will <routine>. Then I <reward>."; a bad Habit reads "When <cue>, I usually <routine>. It gives me <reward>." Write only the words after "I will"/"I usually" and "Then I"/"It gives me".
 - usual_when: a usual start time as HH:MM (24-hour), only if the sentence or the Habit implies one.
-- usual_where: where it usually happens.
-- obstacles: up to 3 short things that get in the way, lower case; prefer ones from "obstacles".
 - goals: ids from "goals" this Habit serves. Never invent an id.
 - description: leave it out unless the sentence holds detail that fits no other field.
 Keep every field short, in plain words.`;
 
 const Text = z.catch(z.optional(z.string()), undefined);
 
-const Strings = z.optional(z.array(z.string()));
-
 const Numbers = z.optional(z.array(z.number()));
 
 // The model may answer any field with the wrong type, so each is dropped on its own.
 const ModelDetails = z.object({
   description: Text,
-  why: Text,
   usual_when: Text,
-  usual_where: Text,
-  cue: Text,
   cue_type: Text,
-  routine: Text,
-  reward: Text,
-  obstacles: z.catch(Strings, undefined),
   stacked_after: Text,
   goals: z.catch(Numbers, undefined),
 });
 
 type ModelDetails = z.infer<typeof ModelDetails>;
 
-/** What the model may point at: the Habits a new one can stack after, the Goals it can serve, and familiar obstacles. */
+/** What the model may point at: the Habits a new one can stack after and the Goals it can serve. */
 interface DetailsContext {
   habits: { id: string; name: string }[];
   goals: { id: number; title: string }[];
-  obstacles: string[];
 }
 
 async function readDetailsContext(env: Env): Promise<DetailsContext> {
@@ -97,9 +74,6 @@ async function readDetailsContext(env: Env): Promise<DetailsContext> {
   return {
     habits: habits.map(({ id, name }) => ({ id, name })),
     goals: goals.map(({ id, title }) => ({ id, title })),
-    obstacles: obstacleSuggestions(habits, OBSTACLES)
-      .toSorted((a, b) => b.count - a.count)
-      .map(({ name }) => name),
   };
 }
 
@@ -109,11 +83,8 @@ const clip = (text: string | undefined, max: number) => {
   return trimmed === "" ? undefined : trimmed.slice(0, max);
 };
 
-// The server refuses a stacked cue without the Habit it comes after, and the form clears the free-text cue for one.
-function cueOf(
-  { cue_type: type, stacked_after: after, cue }: ModelDetails,
-  { habits }: DetailsContext,
-) {
+// The server refuses a stacked cue without the Habit it comes after.
+function cueOf({ cue_type: type, stacked_after: after }: ModelDetails, { habits }: DetailsContext) {
   const known = habits.some((habit) => habit.id === after) ? after : undefined;
 
   const cueType = PICKABLE_IDS.find(
@@ -122,16 +93,8 @@ function cueOf(
 
   return cueType === "stacked"
     ? { cue_type: cueType, stacked_after: known }
-    : { cue_type: cueType, cue: clip(cue, MAX_LOOP_FIELD) };
+    : { cue_type: cueType };
 }
-
-const obstaclesOf = (obstacles: string[] | undefined) => {
-  const kept = normalizeObstacles(obstacles ?? [])
-    .filter((obstacle) => obstacle.length <= MAX_OBSTACLE)
-    .slice(0, MAX_OBSTACLES);
-
-  return kept.length > 0 ? kept : undefined;
-};
 
 const goalsOf = (goals: number[] | undefined, ctx: DetailsContext) => {
   const kept = ctx.goals.filter(({ id }) => goals?.includes(id) === true).map(({ id }) => id);
@@ -140,7 +103,7 @@ const goalsOf = (goals: number[] | undefined, ctx: DetailsContext) => {
 };
 
 const usualWhenOf = (text: string | undefined) => {
-  const time = clip(text, MAX_LOOP_FIELD);
+  const time = clip(text, MAX_TIME_TEXT);
 
   return time === undefined ? undefined : (readTime(time) ?? undefined);
 };
@@ -159,12 +122,7 @@ function detailsOf(reply: ModelDetails | null, ctx: DetailsContext): HabitDetail
     present({
       ...cueOf(reply, ctx),
       description: clip(reply.description, MAX_TEXT),
-      why: clip(reply.why, MAX_TEXT),
       usual_when: usualWhenOf(reply.usual_when),
-      usual_where: clip(reply.usual_where, MAX_LOOP_FIELD),
-      routine: clip(reply.routine, MAX_LOOP_FIELD),
-      reward: clip(reply.reward, MAX_LOOP_FIELD),
-      obstacles: obstaclesOf(reply.obstacles),
       goals: goalsOf(reply.goals, ctx),
     }),
   );
@@ -195,7 +153,7 @@ async function askDetailsModel(
   return readModelJson(response, ModelDetails);
 }
 
-/** The new Habit's habit-loop details, or null when Workers AI can't be reached. */
+/** The new Habit's details, or null when Workers AI can't be reached. */
 export async function readHabitDetails(
   env: Env,
   request: DetailsRequest,

@@ -15,13 +15,7 @@ import {
 } from "@/core";
 import * as z from "zod/mini";
 import { DATE, isMinutes, MAX_COUNT } from "./habit-records";
-import {
-  MAX_TEXT,
-  type ModelCreate,
-  type ModelItem,
-  type ModelOneOff,
-  type ModelReply,
-} from "./log-thread";
+import type { ModelCreate, ModelItem, ModelOneOff, ModelReply } from "./log-thread";
 
 /** What the log box knows about a Habit; the model sees the same fields. */
 export type LogHabit = Pick<Habit, "id" | "name" | "kind" | "record" | "targetMinutes">;
@@ -315,7 +309,7 @@ export function readOneOff(
   today: string,
 ): DraftOneOff | null {
   if (model === null || model === undefined) return null;
-  const { name, date, time, why } = model;
+  const { name, date, time } = model;
 
   if (name === undefined || name.trim() === "" || name.length > MAX_NAME) return null;
   const clock = time === undefined ? null : readTime(time);
@@ -323,7 +317,6 @@ export function readOneOff(
   return {
     name: name.trim(),
     ...(isDueDate(date, today) && { date }),
-    why: why !== undefined && why.length <= MAX_TEXT ? why.trim() : "",
     usual_when: clock ?? "",
   };
 }

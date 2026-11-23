@@ -57,17 +57,12 @@ const details = (env: Env, body: Json = STRETCH, email: string | null = OWNER) =
     request: apiRequest("POST", "https://x/api/habits/draft", { email, body }),
   });
 
-test("returns the model's habit-loop details, trimmed", async () => {
+test("returns the model's Habit details, trimmed", async () => {
   const env = await replying({
-    description: "Ten minutes on the mat",
-    why: " Less back pain ",
+    description: " Ten minutes on the mat ",
     usual_when: "7:30",
-    usual_where: "Living room",
     cue_type: "stacked",
     stacked_after: "coffee",
-    routine: "stretch for ten minutes",
-    reward: "feel loose",
-    obstacles: ["No time", "too tired"],
     goals: [2],
   });
 
@@ -76,19 +71,14 @@ test("returns the model's habit-loop details, trimmed", async () => {
   assert.equal(res.status, 200);
   assert.deepEqual(await readJson(res), {
     description: "Ten minutes on the mat",
-    why: "Less back pain",
     usual_when: "07:30",
-    usual_where: "Living room",
     cue_type: "stacked",
     stacked_after: "coffee",
-    routine: "stretch for ten minutes",
-    reward: "feel loose",
-    obstacles: ["no time", "too tired"],
     goals: [2],
   });
 });
 
-test("sends the Habit, the sentence, and the active Habits, Goals and obstacle suggestions", async () => {
+test("sends the Habit, the sentence, and the active Habits and Goals", async () => {
   const env = await replying({});
 
   await details(env);
@@ -96,9 +86,11 @@ test("sends the Habit, the sentence, and the active Habits, Goals and obstacle s
   const [system, user] = env.inputs[0]?.messages ?? [];
   const context = JSON.parse(system?.content.split("Context: ", 2)[1] ?? "");
 
-  assert.deepEqual(context.habits, [{ id: "coffee", name: "Morning coffee" }]);
-  assert.deepEqual(context.goals, [{ id: 2, title: "Feel strong" }]);
-  assert.equal(context.obstacles.includes("no time"), true);
+  assert.equal(system?.content.startsWith("You fill in the details of one new Habit"), true);
+  assert.deepEqual(context, {
+    habits: [{ id: "coffee", name: "Morning coffee" }],
+    goals: [{ id: 2, title: "Feel strong" }],
+  });
   assert.deepEqual(JSON.parse(user?.content ?? ""), {
     name: "Stretch",
     kind: "good",
@@ -113,10 +105,9 @@ test("drops an unknown stacked Habit, an unknown Goal and a cue type the form do
     cue_type: "stacked",
     stacked_after: "made-up",
     goals: [2, 3, 99, 2],
-    cue: "after coffee",
   });
 
-  assert.deepEqual(await readJson(await details(env)), { cue: "after coffee", goals: [2] });
+  assert.deepEqual(await readJson(await details(env)), { goals: [2] });
 
   const timed = await replying({
     cue_type: "time",
@@ -127,52 +118,31 @@ test("drops an unknown stacked Habit, an unknown Goal and a cue type the form do
   assert.deepEqual(await readJson(await details(timed)), {});
 });
 
-test("a stacked cue drops the free-text cue, and another cue drops the stacked Habit", async () => {
-  const stacked = await replying({
-    cue_type: "stacked",
-    stacked_after: "coffee",
-    cue: "after coffee",
-  });
+test("a cue other than stacked drops the stacked Habit", async () => {
+  const emotion = await replying({ cue_type: "emotion", stacked_after: "coffee" });
 
-  assert.deepEqual(await readJson(await details(stacked)), {
-    cue_type: "stacked",
-    stacked_after: "coffee",
-  });
-
-  const emotion = await replying({
-    cue_type: "emotion",
-    stacked_after: "coffee",
-    cue: "I feel stiff",
-  });
-
-  assert.deepEqual(await readJson(await details(emotion)), {
-    cue_type: "emotion",
-    cue: "I feel stiff",
-  });
+  assert.deepEqual(await readJson(await details(emotion)), { cue_type: "emotion" });
 });
 
-test("caps obstacles at three and each field's length, and drops blank fields", async () => {
+test("caps the description's length, and drops blank fields and the fields the form no longer has", async () => {
   const env = await replying({
-    obstacles: ["a", "b", "c", "d", "x".repeat(51)],
-    routine: "r".repeat(300),
-    why: "w".repeat(3000),
-    reward: " ".repeat(3),
+    description: "d".repeat(3000),
+    usual_when: " ".repeat(3),
+    why: "Less back pain",
+    routine: "stretch",
+    obstacles: ["no time"],
   });
 
-  const body = await readJson<{ obstacles: string[]; routine: string; why: string }>(
-    await details(env),
-  );
+  const body = await readJson<{ description: string }>(await details(env));
 
-  assert.deepEqual(body.obstacles, ["a", "b", "c"]);
-  assert.equal(body.routine.length, 200);
-  assert.equal(body.why.length, 2000);
-  assert.equal("reward" in body, false);
+  assert.deepEqual(Object.keys(body), ["description"]);
+  assert.equal(body.description.length, 2000);
 });
 
 test("keeps the fields that check out when others have the wrong type", async () => {
-  const env = await replying({ why: 5, obstacles: "no time", goals: ["2"], routine: "stretch" });
+  const env = await replying({ description: 5, goals: ["2"], cue_type: "people" });
 
-  assert.deepEqual(await readJson(await details(env)), { routine: "stretch" });
+  assert.deepEqual(await readJson(await details(env)), { cue_type: "people" });
 });
 
 test("a reply that isn't JSON fills nothing", async () => {
@@ -198,7 +168,7 @@ test("refuses anyone but the owner, and a body without a name", async () => {
 });
 
 test("is routed at POST /api/habits/draft", async () => {
-  const env = await replying({ why: "Less back pain" });
+  const env = await replying({ usual_when: "07:00" });
 
   const res = await worker.fetch(
     apiRequest("POST", "https://journal.fullchee.workers.dev/api/habits/draft", {
@@ -208,5 +178,5 @@ test("is routed at POST /api/habits/draft", async () => {
     env,
   );
 
-  assert.deepEqual(await readJson(res), { why: "Less back pain" });
+  assert.deepEqual(await readJson(res), { usual_when: "07:00" });
 });

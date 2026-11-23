@@ -4,11 +4,6 @@ import { clockLabel, dayOfWeek, shiftDay, torontoDay } from "./calendar";
 import type { CheckIn } from "./check-in-view";
 import { Season } from "./season";
 
-export interface ChipCount {
-  name: string;
-  count: number;
-}
-
 /**
  * Each list below is the one source for its values: the TS type, the server's checks and the schema test derive from it.
  */
@@ -85,15 +80,17 @@ export function withTargetType(target: Target, type: Target["type"]): Target {
   return { ...target, type, count: Math.min(max, Math.max(min, target.count)) };
 }
 
-/** Duhigg's five cue categories, with habit stacking as the sixth. */
-/** In the form's order; `time` is the Scheduled cue, whose label depends on Kind (`cueChoices`). */
+/**
+ * The anchor a Habit comes after (Fogg): Duhigg's five cue categories, with habit stacking as the sixth. Each label
+ * answers "After what?"; `time` is the Scheduled cue, whose label depends on Kind (`cueChoices`).
+ */
 export const CUE_TYPES = [
-  { id: "time", label: "Scheduled" },
-  { id: "stacked", label: "Stacked habit" },
-  { id: "action", label: "Previous Action" },
-  { id: "emotion", label: "Emotional State" },
-  { id: "people", label: "People" },
-  { id: "location", label: "Location" },
+  { id: "time", label: "A set time" },
+  { id: "stacked", label: "Another habit" },
+  { id: "action", label: "Something I did" },
+  { id: "emotion", label: "A feeling" },
+  { id: "people", label: "Being with people" },
+  { id: "location", label: "Arriving somewhere" },
 ] as const;
 
 export const CueType = z.enum(CUE_TYPES.map((c) => c.id));
@@ -128,11 +125,8 @@ export const Habit = z.object({
   id: z.string(),
   name: z.string(),
   description: z.string(),
-  why: z.string(),
   /** The form's Time; Today orders Habits by it when there is no alarm (`habitTime`). */
   usualWhen: UsualWhen,
-  /** The usual spot, free text finer than `places`; the editor no longer shows it, and a save keeps the stored value. */
-  usualWhere: z.string(),
   /** Check-in places where the Habit can be done; empty means anywhere (`fitsPlace`). */
   places: z.array(z.string()),
   kind: Kind,
@@ -146,12 +140,8 @@ export const Habit = z.object({
   /** An Opt-out `duration` Habit's usual length: each counted day logs one Duration entry of it. */
   usualMinutes: z.nullable(z.number()),
   startDate: z.string(),
-  cue: z.string(),
+  /** What the Habit comes after: a time, another Habit (`stackedAfter`) or a kind of moment; "" when unset. */
   cueType: z.union([CueType, z.literal("")]),
-  routine: z.string(),
-  reward: z.string(),
-  obstacles: z.array(z.string()),
-  replaces: z.nullable(z.string()),
   stackedAfter: z.nullable(z.string()),
   target: Target,
   record: RecordStyle,
@@ -253,8 +243,6 @@ export const KIND_COPY: Record<
   {
     target: string;
     scheduledCue: string;
-    cue: string;
-    routine: string;
     routineLead: string;
     schedule: string;
     recordDefault: RecordStyle;
@@ -262,19 +250,15 @@ export const KIND_COPY: Record<
 > = {
   good: {
     target: "Frequency",
-    scheduledCue: "Scheduled",
-    cue: "After / when…",
-    routine: "I will…",
+    scheduledCue: "A set time",
     routineLead: "I will",
     schedule: "Due",
     recordDefault: "check",
   },
   bad: {
     target: "Limit",
-    // "Scheduled" reads as a plan, which a bad habit isn't.
-    scheduledCue: "Time",
-    cue: "When…",
-    routine: "I usually…",
+    // "A set time" reads as a plan, which a bad habit isn't.
+    scheduledCue: "A time of day",
     routineLead: "I usually",
     schedule: "At most",
     recordDefault: "count",
@@ -408,9 +392,7 @@ export const libraryHabit = (habits: Habit[], id: string) =>
 export const blankHabit = (kind: Kind): Draft => ({
   name: "",
   description: "",
-  why: "",
   usualWhen: "",
-  usualWhere: "",
   places: [],
   kind,
   stage: "seed",
@@ -420,12 +402,7 @@ export const blankHabit = (kind: Kind): Draft => ({
   optOutFrom: null,
   usualMinutes: null,
   startDate: torontoDay(new Date()),
-  cue: "",
   cueType: "",
-  routine: "",
-  reward: "",
-  obstacles: [],
-  replaces: null,
   stackedAfter: null,
   target: { type: "daily", count: 7, days: [] },
   record: KIND_COPY[kind].recordDefault,
@@ -436,17 +413,6 @@ export const blankHabit = (kind: Kind): Draft => ({
   seasonQuietUntil: null,
   tinyVersion: "",
 });
-
-/** Built-in obstacles plus ones used on other habits, most used first. */
-export const obstacleSuggestions = (habits: Habit[], builtIn: readonly string[]): ChipCount[] => {
-  const counts = new Map(builtIn.map((name) => [name, 0]));
-
-  const used = habits.flatMap((h) => h.obstacles);
-
-  for (const name of used) counts.set(name, (counts.get(name) ?? 0) + 1);
-
-  return [...counts].map(([name, count]) => ({ name, count }));
-};
 
 /** Adds the weekday when missing and removes it when present. */
 export const toggleDay = (days: number[], day: number) =>
@@ -507,10 +473,6 @@ export const scheduleSummary = (habit: Draft) => {
   return `${KIND_COPY[habit.kind].schedule} ${targetWhen(habit.target)}, ${recordWhen(habit)}`;
 };
 
-/** The good habits that name this bad habit in `replaces`. */
-export const replacedBy = <T extends Pick<Habit, "replaces">>(habits: T[], id: string) =>
-  habits.filter((h) => h.replaces === id);
-
 /** Habits that may come before `id` without a loop: not itself, and not one that already comes after it. */
 export const stackCandidates = (habits: Habit[], id?: string) => {
   const comesAfter = (habit: Habit) => {
@@ -532,48 +494,31 @@ export const stackCandidates = (habits: Habit[], id?: string) => {
   return id === undefined ? habits : habits.filter((h) => !comesAfter(h));
 };
 
-const lowerFirst = (text: string) => text.charAt(0).toLowerCase() + text.slice(1);
-
 const upperFirst = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
-const TRIGGER_WORDS = /^(?:after|when|before|if|once)\b/i;
-
-const ENDS_SENTENCE = /[.!?\u{22}\u{201D}\u{27})]$/u;
-
-const endSentence = (text: string) => (ENDS_SENTENCE.test(text) ? text : `${text}.`);
-
-function triggerOf(cue: string, stackedAfter: string | null, nameOf: (id: string) => string) {
-  if (cue !== "") return TRIGGER_WORDS.test(cue) ? cue : `When ${cue}`;
-
-  return stackedAfter === null ? "" : `After “${nameOf(stackedAfter)}”`;
-}
+const afterHabit = (stackedAfter: string | null, nameOf: (id: string) => string) =>
+  stackedAfter === null ? "" : `After “${nameOf(stackedAfter)}”`;
 
 /**
- * "When <cue>, I will <routine> at <when>." with empty parts left out;
- * a Scheduled cue with a time opens with "At <time>" instead.
+ * "After <anchor>, I will do “<name>” at <when>." A Scheduled cue with a time opens with "At <time>" instead. Empty
+ * when there is neither an anchor nor a time, since the sentence would only repeat the name.
  */
 export const loopSentence = (habit: Draft, nameOf: (id: string) => string) => {
-  const cue = habit.cue.trim();
-  const routine = habit.routine.trim();
-  const { routineLead } = KIND_COPY[habit.kind];
-
   const time = habit.cueType === "time" ? habitTime(habit) : null;
 
-  // A Scheduled cue's time opens the sentence, so it isn't repeated after the routine.
+  // A Scheduled cue's time opens the sentence, so it isn't repeated after the action.
   const usualWhen =
     time === null && habit.usualWhen !== "" ? ` at ${clockLabel(habit.usualWhen)}` : "";
 
-  const doing = routine === "" ? "do it" : lowerFirst(routine);
-  const action = routine === "" && usualWhen === "" ? "" : `${routineLead} ${doing}${usualWhen}`;
+  const anchor = time === null ? afterHabit(habit.stackedAfter, nameOf) : `At ${clockLabel(time)}`;
 
-  const sentence = [
-    time === null ? triggerOf(cue, habit.stackedAfter, nameOf) : `At ${clockLabel(time)}`,
-    action,
-  ]
-    .filter((part) => part !== "")
-    .join(", ");
+  if (anchor === "" && usualWhen === "") return "";
 
-  return sentence === "" ? "" : endSentence(upperFirst(sentence));
+  const name = habit.name.trim();
+  const doing = name === "" ? "do it" : `do “${name}”`;
+  const action = `${KIND_COPY[habit.kind].routineLead} ${doing}${usualWhen}`;
+
+  return `${upperFirst([anchor, action].filter((part) => part !== "").join(", "))}.`;
 };
 
 /** Imported Habits open their description with "# <name>"; the card already shows the name as its title. */

@@ -79,7 +79,7 @@ const GOALS: Goal[] = [{ id: 1, title: "Steady energy", state: "active" }];
 
 const tracker = (): HabitsBody => ({
   habits: [
-    habit({ description: "Slow is **fine**.", why: "Clear head", goals: [1] }),
+    habit({ description: "Slow is **fine**.", tinyVersion: "Walk to the corner", goals: [1] }),
     habit({ id: "water", name: "Water", record: "count" }),
     habit({ id: "read", name: "Read", record: "duration", targetMinutes: 60 }),
     habit({
@@ -199,7 +199,7 @@ describe("Habits tab", () => {
 
     await userEvent.press(await screen.findByRole("button", { name: "Details of Walk" }));
 
-    expect(screen.getByText("Clear head")).toBeOnTheScreen();
+    expect(screen.getByText("Walk to the corner")).toBeOnTheScreen();
     expect(screen.getByText("Steady energy")).toBeOnTheScreen();
     expect(screen.getByText("Slow is **fine**.")).toBeOnTheScreen();
     expect(screen.getByLabelText("Walk: last 7 days")).toBeOnTheScreen();
@@ -269,10 +269,10 @@ describe("Habits tab", () => {
     const details = await screen.findByRole("button", { name: "Details of Walk" });
 
     await userEvent.press(details);
-    expect(screen.getByText("Clear head")).toBeOnTheScreen();
+    expect(screen.getByText("Walk to the corner")).toBeOnTheScreen();
 
     await userEvent.press(details);
-    expect(screen.queryByText("Clear head")).not.toBeOnTheScreen();
+    expect(screen.queryByText("Walk to the corner")).not.toBeOnTheScreen();
   });
 
   it("names the Habit a loop follows and a Goal the list doesn't hold by their ids", async () => {
@@ -281,9 +281,9 @@ describe("Habits tab", () => {
       "/api/habits": (): HabitsBody => ({
         ...tracker(),
         habits: [
-          habit({ cue: "", stackedAfter: "water", goals: [1, 9] }),
+          habit({ stackedAfter: "water", goals: [1, 9] }),
           habit({ id: "water", name: "Water", record: "count" }),
-          habit({ id: "rinse", name: "Rinse", cue: "", stackedAfter: "gone" }),
+          habit({ id: "rinse", name: "Rinse", stackedAfter: "gone" }),
         ],
       }),
     });
@@ -500,10 +500,8 @@ describe("Habit editor", () => {
 
     await userEvent.paste(screen.getByLabelText("Name"), "Stretch");
     await openMore();
-    await userEvent.paste(screen.getByLabelText("Why"), "Loose back");
-    await userEvent.press(chip("Cue", "Stacked habit"));
+    await userEvent.press(chip("After what?", "Another habit"));
     await userEvent.press(chip("Comes after habit", "Walk"));
-    await userEvent.paste(screen.getByLabelText("I will…"), "Stretch five minutes");
     expect(screen.queryByLabelText("Usual when")).not.toBeOnTheScreen();
     expect(screen.getByText("Anywhere")).toBeOnTheScreen();
     await userEvent.press(chip("Places", "Gym"));
@@ -514,11 +512,6 @@ describe("Habit editor", () => {
     await fireEvent(screen.getByLabelText("Other place"), "submitEditing");
     expect(screen.queryByLabelText("Other place")).not.toBeOnTheScreen();
     expect(screen.queryByText("Anywhere")).not.toBeOnTheScreen();
-    await userEvent.paste(screen.getByLabelText("Obstacles"), "Too Tired ");
-    await fireEvent(screen.getByLabelText("Obstacles"), "submitEditing");
-    await userEvent.press(chip("Suggestions", "no time"));
-    await userEvent.press(screen.getByRole("button", { name: "Remove no time" }));
-    await userEvent.press(chip("Replaces bad habit", "Snack"));
     await userEvent.press(chip("Frequency", "N× a week"));
     await userEvent.press(screen.getByRole("button", { name: "Fewer times" }));
     await userEvent.press(chip("Record", "Minutes"));
@@ -539,9 +532,7 @@ describe("Habit editor", () => {
       type: "habit",
       name: "Stretch",
       description: "# Stretch",
-      why: "Loose back",
       usualWhen: "07:30",
-      usualWhere: "",
       places: ["Gym", "Pool"],
       kind: "good",
       stage: "sprout",
@@ -551,12 +542,7 @@ describe("Habit editor", () => {
       optOutFrom: null,
       usualMinutes: null,
       startDate: "2026-12-24",
-      cue: "",
       cueType: "stacked",
-      routine: "Stretch five minutes",
-      reward: "",
-      obstacles: ["too tired"],
-      replaces: "snack",
       stackedAfter: "walk",
       target: { type: "weekly", count: 6, days: [] },
       record: "duration",
@@ -567,28 +553,6 @@ describe("Habit editor", () => {
       seasonQuietUntil: null,
       tinyVersion: "",
     } satisfies Draft & { type: string });
-  });
-
-  it("keeps an older Habit's usual spot and reward when it saves", async () => {
-    const { writes } = fakeApi({
-      ...HABITS_ROUTES,
-      "/api/habits": () => ({
-        ...tracker(),
-        habits: [habit({ usualWhere: "the hall", reward: "feel loose" })],
-      }),
-    });
-
-    await renderRouter(APP_DIR, { initialUrl: "/habit/walk" });
-
-    await userEvent.paste(await screen.findByLabelText("Name"), "Walk far");
-    await userEvent.press(screen.getByRole("button", { name: "Save" }));
-
-    await waitFor(() => expect(posted(writes)).toHaveLength(1));
-    expect(posted(writes)[0]).toMatchObject({
-      name: "Walk far",
-      usualWhere: "the hall",
-      reward: "feel loose",
-    });
   });
 
   it("makes a timed Habit Opt-out from today with its usual length", async () => {
@@ -637,8 +601,7 @@ describe("Habit editor", () => {
     await userEvent.press(screen.getByRole("button", { name: "Add time" }));
     await userEvent.press(chip("Notify", "Alarm"));
     await userEvent.press(chip("Notify", "None"));
-    await userEvent.press(chip("Cue", "People"));
-    await userEvent.paste(screen.getByLabelText("After / when…"), "a friend calls");
+    await userEvent.press(chip("After what?", "Being with people"));
     await userEvent.press(screen.getByRole("button", { name: "Move to backlog" }));
     await userEvent.press(screen.getByRole("button", { name: "Save" }));
 
@@ -649,56 +612,16 @@ describe("Habit editor", () => {
       alarm: null,
       usualWhen: "08:00",
       cueType: "people",
-      cue: "a friend calls",
       active: false,
     });
   });
 
-  it("offers only bad Habits that share a Place, keeping the current pick, as the last field", async () => {
-    fakeApi({
-      ...HABITS_ROUTES,
-      "/api/habits": () => ({
-        ...tracker(),
-        habits: [
-          habit({ places: ["Gym"], replaces: "scroll" }),
-          habit({ id: "snack", name: "Snack", kind: "bad", places: ["gym"] }),
-          habit({ id: "scroll", name: "Scroll", kind: "bad", places: ["Work"] }),
-          habit({ id: "bite", name: "Nail biting", kind: "bad", places: ["Work"] }),
-          habit({ id: "sugar", name: "Sugar", kind: "bad" }),
-        ],
-      }),
-    });
-    await renderRouter(APP_DIR, { initialUrl: "/habit/walk" });
-    await screen.findByLabelText("Name");
-    await openMore();
-
-    const offered = () =>
-      ["Snack", "Scroll", "Nail biting", "Sugar"].filter(
-        (name) =>
-          within(screen.getByLabelText("Replaces bad habit")).queryByRole("button", { name }) !==
-          null,
-      );
-
-    expect(offered()).toEqual(["Snack", "Scroll", "Sugar"]);
-
-    await userEvent.press(chip("Places", "Gym"));
-
-    expect(offered()).toEqual(["Snack", "Scroll", "Nail biting", "Sugar"]);
-
-    const labels = screen.getAllByText(/^(?:Description|Replaces bad habit)$/);
-
-    expect(labels).toHaveLength(2);
-    expect(labels.at(-1)).toHaveTextContent("Replaces bad habit");
-  });
-
-  it("shows who replaces a bad Habit and blocks a stacked cue with no Habit", async () => {
+  it("blocks a stacked cue with no Habit", async () => {
     await renderAt("/habits?edit=snack");
     await screen.findByLabelText("Name");
     await openMore();
 
-    expect(screen.queryByRole("group", { name: "Replaces bad habit" })).not.toBeOnTheScreen();
-
-    await userEvent.press(chip("Cue", "Stacked habit"));
+    await userEvent.press(chip("After what?", "Another habit"));
 
     expect(screen.getByText("Choose the habit this one comes after.")).toBeOnTheScreen();
     expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
@@ -876,7 +799,7 @@ describe("Habit editor", () => {
 
     expect(screen.getAllByLabelText("Time: 8:00 AM")).toHaveLength(1);
     expect(screen.queryByText("Choose a time.")).not.toBeOnTheScreen();
-    expect(screen.queryByLabelText("Cue")).not.toBeOnTheScreen();
+    expect(screen.queryByLabelText("After what?")).not.toBeOnTheScreen();
 
     await userEvent.press(screen.getByRole("button", { name: "Save" }));
 
@@ -899,21 +822,18 @@ describe("Habit editor", () => {
     await screen.findByLabelText("Name");
     await openMore();
 
-    expect(chip("Cue", "Scheduled")).toBeSelected();
-    expect(screen.queryByLabelText(KIND_COPY.good.cue)).not.toBeOnTheScreen();
+    expect(chip("After what?", "A set time")).toBeSelected();
+    expect(screen.queryByLabelText("Comes after habit")).not.toBeOnTheScreen();
     expect(screen.getAllByLabelText("Time: 7:45 AM")).toHaveLength(1);
+    expect(screen.getByText("At 7:45 AM, I will do “Walk”.")).toBeOnTheScreen();
 
-    await userEvent.paste(screen.getByLabelText("I will…"), "Walk");
-
-    expect(screen.getByText("At 7:45 AM, I will walk.")).toBeOnTheScreen();
-
-    await userEvent.press(chip("Cue", "People"));
+    await userEvent.press(chip("After what?", "Being with people"));
 
     expect(screen.getAllByLabelText("Time: 7:45 AM")).toHaveLength(1);
-    expect(screen.getByLabelText(KIND_COPY.good.cue)).toBeOnTheScreen();
+    expect(screen.getByText("I will do “Walk” at 7:45 AM.")).toBeOnTheScreen();
   });
 
-  it("calls the schedule Frequency on a good Habit and Limit, with a Time cue, on a bad one", async () => {
+  it("calls the schedule Frequency on a good Habit and Limit, with A time of day, on a bad one", async () => {
     await renderAt("/habits?edit=new");
     await screen.findByLabelText("Name");
 
@@ -923,7 +843,7 @@ describe("Habit editor", () => {
     await openMore();
 
     expect(chip("Limit", "Every day")).toBeOnTheScreen();
-    expect(chip("Cue", "Time")).toBeSelected();
+    expect(chip("After what?", "A time of day")).toBeSelected();
     expect(screen.queryByRole("group", { name: "Frequency" })).not.toBeOnTheScreen();
   });
 
@@ -940,30 +860,33 @@ describe("Habit editor", () => {
         expect(texts.at(i)).toHaveTextContent(name, { exact: true });
     };
 
-    const cues = ["Scheduled", "Stacked habit", "Previous Action", "Emotional State", "People"];
+    const cues = [
+      "A set time",
+      "Another habit",
+      "Something I did",
+      "A feeling",
+      "Being with people",
+    ];
 
-    inOrder(within(screen.getByLabelText("Cue")).getAllByText(/./), ["Cue", ...cues]);
+    inOrder(within(screen.getByLabelText("After what?")).getAllByText(/./), [
+      "After what?",
+      ...cues,
+    ]);
 
     const fields = [
       "Name",
       "Kind",
       "Frequency",
       "Started",
-      "Why",
-      "Cue",
-      "I will…",
+      "After what?",
       "Places",
-      // The section heading, then its text field.
-      "Obstacles",
-      "Obstacles",
       "Goals this habit serves",
       "Stage",
       "Priority",
       "Description",
-      "Replaces bad habit",
     ];
 
-    const anyField = new RegExp(`^(?:${[...new Set(fields)].join("|")})$`);
+    const anyField = new RegExp(`^(?:${fields.map((field) => RegExp.escape(field)).join("|")})$`);
 
     inOrder(screen.getAllByText(anyField), fields);
   });
@@ -978,18 +901,9 @@ describe("Habit editor", () => {
     await userEvent.press(chip(KIND_COPY.bad.target, "Once"));
     await openMore();
 
-    expect(screen.getByLabelText("Why")).toBeOnTheScreen();
+    expect(screen.getByLabelText("Description")).toBeOnTheScreen();
 
-    for (const field of [
-      "Cue",
-      "I will…",
-      "Places",
-      "Obstacles",
-      "Kind",
-      "Record",
-      "Stage",
-      "Priority",
-    ])
+    for (const field of ["Why", "After what?", "Places", "Kind", "Record", "Stage", "Priority"])
       expect(screen.queryByLabelText(field)).not.toBeOnTheScreen();
     expect(screen.queryByLabelText(/^Started: /)).not.toBeOnTheScreen();
     expect(screen.queryByRole("heading", { name: "Habit loop" })).not.toBeOnTheScreen();

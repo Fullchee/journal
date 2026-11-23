@@ -60,7 +60,7 @@ test("Logged parses a save's receipt", () => {
 test("LogDraft parses a One-off with its day", () => {
   const draft = {
     type: "one-off",
-    one_off: { name: "Go portaging", date: "2026-11-14", why: "", usual_when: "" },
+    one_off: { name: "Go portaging", date: "2026-11-14", usual_when: "" },
     text: "Go portaging on Saturday 14 Nov.",
   };
 
@@ -70,7 +70,7 @@ test("LogDraft parses a One-off with its day", () => {
 test("LogDraft parses a One-off with no day yet", () => {
   const draft = {
     type: "one-off",
-    one_off: { name: "Call the clinic", why: "Refill", usual_when: "09:00" },
+    one_off: { name: "Call the clinic", usual_when: "09:00" },
     text: "Which day is Call the clinic?",
   };
 
@@ -80,19 +80,17 @@ test("LogDraft parses a One-off with no day yet", () => {
 test("LogDraft refuses a One-off whose usual when isn't HH:MM", () => {
   const draft = {
     type: "one-off",
-    one_off: { name: "Call the clinic", why: "", usual_when: "9am" },
+    one_off: { name: "Call the clinic", usual_when: "9am" },
     text: "Which day is Call the clinic?",
   };
 
   assert.equal(LogDraft.safeParse(draft).success, false);
 });
 
-test("HabitDetails parses a partial habit-loop guess", () => {
+test("HabitDetails parses a partial guess", () => {
   const details = {
-    why: "Calm mornings",
     cue_type: "stacked",
     stacked_after: "coffee",
-    obstacles: ["no time"],
     goals: [2],
   };
 

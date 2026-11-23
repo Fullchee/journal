@@ -44,74 +44,53 @@ describe("HabitForm", () => {
     expect(screen.getByLabelText("Record")).toBeOnTheScreen();
     expect(more()).toHaveTextContent("More");
     expect(more()).not.toBeExpanded();
-    expect(screen.queryByLabelText("Why")).not.toBeOnTheScreen();
+    expect(screen.queryByLabelText("Description")).not.toBeOnTheScreen();
     expect(screen.queryByText("Circle picker")).not.toBeOnTheScreen();
 
     await userEvent.press(more());
 
-    for (const field of [
-      "Why",
-      "Cue",
-      "I will…",
-      "Places",
-      "Obstacles",
-      "Stage",
-      "Priority",
-      "Description",
-    ])
+    for (const field of ["After what?", "Places", "Stage", "Priority", "Description"])
       expect(screen.getByLabelText(field)).toBeOnTheScreen();
+
+    for (const dropped of ["Why", "I will…", "Obstacles", "Replaces bad habit"])
+      expect(screen.queryByLabelText(dropped)).not.toBeOnTheScreen();
     expect(screen.getByText("Circle picker")).toBeOnTheScreen();
     expect(more()).toBeExpanded();
 
     await userEvent.press(more());
 
-    expect(screen.queryByLabelText("Why")).not.toBeOnTheScreen();
-  });
-
-  it("has no Usual spot or reward field", async () => {
-    await renderForm(habit({ usualWhere: "the hall", reward: "feel loose" }));
-    await userEvent.press(more());
-
-    expect(screen.queryByLabelText("Usual spot")).not.toBeOnTheScreen();
-    expect(screen.queryByLabelText("Then I…")).not.toBeOnTheScreen();
-    expect(screen.queryByDisplayValue("the hall")).not.toBeOnTheScreen();
-    expect(screen.queryByDisplayValue("feel loose")).not.toBeOnTheScreen();
-  });
-
-  it("leaves Obstacles off a bad Habit", async () => {
-    await renderForm(habit({ kind: "bad", obstacles: ["too tired"] }));
-    await userEvent.press(more());
-
-    expect(screen.getByLabelText("Why")).toBeOnTheScreen();
-    expect(screen.queryByLabelText("Obstacles")).not.toBeOnTheScreen();
-    expect(screen.queryByText("too tired")).not.toBeOnTheScreen();
+    expect(screen.queryByLabelText("Description")).not.toBeOnTheScreen();
   });
 
   it("counts the filled fields under More, leaving out what a bad Habit hides", async () => {
     const filled = {
-      why: "Clear head",
-      cue: "lunch ends",
+      cueType: "action" as const,
       places: ["Gym"],
       goals: [1],
-      obstacles: ["rain"],
-      replaces: "snack",
+      tinyVersion: "Put on shoes",
     };
 
     const { rerender } = await renderForm(habit({ ...filled, description: "  " }));
 
-    expect(more()).toHaveTextContent("More · 6 filled");
+    expect(more()).toHaveTextContent("More · 4 filled");
 
     await rerender(form(habit({ ...filled, kind: "bad" })));
 
-    expect(more()).toHaveTextContent("More · 4 filled");
+    expect(more()).toHaveTextContent("More · 3 filled");
   });
 
-  it("counts only Why, Goals and Description on a One-off", async () => {
+  it("leaves a Scheduled cue out of the More count, since it shows in the schedule", async () => {
+    await renderForm(habit({ cueType: "time", usualWhen: "07:00" }));
+
+    expect(more()).toHaveTextContent(/^More$/);
+  });
+
+  it("counts only Goals and Description on a One-off", async () => {
     await renderForm(
       habit({
         target: { type: "once", count: 1, days: [] },
-        why: "Fun",
-        routine: "Paddle",
+        goals: [1],
+        places: ["Gym"],
         description: "Map",
       }),
     );

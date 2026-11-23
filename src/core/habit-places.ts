@@ -1,4 +1,4 @@
-import type { Draft, Habit } from "./habits-view";
+import type { Habit } from "./habits-view";
 
 const placeKey = (place: string) => place.trim().toLowerCase();
 
@@ -23,15 +23,3 @@ export const fitsPlace = (habit: Pick<Habit, "places">, place: string) =>
   placeKey(place) === "" ||
   habit.places.length === 0 ||
   habit.places.some((own) => samePlace(own, place));
-
-const sharesPlace = (habit: Pick<Habit, "places">, places: readonly string[]) =>
-  places.length === 0 || places.some((place) => fitsPlace(habit, place));
-
-/** The bad Habits a good one can replace: ones done where it is, plus its current pick so the form still shows it. */
-export const replaceCandidates = (habits: Habit[], draft: Draft) =>
-  habits.filter(
-    (habit) =>
-      habit.kind === "bad" &&
-      habit.id !== draft.id &&
-      (habit.id === draft.replaces || sharesPlace(habit, draft.places)),
-  );

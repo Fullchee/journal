@@ -128,37 +128,25 @@ export const draftOfNewHabit = (habit: NewHabit): Draft => ({
 const orBlank = (current: string, offered: string | undefined) =>
   offered !== undefined && current.trim() === "" ? offered : current;
 
-// The model's cue type, unless it would hide a cue the owner typed: a stacked cue shows the Habit picker, not the text.
-const offeredCueType = (current: Draft, details: HabitDetails) =>
-  details.cue_type === "stacked" && current.cue.trim() !== "" ? "" : (details.cue_type ?? "");
+// A stacked cue names the Habit it comes after, as the form's "After what?" picker does.
+function cueOf(current: Draft, details: HabitDetails): Pick<Draft, "cueType" | "stackedAfter"> {
+  const cueType = current.cueType === "" ? (details.cue_type ?? "") : current.cueType;
 
-// A stacked cue names the Habit it comes after instead of a free-text cue, as the form's cue picker does.
-function cueOf(
-  current: Draft,
-  details: HabitDetails,
-): Pick<Draft, "cue" | "cueType" | "stackedAfter"> {
-  const cueType = current.cueType === "" ? offeredCueType(current, details) : current.cueType;
-
-  return cueType === "stacked"
-    ? {
-        cueType,
-        cue: current.cue,
-        stackedAfter: current.stackedAfter ?? details.stacked_after ?? null,
-      }
-    : { cueType, cue: orBlank(current.cue, details.cue), stackedAfter: current.stackedAfter };
+  return {
+    cueType,
+    stackedAfter:
+      cueType === "stacked"
+        ? (current.stackedAfter ?? details.stacked_after ?? null)
+        : current.stackedAfter,
+  };
 }
 
-/** The model's habit-loop details fill only the fields still blank, so anything the owner typed first wins. */
+/** The model's details fill only the fields still blank, so anything the owner typed first wins. */
 export const withDetails = (current: Draft, details: HabitDetails): Draft => ({
   ...current,
   ...cueOf(current, details),
   description: orBlank(current.description, details.description),
-  why: orBlank(current.why, details.why),
   usualWhen: orBlank(current.usualWhen, details.usual_when),
-  usualWhere: orBlank(current.usualWhere, details.usual_where),
-  routine: orBlank(current.routine, details.routine),
-  reward: orBlank(current.reward, details.reward),
-  obstacles: current.obstacles.length === 0 ? (details.obstacles ?? []) : current.obstacles,
   goals: current.goals.length === 0 ? (details.goals ?? []) : current.goals,
 });
 

@@ -67,7 +67,6 @@ const SCHEMA = {
         name: { type: "string" },
         date: { type: "string" },
         time: { type: "string" },
-        why: { type: "string" },
       },
       required: ["name"],
     },
@@ -89,10 +88,10 @@ const PROMPT = `You turn one person's sentence into Habit logs. Reply with JSON 
   Fill in every field with your best guess; the person confirms before anything is made.
   kind: "bad" for something they want to stop or cut down, else "good". record: "duration" if they gave minutes, "count" if it can happen many times a day, else "check".
   How often: "daily", "weekly" with target_count (times a week, 1-7), or "days" with target_days (0 = Sunday … 6 = Saturday). Use what they said, e.g. "gym Mon and Thu"; else guess.
-- {"action":"one-off","one_off":{"name":"Go portaging","date":"YYYY-MM-DD","time":"HH:MM","why":"..."}} when the person plans something to do once, e.g. "go portaging Saturday" or "run tomorrow at 7am".
+- {"action":"one-off","one_off":{"name":"Go portaging","date":"YYYY-MM-DD","time":"HH:MM"}} when the person plans something to do once, e.g. "go portaging Saturday" or "run tomorrow at 7am".
   A plan is about a day still to come or later today ("go", "going to", "will"); something already done is a log.
   name: the action, capitalized, e.g. "Go portaging". Resolve "today", "tomorrow", weekday names ("Saturday", "next Tuesday") and dates ("Nov 20") to the next such date on or after today, from "today" and "weekday" in the context.
-  If they named no day, leave out date; the person is asked which day. Give time (24-hour) only if they said one, and why only if they said why.
+  If they named no day, leave out date; the person is asked which day. Give time (24-hour) only if they said one.
 "entries" lists what is already logged; log new entries even if they overlap.`;
 
 /** The model sees the entries of the past week, today included. */

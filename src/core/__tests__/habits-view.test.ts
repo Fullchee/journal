@@ -9,13 +9,11 @@ import {
   descriptionBody,
   cueMissing,
   loopSentence,
-  replacedBy,
   scheduleSummary,
   stackCandidates,
   targetCountRange,
   targetWhen,
   withTargetType,
-  obstacleSuggestions,
   toggleDay,
   causeLine,
   checksSince,
@@ -88,12 +86,12 @@ test("newHabitDraft starts a good Habit Scheduled and a bad one with no cue", ()
   assert.equal(newHabitDraft("bad").record, "count");
 });
 
-test("cueChoices lists Scheduled first and calls it Time on a bad Habit", () => {
+test("cueChoices answers After what? with a set time first, and a time of day on a bad Habit", () => {
   assert.deepEqual(
     cueChoices("good", "").map((c) => c.label),
-    ["Scheduled", "Stacked habit", "Previous Action", "Emotional State", "People"],
+    ["A set time", "Another habit", "Something I did", "A feeling", "Being with people"],
   );
-  assert.equal(cueChoices("bad", "")[0]?.label, "Time");
+  assert.equal(cueChoices("bad", "")[0]?.label, "A time of day");
 });
 
 test("cueChoices keeps the hidden location cue while a Habit holds it", () => {
@@ -112,19 +110,6 @@ test("blankHabit counts each time for a bad habit", () => {
 test("toggleDay adds a weekday in order and removes it when present", () => {
   assert.deepEqual(toggleDay([1, 5], 3), [1, 3, 5]);
   assert.deepEqual(toggleDay([1, 3, 5], 3), [1, 5]);
-});
-
-test("obstacleSuggestions lists built-ins and used obstacles with how often each is used", () => {
-  const habits = [
-    makeHabit({ obstacles: ["no time", "boredom"] }),
-    makeHabit({ id: "b", obstacles: ["boredom"] }),
-  ];
-
-  assert.deepEqual(obstacleSuggestions(habits, ["no time", "too tired"]), [
-    { name: "no time", count: 1 },
-    { name: "too tired", count: 0 },
-    { name: "boredom", count: 2 },
-  ]);
 });
 
 const NAMES = new Map([
@@ -202,14 +187,6 @@ test("scheduleSummary joins the target and the record style by kind", () => {
   );
 });
 
-test("replacedBy lists the habits that replace this one", () => {
-  const habits = [makeHabit({ id: "x", replaces: "w" }), makeHabit({ id: "y" })];
-  assert.deepEqual(
-    replacedBy(habits, "w").map((h) => h.id),
-    ["x"],
-  );
-});
-
 test("stackCandidates skips the habit itself and any habit that comes after it", () => {
   const habits = [
     makeHabit({ id: "a" }),
@@ -242,73 +219,39 @@ test("stackCandidates lists every habit for a new one and survives an existing l
   );
 });
 
-test("loopSentence builds the good-habit sentence from every part and leaves out the usual spot and reward", () => {
-  const h = makeHabit({
-    cue: "I finish dinner",
-    routine: "Walk",
-    usualWhen: "19:00",
-    usualWhere: "the park",
-    reward: "Feel calm",
-  });
+test("loopSentence names the anchor Habit, then the Habit itself and its usual time", () => {
+  const h = makeHabit({ name: "Walk", stackedAfter: "a", usualWhen: "19:00" });
 
-  assert.equal(loopSentence(h, nameOf), "When I finish dinner, I will walk at 7:00 PM.");
+  assert.equal(loopSentence(h, nameOf), "After “Brush teeth”, I will do “Walk” at 7:00 PM.");
 });
 
-test("loopSentence keeps a cue that already starts with a trigger word", () => {
-  assert.equal(
-    loopSentence(makeHabit({ cue: "After lunch", routine: "stretch" }), nameOf),
-    "After lunch, I will stretch.",
-  );
-});
+test("loopSentence uses the bad-habit wording", () => {
+  const h = makeHabit({ kind: "bad", name: "Scroll", stackedAfter: "a" });
 
-test("loopSentence falls back to the stacked habit when there is no cue", () => {
-  assert.equal(
-    loopSentence(makeHabit({ stackedAfter: "a", routine: "floss" }), nameOf),
-    "After “Brush teeth”, I will floss.",
-  );
-});
-
-test("loopSentence uses the bad-habit wording and leaves existing punctuation alone", () => {
-  const h = makeHabit({ kind: "bad", cue: "I'm bored", routine: "Scroll!" });
-
-  assert.equal(loopSentence(h, nameOf), "When I'm bored, I usually scroll!");
+  assert.equal(loopSentence(h, nameOf), "After “Brush teeth”, I usually do “Scroll”.");
 });
 
 test("loopSentence opens a Scheduled cue with its time and leaves the time out of the action", () => {
   assert.equal(
-    loopSentence(
-      makeHabit({
-        cueType: "time",
-        cue: "alarm rings",
-        usualWhen: "08:00",
-        routine: "Walk",
-        usualWhere: "the park",
-      }),
-      nameOf,
-    ),
-    "At 8:00 AM, I will walk.",
+    loopSentence(makeHabit({ name: "Walk", cueType: "time", usualWhen: "08:00" }), nameOf),
+    "At 8:00 AM, I will do “Walk”.",
   );
 });
 
-test("loopSentence falls back to the cue text for a Scheduled cue with no time", () => {
-  assert.equal(
-    loopSentence(makeHabit({ cueType: "time", cue: "the alarm rings", routine: "Walk" }), nameOf),
-    "When the alarm rings, I will walk.",
-  );
-});
-
-test("loopSentence is empty when nothing is filled and keeps when/where without a routine", () => {
+test("loopSentence is empty with no anchor and no time, since it would only repeat the name", () => {
   assert.equal(loopSentence(makeHabit(), nameOf), "");
-  assert.equal(
-    loopSentence(makeHabit({ usualWhen: "12:00" }), nameOf),
-    "I will do it at 12:00 PM.",
-  );
+  assert.equal(loopSentence(makeHabit({ cueType: "emotion" }), nameOf), "");
+  assert.equal(loopSentence(makeHabit({ cueType: "time" }), nameOf), "");
 });
 
-test("loopSentence shows a picked usual time with AM or PM when the cue isn't Scheduled", () => {
+test("loopSentence keeps a usual time when the cue isn't Scheduled, and says do it for a blank name", () => {
   assert.equal(
-    loopSentence(makeHabit({ usualWhen: "19:30", routine: "Read" }), nameOf),
-    "I will read at 7:30 PM.",
+    loopSentence(makeHabit({ name: "Read", usualWhen: "19:30" }), nameOf),
+    "I will do “Read” at 7:30 PM.",
+  );
+  assert.equal(
+    loopSentence(makeHabit({ name: " ", usualWhen: "12:00" }), nameOf),
+    "I will do it at 12:00 PM.",
   );
 });
 

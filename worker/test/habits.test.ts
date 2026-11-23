@@ -102,7 +102,6 @@ const INVALID_CHANGES: [string, Json][] = [
   ["bad_habit", check("2026-11-04", "Up Now!", true)],
   ["non_boolean_on", check("2026-11-04", "up", "yes")],
   ["bad_start_date", { type: "habit", name: "X", startDate: "last week" }],
-  ["replaces_a_build_habit", { type: "habit", name: "X", replaces: "up" }],
   ["stacked_after_unknown_habit", { type: "habit", name: "X", stackedAfter: "nope" }],
   ["links_to_itself", { type: "habit", id: "up", name: "Up", stackedAfter: "up" }],
   ["retired_text_type", { type: "text", focus: "", discuss: "" }],
@@ -153,11 +152,7 @@ const GARDEN = {
   record: "check",
   description: "Most nights, on the couch.",
   startDate: "2026-11-01",
-  cue: "laptop open after 9pm",
   cueType: "action",
-  routine: "close the lid",
-  reward: "tea",
-  obstacles: ["Tired after work", "no time", "tired after work"],
   target: { type: "weekly", count: 2, days: [] },
 };
 
@@ -194,24 +189,8 @@ test("the owner adds a habit with a generated id", async () => {
   assert.deepEqual([res.status, await res.json()], [201, { id: habit.id }]);
   assert.match(habit.id, /^scrolling-on-the-laptop-[0-9a-f]{6}$/);
   assert.deepEqual(
-    [
-      habit.kind,
-      habit.stage,
-      habit.description,
-      habit.startDate,
-      habit.cueType,
-      [habit.cue, habit.routine, habit.reward, habit.obstacles],
-      habit.target,
-    ],
-    [
-      "bad",
-      "seed",
-      "Most nights, on the couch.",
-      "2026-11-01",
-      "action",
-      ["laptop open after 9pm", "close the lid", "tea", ["tired after work", "no time"]],
-      GARDEN.target,
-    ],
+    [habit.kind, habit.stage, habit.description, habit.startDate, habit.cueType, habit.target],
+    ["bad", "seed", "Most nights, on the couch.", "2026-11-01", "action", GARDEN.target],
   );
   assert.equal("usualFrequency" in habit, false);
 });
@@ -222,10 +201,38 @@ test("the owner saves a habit's Places trimmed, without blanks or repeats", asyn
   assert.deepEqual((await habitNamed(env, GARDEN.name)).places, ["Gym", "Home"]);
 });
 
-test("the owner saves a habit's why", async () => {
+test("an old client's dropped Habit fields are ignored, not refused", async () => {
   const env = makeEnv();
-  await post(env, OWNER, { ...GARDEN, why: "Nights are when the scroll starts" });
-  assert.equal((await habitNamed(env, GARDEN.name)).why, "Nights are when the scroll starts");
+
+  const res = await post(env, OWNER, {
+    ...GARDEN,
+    why: "Nights are when the scroll starts",
+    usualWhere: "Couch",
+    cue: "laptop open after 9pm",
+    routine: "close the lid",
+    reward: "tea",
+    obstacles: ["no time"],
+    replaces: "up",
+  });
+
+  const habit = await habitNamed(env, GARDEN.name);
+
+  assert.equal(res.status, 201);
+
+  const dropped = new Set([
+    "why",
+    "usualWhere",
+    "cue",
+    "routine",
+    "reward",
+    "obstacles",
+    "replaces",
+  ]);
+
+  assert.deepEqual(
+    Object.keys(habit).filter((field) => dropped.has(field)),
+    [],
+  );
 });
 
 const RUN = {
@@ -506,7 +513,6 @@ const INVALID_HABIT_CHANGES: [string, Json][] = [
   ],
   ["interval_every_day", { ...GARDEN, target: { type: "interval", count: 1, days: [] } }],
   ["interval_count_31", { ...GARDEN, target: { type: "interval", count: 31, days: [] } }],
-  ["why_not_a_string", { ...GARDEN, why: 3 }],
   ["goals_not_a_list", { ...GARDEN, goals: 1 }],
   ["usual_when_free_text", { ...GARDEN, usualWhen: "evening" }],
   ["usual_when_twelve_hour", { ...GARDEN, usualWhen: "7:45 a.m." }],
@@ -626,17 +632,15 @@ test("posting a stackedAfter with no cueType normalizes the cue type to stacked"
   assert.equal((await habitNamed(env, "Walk")).cueType, "stacked");
 });
 
-test("a habit stacks after one habit and replaces a break habit; deleting either clears the link", async () => {
+test("a habit stacks after another habit; deleting that one clears the link", async () => {
   const env = makeEnv();
-  await post(env, OWNER, { ...GARDEN, id: "up", name: "Out of bed at alarm", kind: "bad" });
-  await post(env, OWNER, { type: "habit", name: "Walk", replaces: "up", stackedAfter: "sit" });
+  await post(env, OWNER, { type: "habit", name: "Walk", stackedAfter: "sit" });
   const walk = await habitNamed(env, "Walk");
-  assert.deepEqual([walk.replaces, walk.stackedAfter, walk.cueType], ["up", "sit", "stacked"]);
+  assert.deepEqual([walk.stackedAfter, walk.cueType], ["sit", "stacked"]);
 
-  await post(env, OWNER, { type: "delete-habit", id: "up" });
   await post(env, OWNER, { type: "delete-habit", id: "sit" });
   const after = await habitNamed(env, "Walk");
-  assert.deepEqual([after.replaces, after.stackedAfter, after.cueType], [null, null, ""]);
+  assert.deepEqual([after.stackedAfter, after.cueType], [null, ""]);
 });
 
 test("a Skip is stored as the MISSED count and reads back with its cause", async () => {
@@ -899,14 +903,11 @@ test("a saved change answers 204 with no body", async () => {
 test("a saved draft reads back field for field, on insert and on update", async () => {
   const env = makeEnv();
   const [goalId] = await goalIds(env);
-  await post(env, OWNER, { ...GARDEN, id: "up", name: "Out of bed at alarm", kind: "bad" });
 
   const draft: Omit<Habit, "id"> = {
     name: "Walk",
     description: "Round the block",
-    why: "Clear head",
     usualWhen: "18:30",
-    usualWhere: "outside",
     places: ["Gym", "Home"],
     kind: "good",
     stage: "sprout",
@@ -916,12 +917,7 @@ test("a saved draft reads back field for field, on insert and on update", async 
     optOutFrom: "2026-10-01",
     usualMinutes: null,
     startDate: "2026-10-01",
-    cue: "",
     cueType: "stacked",
-    routine: "walk",
-    reward: "podcast",
-    obstacles: ["rain"],
-    replaces: "up",
     stackedAfter: "sit",
     target: { type: "days", count: 7, days: [1, 3] },
     record: "count",
@@ -948,21 +944,14 @@ test("a saved draft reads back field for field, on insert and on update", async 
 // A change that names only the habit takes the new-Habit form's default for every other field.
 const DEFAULTS: [keyof Habit, Json][] = [
   ["description", ""],
-  ["why", ""],
   ["usualWhen", ""],
-  ["usualWhere", ""],
   ["places", []],
   ["kind", "good"],
   ["stage", "seed"],
   ["priority", "normal"],
   ["active", true],
   ["startDate", torontoDay(new Date())],
-  ["cue", ""],
   ["cueType", ""],
-  ["routine", ""],
-  ["reward", ""],
-  ["obstacles", []],
-  ["replaces", null],
   ["stackedAfter", null],
   ["target", { type: "daily", count: 7, days: [] }],
   ["record", "check"],

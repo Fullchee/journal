@@ -47,7 +47,7 @@ test.each([
 ])("a One-off for $said drafts that date, named in words", ({ date, text }) => {
   assert.deepEqual(draftOf(oneOff({ date }), ctx), {
     type: "one-off",
-    one_off: { name: "Go portaging", date, why: "", usual_when: "" },
+    one_off: { name: "Go portaging", date, usual_when: "" },
     text,
   });
 });
@@ -55,7 +55,7 @@ test.each([
 test("a One-off with no day drafts without a date and asks which day", () => {
   assert.deepEqual(draftOf(oneOff({}), ctx), {
     type: "one-off",
-    one_off: { name: "Go portaging", why: "", usual_when: "" },
+    one_off: { name: "Go portaging", usual_when: "" },
     text: "Which day is Go portaging?",
   });
 });
@@ -68,22 +68,23 @@ test.each([
   assert.equal(readOneOff({ name: "Go portaging", date }, TODAY)?.date, undefined);
 });
 
-test("a One-off keeps its why and reads a time as when it usually happens", () => {
-  assert.deepEqual(
-    readOneOff({ name: " Run ", date: TOMORROW, time: "7:00", why: "clear my head" }, TODAY),
-    { name: "Run", date: TOMORROW, why: "clear my head", usual_when: "07:00" },
-  );
-});
-
-test("a bad time is dropped and a why that isn't text is ignored", () => {
-  const model = ModelOneOff.parse({ name: "Run", date: TOMORROW, time: "25:00", why: 3 });
-
-  assert.deepEqual(readOneOff(model, TODAY), {
+test("a One-off reads a time as when it usually happens", () => {
+  assert.deepEqual(readOneOff({ name: " Run ", date: TOMORROW, time: "7:00" }, TODAY), {
     name: "Run",
     date: TOMORROW,
-    why: "",
-    usual_when: "",
+    usual_when: "07:00",
   });
+});
+
+test("a bad time is dropped and a why from the model is ignored", () => {
+  const model = ModelOneOff.parse({
+    name: "Run",
+    date: TOMORROW,
+    time: "25:00",
+    why: "clear my head",
+  });
+
+  assert.deepEqual(readOneOff(model, TODAY), { name: "Run", date: TOMORROW, usual_when: "" });
 });
 
 test("a One-off with no name drafts as unclear", () => {
@@ -164,7 +165,7 @@ const undo = (env: Env, action: number) =>
 const oneOffs = async (env: TestEnv) =>
   (
     await env.DB.prepare(
-      "SELECT name, why, usual_when, kind, record, start_date, target_type, target_count, target_days, active FROM habits WHERE target_type = 'once'",
+      "SELECT name, usual_when, kind, record, start_date, target_type, target_count, target_days, active FROM habits WHERE target_type = 'once'",
     )
       .bind()
       .all<Record<string, SqlValue>>()
@@ -172,7 +173,6 @@ const oneOffs = async (env: TestEnv) =>
 
 const portaging = {
   name: "Go portaging",
-  why: "",
   usual_when: "",
   kind: "good",
   record: "check",
@@ -183,7 +183,7 @@ const portaging = {
   active: 1,
 };
 
-const PORTAGING = { name: "Go portaging", date: NEXT_SATURDAY, why: "", usual_when: "" };
+const PORTAGING = { name: "Go portaging", date: NEXT_SATURDAY, usual_when: "" };
 
 const save = (env: Env, oneOffBody: Json, email = OWNER) =>
   postOneOff({
@@ -221,21 +221,20 @@ test("saving a One-off creates a once Habit and names its day on the receipt", a
   assert.deepEqual(await oneOffs(env), [portaging]);
 });
 
-test("saving a One-off keeps its why and when", async () => {
+test("saving a One-off keeps its when and ignores an old client's why", async () => {
   const env = await makeOneOffEnv();
 
   await save(env, { name: "Run", date: TOMORROW, why: "clear my head", usual_when: "07:00" });
 
   assert.deepEqual(await oneOffs(env), [
-    { ...portaging, name: "Run", start_date: TOMORROW, why: "clear my head", usual_when: "07:00" },
+    { ...portaging, name: "Run", start_date: TOMORROW, usual_when: "07:00" },
   ]);
 });
 
 test.each([
-  { id: "no_date", oneOff: { name: "Go portaging", why: "", usual_when: "" } },
+  { id: "no_date", oneOff: { name: "Go portaging", usual_when: "" } },
   { id: "past_date", oneOff: { ...PORTAGING, date: "2026-11-05" } },
   { id: "blank_name", oneOff: { ...PORTAGING, name: " " } },
-  { id: "why_not_text", oneOff: { ...PORTAGING, why: 3 } },
   { id: "free_text_when", oneOff: { ...PORTAGING, usual_when: "7:00 AM" } },
   { id: "null", oneOff: null },
 ])("saving a One-off with $id is refused and writes nothing", async ({ oneOff: body }) => {

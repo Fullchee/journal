@@ -40,15 +40,15 @@ test("filterHabits matches enum columns", () => {
 
 test("filterHabits matches links, dates and text case-insensitively", () => {
   const habits = [
-    makeHabit({ id: "a", startDate: "2026-10-01", cue: "Coffee", obstacles: ["tired"] }),
-    makeHabit({ id: "b", startDate: "2026-11-01", replaces: "a", stackedAfter: "a" }),
+    makeHabit({ id: "a", startDate: "2026-10-01" }),
+    makeHabit({ id: "b", startDate: "2026-11-01", stackedAfter: "a" }),
     makeHabit({ id: "c" }),
   ];
 
   const ids = (over: Partial<HabitFilters>) =>
     filterHabits(habits, { ...blankFilters(), ...over }).map((h) => h.id);
 
-  assert.deepEqual(ids({ replaces: "has" }), ["b"]);
+  assert.deepEqual(ids({ stackedAfter: "has" }), ["b"]);
   assert.deepEqual(ids({ stackedAfter: "none" }), ["a", "c"]);
   assert.deepEqual(ids({ startFrom: "2026-10-15" }), ["b"]);
   assert.deepEqual(ids({ startTo: "2026-10-15" }), ["a"]);
@@ -88,7 +88,7 @@ test.each([
   ["priority", "low"],
   ["targetType", "days"],
   ["record", "count"],
-  ["replaces", "none"],
+  ["stackedAfter", "none"],
   ["stackedAfter", "has"],
 ] as const)("filtersFromParams reads %s=%s", (key, value) => {
   const params = new URLSearchParams({ [key]: value });
