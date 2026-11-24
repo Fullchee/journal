@@ -609,7 +609,6 @@ describe("Today", () => {
       .mock.calls.map(([path]) => new URL(path, "https://journal.test").pathname);
 
     expect(paths.toSorted((a, b) => a.localeCompare(b))).toEqual([
-      "/api/calendar-links",
       "/api/check-ins",
       "/api/circles",
       "/api/connections",
