@@ -1,4 +1,4 @@
-import type { Draft, Goal, Habit } from "@/core";
+import type { Draft, Goal, Habit, Stage } from "@/core";
 import { Text } from "@/ui";
 import { render, screen, userEvent, waitFor, within } from "@testing-library/react-native";
 
@@ -14,7 +14,17 @@ jest.mock("@/lib/data/check-ins", () => ({ useCheckInPlaces: () => ["Home", "Gym
 
 jest.mock("@/lib/data/data-provider", () => ({ useIsOnline: () => true }));
 
-jest.mock("@/lib/data/streaks", () => ({ useRestPeriods: () => [] }));
+interface StageState {
+  value: Stage | null;
+}
+
+const mockStage: StageState = { value: null };
+
+jest.mock("@/lib/data/streaks", () => ({ useHabitStage: () => mockStage.value }));
+
+afterEach(() => {
+  mockStage.value = null;
+});
 
 jest.mock("@/lib/image-upload", () => ({ pickImage: jest.fn(), uploadImage: jest.fn() }));
 
@@ -192,6 +202,13 @@ describe("HabitForm under More", () => {
     await show(habit(), { goals: [{ id: 1, title: "Rest", state: "retired" }] });
 
     expect(screen.getByRole("button", { name: "Rest (retired)" })).toBeOnTheScreen();
+  });
+
+  it("tells a plant's owner it notifies only after a missed day", async () => {
+    mockStage.value = "plant";
+    await show(habit({ usualWhen: "08:00", alarm: { time: "08:00", kind: "alarm" } }));
+
+    expect(screen.getByText(/Plant Habits notify only after a missed day\./)).toBeOnTheScreen();
   });
 
   it("shows no alarm sound off Android", async () => {

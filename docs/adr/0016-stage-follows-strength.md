@@ -11,4 +11,4 @@ Stage used to be set by hand, so 193 of 200 Habits stayed seed and no reminder e
 ## Consequences
 
 - Only the tree decision is stored; seed, sprout and plant are read from History wherever Stage is shown.
-- Sprout and plant change only the label until a follow-up thins reminders through the plant stage. No study has tested a fading schedule yet.
+- Sprout changes only the label. A plant notifies only on the due day after a missed due day: each reschedule holds back its next notification when the last due day that counts was done, and keeps every later one, so a held-back day that passes unlogged brings the next notification back without opening the app (#37). No study has tested a fading schedule, so this follows Pinder 2018's untested guideline.

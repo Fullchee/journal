@@ -10,7 +10,6 @@ import {
   dueDateLabel,
   hasHistory,
   isCountedTarget,
-  isTree,
   torontoDay,
   isOneOff,
   loopSentence,
@@ -38,7 +37,7 @@ import { useCSSVariable } from "uniwind";
 import { AddImageButton, useAddImage } from "@/components/add-image";
 import { pickAlarmSound, useAlarmSound } from "@/lib/alarms/alarm-sound";
 import { useCheckInPlaces } from "@/lib/data/check-ins";
-import { useRestPeriods } from "@/lib/data/streaks";
+import { useHabitStage } from "@/lib/data/streaks";
 import { ChoiceChips, TextField, type Choice } from "@/components/habits/form-fields";
 import { SeasonFields } from "@/components/habits/season-fields";
 import { TinyVersionField } from "@/components/habits/tiny-version-field";
@@ -311,13 +310,12 @@ function TargetCount({ draft, update, type }: SectionProps & { type: CountedTarg
   );
 }
 
-// A tree doesn't ring, and Rest periods decide whether the Habit is still one.
+// A tree doesn't ring and a plant notifies only after a miss, so the note follows today's Stage.
 function AlarmNote({ draft, alarm }: { draft: Draft; alarm: Alarm }) {
-  const restPeriods = useRestPeriods();
-  // eslint-disable-next-line eslint-react/purity -- whether the Habit is a tree today reads the clock
-  const tree = isTree(draft, restPeriods, new Date());
+  // eslint-disable-next-line eslint-react/purity -- the Stage today reads the clock
+  const stage = useHabitStage(draft, new Date());
 
-  return <Text variant="muted">{alarmNote({ ...draft, alarm }, tree)}</Text>;
+  return <Text variant="muted">{alarmNote({ ...draft, alarm }, stage)}</Text>;
 }
 
 // A Habit's time lives in `usualWhen` as HH:MM, and in its alarm too when it notifies.

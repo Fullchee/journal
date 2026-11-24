@@ -29,7 +29,7 @@ import { useSilencedAlarms } from "@/lib/alarms/silenced-alarms";
 import { connectionsQuery } from "@/lib/data/connections";
 import { useTodayHabits } from "@/lib/data/habits";
 import { askNotificationPermissionOnce } from "@/lib/notifications/ask-permission";
-import { useRestPeriods } from "@/lib/data/streaks";
+import { useHabitRecords, useRestPeriods } from "@/lib/data/streaks";
 
 // eslint-disable-next-line no-restricted-imports -- Expo local modules live outside src, where no @/ alias reaches
 import JournalAndroid from "../../../modules/journal-android";
@@ -150,13 +150,14 @@ function reschedule(schedule: AlarmSchedule, keep: string[]) {
 
 /**
  * Mount once inside the signed-in app. Reschedules on launch (from the persisted cache) and whenever
- * a save or a sync refetches the Habits or Connections with different data, Rest mode starts or ends, or the owner picks
+ * a save or a sync refetches the Habits, their history or Connections with different data, Rest mode starts or ends, or the owner picks
  * a new alarm sound.
  */
 export function useAlarmSchedule() {
   const { data: habits } = useTodayHabits();
   const { data: connections } = useQuery(connectionsQuery);
   const restPeriods = useRestPeriods();
+  const records = useHabitRecords(habits);
   const sound = useAlarmSound();
   const silenced = useSilencedAlarms();
 
@@ -167,9 +168,10 @@ export function useAlarmSchedule() {
     const schedule = reschedulePlan(habits?.habits, connections?.connections, now, {
       restPeriods,
       today,
+      records,
     });
 
     if (schedule && habits) void reschedule(schedule, postponedToKeep(habits.habits, today, now));
     // A new sound means a new alarm channel, and every alarm must move onto it.
-  }, [habits, connections, restPeriods, sound, silenced]);
+  }, [habits, connections, restPeriods, records, sound, silenced]);
 }

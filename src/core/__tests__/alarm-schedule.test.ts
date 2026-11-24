@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { firstTrigger, reschedulePlan, type TodayRecords } from "@/core/alarm-schedule";
 import { notificationId } from "@/core/alarms";
+import { daysFrom, isoAt } from "@/core/calendar";
+import type { StreakRecords } from "@/core/habit-day";
+import type { Counts, Habit } from "@/core/habits-view";
 import { makeConnection } from "./helpers/connection";
 import { makeHabit } from "./helpers/habit";
 
@@ -338,5 +341,103 @@ describe("reschedulePlan when today's Day is logged or silenced", () => {
       ],
       [[todayRing], [tomorrowRing]],
     );
+  });
+});
+
+describe("reschedulePlan for a plant", () => {
+  // Sunday 2026-11-22 at noon; the plant's alarm at 18:00 is still ahead today.
+  const sunday = new Date(isoAt("2026-11-22", 12 * 60));
+  const start = "2026-09-01";
+
+  const plant = makeHabit({
+    id: "up",
+    name: "Up",
+    startDate: start,
+    alarm: { time: "18:00", kind: "alarm" },
+  });
+
+  /** Done every day from the start through Saturday, then `over` replaces or clears single days. */
+  function history(
+    over: Record<string, number | null> = {},
+    extra: Partial<StreakRecords> = {},
+  ): StreakRecords {
+    const counts: Counts = {};
+
+    for (const day of daysFrom(start, "2026-11-21")) counts[day] = { up: 1 };
+
+    for (const [day, count] of Object.entries(over))
+      counts[day] = count === null ? {} : { up: count };
+
+    return { counts, durations: {}, skips: {}, restPeriods: [], ...extra };
+  }
+
+  const firstRings = (habit: Habit, records: StreakRecords, today?: TodayRecords) =>
+    reschedulePlan([habit], [], sunday, { records, ...(today && { today }) })?.notifications.map(
+      ({ trigger }) => trigger,
+    );
+
+  const daily = (day: string) => ({
+    timestamp: new Date(`${day}T18:00`).getTime(),
+    repeat: "day",
+  });
+
+  test("a plant that did its last due day skips its next ring, and rings the day after", () => {
+    assert.deepEqual(firstRings(plant, history()), [daily("2026-11-23")]);
+  });
+
+  test("a plant logged done today skips tomorrow's ring", () => {
+    const records = history({ "2026-11-22": 1 });
+
+    assert.deepEqual(firstRings(plant, records, { counts: records.counts, silenced: [] }), [
+      daily("2026-11-24"),
+    ]);
+  });
+
+  test.each([
+    ["logged Not done", -1],
+    ["not logged", null],
+  ])("a plant whose last due day was %s rings on its next due day", (_name, count) => {
+    assert.deepEqual(firstRings(plant, history({ "2026-11-21": count })), [daily("2026-11-22")]);
+  });
+
+  test("a Skip or a Rest mode day isn't a miss: the plant looks back to the last due day that counts", () => {
+    const records = history(
+      { "2026-11-21": -1, "2026-11-20": null },
+      {
+        skips: { "2026-11-21": { up: { cause: "outside", note: "" } } },
+        restPeriods: [{ start: "2026-11-20", end: "2026-11-20" }],
+      },
+    );
+
+    assert.deepEqual(firstRings(plant, records), [daily("2026-11-23")]);
+  });
+
+  test("a plant on fixed weekdays looks past its days off and holds back only its next weekday", () => {
+    // Monday, Wednesday and Friday; plugin weekdays are 2, 4 and 6.
+    const weekdays = { ...plant, target: { type: "days" as const, count: 3, days: [1, 3, 5] } };
+
+    assert.deepEqual(
+      firstRings(weekdays, history())?.map(({ timestamp }) => new Date(timestamp).getDate()),
+      [30, 25, 27],
+    );
+  });
+
+  test("a plant on the first day of its Season has no previous due day, so it rings", () => {
+    const seasonal = {
+      ...plant,
+      seasons: [
+        { start, end: "2026-11-10" },
+        { start: "2026-11-22", end: null },
+      ],
+    };
+
+    assert.deepEqual(firstRings(seasonal, history()), [daily("2026-11-22")]);
+  });
+
+  test("a seed rings as before, and a Habit without an alarm plans nothing", () => {
+    const never: StreakRecords = { counts: {}, durations: {}, skips: {}, restPeriods: [] };
+
+    assert.deepEqual(firstRings(plant, never), [daily("2026-11-22")]);
+    assert.deepEqual(firstRings({ ...plant, alarm: null }, history()), []);
   });
 });

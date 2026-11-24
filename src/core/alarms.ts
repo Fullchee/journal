@@ -1,7 +1,15 @@
 import { clockLabel, daysFrom, minutesOf, shiftDay, torontoDay } from "./calendar";
 import { dueBySchedule, canMiss, MISSED } from "./habit-day";
 import { isTree } from "./habit-tree";
-import { dueDateLabel, isOneOff, isTimed, WEEKDAYS, type Alarm, type Habit } from "./habits-view";
+import {
+  dueDateLabel,
+  isOneOff,
+  isTimed,
+  WEEKDAYS,
+  type Alarm,
+  type Habit,
+  type Stage,
+} from "./habits-view";
 import type { RestPeriod } from "./rest-mode";
 import type { SkipCause } from "./skip";
 
@@ -176,7 +184,7 @@ export const notificationsFor = (
       : [notificationFor(habit)];
   });
 
-/** The hint under the alarm control in the Habit form; `tree` is whether the Habit is a tree today. */
+/** The hint under the alarm control in the Habit form; `stage` is the Habit's Stage today. */
 export function alarmNote(
   {
     active,
@@ -184,9 +192,9 @@ export function alarmNote(
     startDate,
     alarm,
   }: Pick<Habit, "active" | "target" | "startDate"> & { alarm: Alarm },
-  tree: boolean,
+  stage: Stage | null,
 ) {
-  if (tree) return "Tree Habits don't ring.";
+  if (stage === "tree") return "Tree Habits don't ring.";
 
   if (!active) return "Backlog Habits don't ring.";
 
@@ -202,7 +210,9 @@ export function alarmNote(
 
   const verb = alarm.kind === "alarm" ? "Rings" : "Shows quietly";
 
-  return `${verb} at ${clockLabel(alarm.time)} ${days}, in the Android app.`;
+  const plant = stage === "plant" ? " Plant Habits notify only after a missed day." : "";
+
+  return `${verb} at ${clockLabel(alarm.time)} ${days}, in the Android app.${plant}`;
 }
 
 /**

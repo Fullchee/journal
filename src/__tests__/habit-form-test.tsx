@@ -14,7 +14,7 @@ jest.mock("@/lib/data/check-ins", () => ({ useCheckInPlaces: () => ["Home", "Gym
 
 jest.mock("@/lib/data/data-provider", () => ({ useIsOnline: () => true }));
 
-jest.mock("@/lib/data/streaks", () => ({ useRestPeriods: () => [] }));
+jest.mock("@/lib/data/streaks", () => ({ useHabitStage: () => null }));
 
 jest.mock("uniwind", () =>
   jest.requireActual<typeof RouteMocks>("../../jest/route-mocks").mockUniwind(),

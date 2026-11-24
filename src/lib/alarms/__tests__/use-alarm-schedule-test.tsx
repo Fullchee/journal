@@ -2,6 +2,7 @@ import { QueryClientProvider, type QueryClient } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react-native";
 import {
   CHECK_IN_PROMPT_IDS,
+  daysFrom,
   notificationId,
   shiftDay,
   torontoDay,
@@ -75,13 +76,15 @@ interface Answers {
   counts?: Counts;
   connections: Connection[] | Error;
   restPeriods?: RestPeriod[];
+  /** Every Habit's older Days, as the history serves them. */
+  history?: Counts;
 }
 
-function serve({ habits, counts = {}, connections, restPeriods = [] }: Answers) {
+function serve({ habits, counts = {}, connections, restPeriods = [], history = {} }: Answers) {
   fakeApi({
     "/api/habits": reply(habits instanceof Error ? habits : { habits, counts }),
     "/api/connections": reply(connections instanceof Error ? connections : { connections }),
-    "/api/streaks": reply({ counts: {}, durations: {}, skips: {}, restPeriods }),
+    "/api/streaks": reply({ counts: history, durations: {}, skips: {}, restPeriods }),
   });
 }
 
@@ -374,5 +377,19 @@ describe("today's ring", () => {
 
     await act(() => toggleSilenced("out-of-bed"));
     await waitFor(() => expect(ringAt()).toMatchObject(today));
+  });
+
+  test("a plant that did yesterday holds back today's ring once its history loads", async () => {
+    const history = Object.fromEntries(
+      daysFrom("2026-09-01", "2026-11-05").map((day) => [day, { "out-of-bed": 1 }]),
+    );
+
+    await mount({
+      habits: [{ ...evening, startDate: "2026-09-01" }],
+      history,
+      connections: [],
+    });
+
+    await waitFor(() => expect(ringAt()).toMatchObject(tomorrow));
   });
 });

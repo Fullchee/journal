@@ -114,6 +114,7 @@ Researched 2026-11-22 for Stage (#34). Every claim below was checked against the
 
 - **No study tests a fading schedule.** Searches found no trial of gradual thinning, contingent "only if not done" reminders, or timing.
 - **A registered pilot tests withdrawal** of a cue-based app ([NCT04691596][nct-cued]). No results were found.
+- **Our untested choice, following Pinder 2018:** a plant notifies only on the due day after a missed due day (#37). A Skip, a Rest mode day or a day off the schedule is not a miss. Seed and sprout notify on every due day; a tree is silent.
 
 ### How established habits break
 

@@ -6,9 +6,10 @@ import {
 } from "./alarms";
 import { connectionNotifications } from "./connection-notifications";
 import type { Connection } from "./connections-view";
-import { habitDays } from "./habit-day";
+import { habitDays, type StreakRecords } from "./habit-day";
+import { habitStage } from "./habit-stage";
 import type { Counts, Durations, Habit, Skips } from "./habits-view";
-import { shiftDay, torontoDay } from "./calendar";
+import { isoAt, shiftDay, torontoDay } from "./calendar";
 import { isInSeason, nextSeasonDay } from "./season";
 import { restPeriodOn, type RestPeriod } from "./rest-mode";
 
@@ -109,10 +110,55 @@ const plan = (notifications: ScheduledNotification[], from: Date): PlannedNotifi
 const NOTHING_LOGGED: TodayRecords = { silenced: [] };
 
 /**
+ * Whether the last due day before `day` that counts was done. A Skip, a Rest mode day, a day off the schedule and a
+ * day the period's target no longer needs are passed over. False at the Habit's start or its Season's start.
+ */
+function lastCountedDayDone(habit: Habit, records: StreakRecords, day: string) {
+  const days = habitDays(habit, records);
+
+  for (
+    let previous = shiftDay(day, -1);
+    previous >= habit.startDate && isInSeason(habit.seasons, previous);
+    previous = shiftDay(previous, -1)
+  ) {
+    const reading = days.on(new Date(isoAt(previous)));
+
+    const passedOver =
+      Object.hasOwn(records.skips[previous] ?? {}, habit.id) ||
+      restPeriodOn(records.restPeriods, previous) !== null ||
+      !reading.due;
+
+    if (!passedOver) return reading.status === "done";
+  }
+
+  return false;
+}
+
+/**
+ * A plant holds back only its next ring, and only when its last due day was done (ADR 0016). Every later ring stays
+ * scheduled, so a held-back day that passes unlogged is a miss and the ring after it fires without the app.
+ */
+function thinPlant(
+  habit: Habit,
+  planned: PlannedNotification[],
+  { records, restPeriods, now }: { records: StreakRecords; restPeriods: RestPeriod[]; now: Date },
+) {
+  if (planned.length === 0 || habitStage(habit, records, now) !== "plant") return planned;
+  const firstRing = Math.min(...planned.map(({ trigger }) => trigger.timestamp));
+  const next = torontoDay(new Date(firstRing));
+
+  if (!lastCountedDayDone(habit, records, next)) return planned;
+  const after = new Date(`${shiftDay(next, 1)}T00:00`);
+
+  return plan(notificationsFor([habit], restPeriods, after), after);
+}
+
+/**
  * Everything one reschedule hands the phone. `undefined` means that list never loaded:
  * no Habits keeps the last schedule (null), so an offline launch still rings; no Connections drops only their reminders.
  * During Rest mode, Habit alarms first ring after it ends, and outside a Season after the next one starts;
- * a Habit whose Day is logged or silenced today first rings on its next due day. Connection reminders keep their times.
+ * a Habit whose Day is logged or silenced today first rings on its next due day. With every Habit's `records`, a plant
+ * that did its last due day skips its next ring. Connection reminders keep their times.
  */
 export function reschedulePlan(
   habits: Habit[] | undefined,
@@ -121,7 +167,8 @@ export function reschedulePlan(
   {
     restPeriods = [],
     today = NOTHING_LOGGED,
-  }: { restPeriods?: RestPeriod[]; today?: TodayRecords } = {},
+    records = null,
+  }: { restPeriods?: RestPeriod[]; today?: TodayRecords; records?: StreakRecords | null } = {},
 ): AlarmSchedule | null {
   if (!habits) return null;
   const quiet = quietUntil(restPeriods, now);
@@ -130,7 +177,10 @@ export function reschedulePlan(
     const quietToday = today.silenced.includes(habit.id) || isLoggedToday(habit, today, now);
     const from = habitRingsFrom(habit, now, quiet, quietToday);
 
-    return from === null ? [] : plan(notificationsFor([habit], restPeriods, from), from);
+    if (from === null) return [];
+    const planned = plan(notificationsFor([habit], restPeriods, from), from);
+
+    return records === null ? planned : thinPlant(habit, planned, { records, restPeriods, now });
   });
 
   return {

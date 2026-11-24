@@ -13,14 +13,17 @@ import {
   DayNotes,
   Durations,
   habitHistory,
+  habitStage,
   habitStreak,
   hasStreak,
   restPeriodOn,
   RestPeriod,
   Skips,
   torontoDay,
+  type Draft,
   type Habit,
   type HabitHistory,
+  type Stage,
   type Streak,
   type StreakRecords,
 } from "@/core";
@@ -67,7 +70,9 @@ function withRecent<Value>(history: ByDay<Value>, recent: ByDay<Value> = {}) {
   return merged;
 }
 
-const recordsOf = (history: StreakHistory, recent: HabitsBody): StreakRecords => ({
+type RecentRecords = Pick<HabitsBody, "counts" | "durations" | "skips">;
+
+const recordsOf = (history: StreakHistory, recent: RecentRecords): StreakRecords => ({
   counts: withRecent(history.counts, recent.counts),
   durations: withRecent(history.durations, recent.durations),
   skips: withRecent(history.skips, recent.skips),
@@ -89,10 +94,18 @@ export function useHabitStreaks(recent: HabitsBody, now: Date) {
 }
 
 /** Every Habit's records since its start date, with the tracker's unsent taps; null before the history loads. */
-export function useHabitRecords(recent: HabitsBody): StreakRecords | null {
+export function useHabitRecords(recent: RecentRecords = {}): StreakRecords | null {
   const { data } = useQuery(streakHistoryQuery);
 
   return data ? recordsOf(data, recent) : null;
+}
+
+/** A Habit's Stage today; null for an unsaved Habit, one without a Stage, or before the history loads. */
+export function useHabitStage({ id, ...draft }: Draft, now: Date): Stage | null {
+  const { data } = useHabitTracker();
+  const records = useHabitRecords(data);
+
+  return id === undefined || records === null ? null : habitStage({ ...draft, id }, records, now);
 }
 
 /** Each Day's notes on Duration entries and checks; empty before the history loads. */

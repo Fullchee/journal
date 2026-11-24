@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 
 import { apiFetch } from "@/lib/api/api-fetch";
 import { createQueryClient } from "@/lib/data/query-client";
-import { useHabitHistory } from "@/lib/data/streaks";
+import { useHabitHistory, useHabitRecords, useHabitStage } from "@/lib/data/streaks";
 
 // eslint-disable-next-line no-restricted-imports -- jest/ sits outside src, so no @/ alias reaches it
 import { habit } from "../../../../jest/fixtures";
@@ -30,5 +30,39 @@ describe("useHabitHistory", () => {
     );
 
     await waitFor(() => expect(result.current).not.toBeNull());
+  });
+});
+
+describe("useHabitStage", () => {
+  const now = new Date("2026-11-10T12:00:00Z");
+
+  beforeEach(() => {
+    // One answer serves both the tracker and the history: each schema keeps only its own fields.
+    jest.mocked(apiFetch).mockResolvedValue({
+      habits: [],
+      counts: {},
+      durations: {},
+      skips: {},
+      restPeriods: [],
+    });
+  });
+
+  it("reads a saved Habit's Stage once the history loads", async () => {
+    const { result } = await renderHook(() => useHabitStage(habit(), now), { wrapper: Wrapper });
+
+    await waitFor(() => expect(result.current).toBe("seed"));
+  });
+
+  it("has no Stage for an unsaved Habit", async () => {
+    const { id: _id, ...draft } = habit();
+
+    const { result } = await renderHook(
+      () => ({ stage: useHabitStage(draft, now), records: useHabitRecords() }),
+      { wrapper: Wrapper },
+    );
+
+    await waitFor(() => expect(result.current.records).not.toBeNull());
+
+    expect(result.current.stage).toBeNull();
   });
 });

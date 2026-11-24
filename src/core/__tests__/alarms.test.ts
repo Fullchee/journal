@@ -111,20 +111,27 @@ test("notificationId is stable, distinct per Habit and weekday, and fits a 32-bi
 });
 
 test("alarmNote says when the alarm rings", () => {
-  assert.equal(alarmNote(wake, false), "Rings at 7:15 AM every day, in the Android app.");
+  assert.equal(alarmNote(wake, "seed"), "Rings at 7:15 AM every day, in the Android app.");
   assert.equal(
-    alarmNote({ ...wake, target: { type: "days", count: 7, days: [1, 5] } }, false),
+    alarmNote({ ...wake, target: { type: "days", count: 7, days: [1, 5] } }, "sprout"),
     "Rings at 7:15 AM on Mon, Fri, in the Android app.",
   );
   assert.equal(
-    alarmNote({ ...wake, alarm: { time: "21:00", kind: "persistent" } }, false),
+    alarmNote({ ...wake, alarm: { time: "21:00", kind: "persistent" } }, null),
     "Shows quietly at 9:00 PM every day, in the Android app.",
   );
 });
 
+test("alarmNote says a plant notifies only after a missed day", () => {
+  assert.equal(
+    alarmNote(wake, "plant"),
+    "Rings at 7:15 AM every day, in the Android app. Plant Habits notify only after a missed day.",
+  );
+});
+
 test("alarmNote says why a Tree or Backlog Habit stays silent", () => {
-  assert.equal(alarmNote(wake, true), "Tree Habits don't ring.");
-  assert.equal(alarmNote({ ...wake, active: false }, false), "Backlog Habits don't ring.");
+  assert.equal(alarmNote(wake, "tree"), "Tree Habits don't ring.");
+  assert.equal(alarmNote({ ...wake, active: false }, "seed"), "Backlog Habits don't ring.");
 });
 
 test("widgetAlarms lists ringing Habits earliest first, with every day for a daily Habit", () => {
@@ -183,7 +190,7 @@ test("notificationsFor skips a One-off whose moment has passed", () => {
 });
 
 test("alarmNote says a One-off rings only on its date", () => {
-  assert.equal(alarmNote(portage, false), "Rings at 7:15 AM on Sat 14 Nov, in the Android app.");
+  assert.equal(alarmNote(portage, null), "Rings at 7:15 AM on Sat 14 Nov, in the Android app.");
 });
 
 test("widgetAlarms leaves out One-offs, since the widget lists weekly alarms", () => {
@@ -228,9 +235,9 @@ test("notificationsFor rings an N× a month Habit every day", () => {
 });
 
 test("alarmNote names an Every N days or N× a month Habit's days", () => {
-  assert.equal(alarmNote(everyThree, false), "Rings at 7:15 AM every 3 days, in the Android app.");
+  assert.equal(alarmNote(everyThree, "seed"), "Rings at 7:15 AM every 3 days, in the Android app.");
   assert.equal(
-    alarmNote({ ...wake, target: { type: "monthly", count: 2, days: [] } }, false),
+    alarmNote({ ...wake, target: { type: "monthly", count: 2, days: [] } }, "seed"),
     "Rings at 7:15 AM every day, in the Android app.",
   );
 });
