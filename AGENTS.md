@@ -23,6 +23,8 @@ In app tests, press and type with `userEvent` (`press`, `paste`); keep `fireEven
 
 To accept a detect-secrets false positive, run `bun run secrets:scan` and mark the hit `is_secret: false`.
 
+`.github/workflows/actions.lock` pins every action to a commit. After changing a `uses:` line, run `GH_TOKEN=$(gh auth token --user Fullchee) gh actions-lock` and commit the lock with it.
+
 Create worktrees with `wt switch --create <branch>`; its setup script copies the untracked `mise.local.toml`, `CLAUDE.local.md` and `.dev.vars`.
 
 This repo is the source for the setup files rex-mobile shares (listed in `scripts/sync-shared-setup.sh`): edit them here, then run `scripts/sync-shared-setup.sh "$REX_MOBILE_DIR"` (set in `mise.local.toml`). `docs/rex-mobile-parity.md` lists every other setup difference and which ones stay; `/compare-rex-mobile` updates it.
