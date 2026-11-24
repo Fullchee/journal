@@ -338,16 +338,12 @@ export function HabitCard({
   stage = null,
   asksTree = false,
   offline = false,
-  description,
-  nameOf,
-  goalName,
   onToggle,
   onOpen,
   onCount,
   onOpenDay,
-  onEdit,
   saving = false,
-  ...manage
+  ...details
 }: HabitCardProps) {
   const days = habitDays(habit, { counts, durations });
   const { row } = days.week(today);
@@ -365,8 +361,8 @@ export function HabitCard({
         onOpen={onOpen}
       />
 
-      {asksTree && manage.onTree && (
-        <TreeQuestion disabled={offline || saving} onTree={manage.onTree} />
+      {asksTree && details.onTree && (
+        <TreeQuestion disabled={offline || saving} onTree={details.onTree} />
       )}
 
       {isLogged(habit) && (
@@ -387,14 +383,10 @@ export function HabitCard({
           today={today}
           streak={streak}
           offline={offline}
-          description={description}
-          nameOf={nameOf}
-          goalName={goalName}
           onCount={onCount}
           onOpenDay={onOpenDay}
-          onEdit={onEdit}
           saving={saving}
-          {...manage}
+          {...details}
         />
       )}
     </View>
