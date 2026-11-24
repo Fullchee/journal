@@ -1,113 +1,113 @@
 {
-  "version": 1,
+  "version": 2,
   "skills": {
     "eas-observe": {
       "source": "expo/skills",
       "sourceType": "github",
       "skillPath": "plugins/expo/skills/eas-observe/SKILL.md",
-      "computedHash": "c57c329b89823f302434e3c2105e20f0d57af104c14e87a867f0e3562dec74b4"
+      "computedHash": "8ba4902769ded976de7b4a38e92850636bf0c79503bc2593d85ad3fa451a344a"
     },
     "eas-update": {
       "source": "expo/skills",
       "sourceType": "github",
       "skillPath": "plugins/expo/skills/eas-update/SKILL.md",
-      "computedHash": "0d434ae35de68bfab06735187ce80f3fe221328dd7ed457eeb2d4272c8abe238"
+      "computedHash": "db37be6aabbea1fd305d80c5a1b0e2c061028ad278e1ca4d0811ed9354af64e3"
     },
     "eas-update-insights": {
       "source": "expo/skills",
       "sourceType": "github",
       "skillPath": "plugins/expo/skills/eas-update-insights/SKILL.md",
-      "computedHash": "b0093fce4f82b31d2923392b93dcbc01907d7cfbf06875260beb6ef51dd0b747"
+      "computedHash": "da6a363d46b711aeb89b35a43ca18efa14041936194895ff29a03df8da2eefb3"
     },
     "eas-workflows": {
       "source": "expo/skills",
       "sourceType": "github",
       "skillPath": "plugins/expo/skills/eas-workflows/SKILL.md",
-      "computedHash": "a6c9af380145afa4eca4cf1ca871a06cc395f41bffc0758eb4e6d10adc77bf3a"
+      "computedHash": "b739a2c65fa06935af11986d2775d64a42dde9cfa548dd5eec2d0e3e813691c3"
     },
     "expo-animation": {
       "source": "expo/skills",
       "sourceType": "github",
       "skillPath": "plugins/expo/skills/expo-animation/SKILL.md",
-      "computedHash": "887ae52d885a9fe2c7d42cf684cd6ba10d410f44480c2501f822accb02b6c483"
+      "computedHash": "7f28a298611a9440484836c2d02366bff5cdbe4c1c4cc2a1965ffe2eb075ffae"
     },
     "expo-data-fetching": {
       "source": "expo/skills",
       "sourceType": "github",
       "skillPath": "plugins/expo/skills/expo-data-fetching/SKILL.md",
-      "computedHash": "61e2e98db962edd74389fe74e41c08c502eb6a25e129f4623421c4afe2dae3de"
+      "computedHash": "b9341ed3d50395ddf0dd09f8c81022ee303ad0947d7ff0acd38b7bf5ee8de20f"
     },
     "expo-design-system": {
       "source": "expo/skills",
       "sourceType": "github",
       "skillPath": "plugins/expo/skills/expo-design-system/SKILL.md",
-      "computedHash": "597dc0de48357b1217f6b35e44812b7c889aba33d02cdfe5a8490d54dd7b165d"
+      "computedHash": "817613a0a2f7beab0d919b45c8c1aaa9e3d3a50c054eec959c6484248cfcbec9"
     },
     "expo-dev-client": {
       "source": "expo/skills",
       "sourceType": "github",
       "skillPath": "plugins/expo/skills/expo-dev-client/SKILL.md",
-      "computedHash": "3e38e9402acd8430b98a887de86b1b346a9fb4873b046585e6c20cf78a91cc49"
+      "computedHash": "d57782a2f5e92847b5bde90900c25f06ffa201e93da81e58e576c046077eb944"
     },
     "expo-dom": {
       "source": "expo/skills",
       "sourceType": "github",
       "skillPath": "plugins/expo/skills/expo-dom/SKILL.md",
-      "computedHash": "8f1d2dd30bd944dc2f2b4f2754d1c92cadca415d90391b5965a7777733ca6017"
+      "computedHash": "eb211170e3cd6b72c6bed26c18586a5ad6d48a45fc481f1b411682c4f7c39ae2"
     },
     "expo-examples": {
       "source": "expo/skills",
       "sourceType": "github",
       "skillPath": "plugins/expo/skills/expo-examples/SKILL.md",
-      "computedHash": "4a32ae5dc15bdd383a33102c687c46fbf27f46e26d4fc1d54d56d6b350ef1266"
+      "computedHash": "3021281ea809d9974e83691c2893a793c8fe36c4ef292c8dabc52c98f69c79fa"
     },
     "expo-module": {
       "source": "expo/skills",
       "sourceType": "github",
       "skillPath": "plugins/expo/skills/expo-module/SKILL.md",
-      "computedHash": "5c5e7c413f516794a7fed79a0753c076d51386c2ee0fa1bc303e908dc670e11f"
+      "computedHash": "0b34d929db086777de7134db7fa7c7264e86152ec203feb255ae0bab82d01e69"
     },
     "expo-native-ui": {
       "source": "expo/skills",
       "sourceType": "github",
       "skillPath": "plugins/expo/skills/expo-native-ui/SKILL.md",
-      "computedHash": "49d480a3f3b5acd3c027bf2b3a12bcab601be14e9467c956697f9a88bd4fbca0"
+      "computedHash": "7062d8239c825963bc4487678165c843594b9950276b18f1c5d48179414518eb"
     },
     "expo-overview": {
       "source": "expo/skills",
       "sourceType": "github",
       "skillPath": "plugins/expo/skills/expo-overview/SKILL.md",
-      "computedHash": "55fa500c2637fbcc25bc933e3b8efea2b96a2568243d05d6728aee7a651a9246"
+      "computedHash": "c59584f70706a6873c5c1f3ee1f9005fc00bdd40de731645c1b7091a1fd2397d"
     },
     "expo-project-structure": {
       "source": "expo/skills",
       "sourceType": "github",
       "skillPath": "plugins/expo/skills/expo-project-structure/SKILL.md",
-      "computedHash": "8ef539eb13f9fbb6560f185644f5bcd60230c04a7883f3d148b6295c43847936"
+      "computedHash": "1d8d0089c3f367cda801f2b675d8df6b773806b62ffb8d88b390bed9f10fa607"
     },
     "expo-router": {
       "source": "expo/skills",
       "sourceType": "github",
       "skillPath": "plugins/expo/skills/expo-router/SKILL.md",
-      "computedHash": "8cd1a4358b14380b259b79e22c4170016a077ec316dc36a09f810efd8120ece3"
+      "computedHash": "9c3a05a145ceec25ccca5c733b9403b03c7174c60c48c017009c2c5a1a68c8cb"
     },
     "expo-ui": {
       "source": "expo/skills",
       "sourceType": "github",
       "skillPath": "plugins/expo/skills/expo-ui/SKILL.md",
-      "computedHash": "49d663ea0d4d5d8a11679317890f907fc08038cfec0de62a8451aeb5657d1095"
+      "computedHash": "7cc34e3ee3d44ee6f754f4cc57bf64d18225ec8d8993d9540a33b9779c540de4"
     },
     "expo-upgrade": {
       "source": "expo/skills",
       "sourceType": "github",
       "skillPath": "plugins/expo/skills/expo-upgrade/SKILL.md",
-      "computedHash": "1a7b83fc0a5b7aa3552a194c57e1f046d85541e77130f3add7c358868f43f4e2"
+      "computedHash": "e7963891b55078eec241470f30ebd45afe0d3b7f1363d62e26f5af1b32382f7e"
     },
     "expo-web-to-native": {
       "source": "expo/skills",
       "sourceType": "github",
       "skillPath": "plugins/expo/skills/expo-web-to-native/SKILL.md",
-      "computedHash": "25c8af32c6b46f26b0948509b80f7d47fe8d1a4505033b5b4ec6f25c574cbc20"
+      "computedHash": "929ec0dd459885036ea615ee65199983afa9ca1bb624c6fb116ce4eabd6a6643"
     }
   }
 }
