@@ -2,7 +2,6 @@ import {
   shiftDay,
   TIME_ZONE,
   torontoDay,
-  type CheckIn,
   type Counts,
   type Habit,
   type LogDraft,
@@ -107,8 +106,6 @@ const TODAY = torontoDay(NOW);
 
 const mom = connection();
 
-const PLAN = "## Care team\n- GP\n\n## Next action\nCall the clinic.";
-
 const HABITS = [
   habit({}),
   habit({ id: "read", name: "Read" }),
@@ -117,19 +114,12 @@ const HABITS = [
 
 const savedCheckIn = () => checkIn({ id: 9, score: 1, zone: "Storm" });
 
-const todayRoutes = ({
-  latest = "Sun",
-  habits = HABITS,
-}: {
-  latest?: CheckIn["zone"];
-  habits?: Habit[];
-}) => ({
-  "/api/check-ins": () => ({ checkIns: [checkIn({ zone: latest })] }),
+const todayRoutes = ({ habits = HABITS }: { habits?: Habit[] }) => ({
+  "/api/check-ins": () => ({ checkIns: [checkIn({ zone: "Sun" })] }),
   "/api/check-ins?at": () => ({ place: null }),
   "/api/habits": () => ({ habits, counts: { [TODAY]: { walk: 1 } }, durations: {} }),
   "/api/connections": () => ({ connections: [mom] }),
   "/api/circles": () => ({ circles: [] }),
-  "/api/health-plan": () => ({ item: { body: PLAN, updatedAt: null } }),
   "POST /api/check-ins": savedCheckIn,
   "PATCH /api/check-ins": savedCheckIn,
   "POST /api/log/entries": () => ({ type: "logged", text: "Logged Walk.", action: 1 }),
@@ -147,8 +137,8 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-const renderToday = async (url = "/", latest: CheckIn["zone"] = "Sun") => {
-  const { writes } = fakeApi(todayRoutes({ latest }));
+const renderToday = async (url = "/") => {
+  const { writes } = fakeApi(todayRoutes({}));
   await renderRouter(APP_DIR, { initialUrl: url });
   await screen.findByText("Read");
 
@@ -576,22 +566,6 @@ describe("Today", () => {
     expect(screen.getByText("All habits")).toBeOnTheScreen();
   });
 
-  it("shows the Health plan card when the latest Check-in is in Storm", async () => {
-    await renderToday("/", "Storm");
-
-    const card = await screen.findByLabelText("Health plan");
-
-    expect(within(card).getByText("Call the clinic.")).toBeOnTheScreen();
-    await userEvent.press(within(card).getByRole("link", { name: "Open the Health plan" }));
-    expect(screen).toHavePathname("/health-plan");
-  });
-
-  it("hides the Health plan card outside Storm", async () => {
-    await renderToday();
-
-    expect(screen.queryByLabelText("Health plan")).not.toBeOnTheScreen();
-  });
-
   it("titles the screen with the date and shows the Connections for today and the plan entry", async () => {
     await renderToday();
 
@@ -640,7 +614,6 @@ describe("Today", () => {
       "/api/circles",
       "/api/connections",
       "/api/habits",
-      "/api/health-plan",
       "/api/parts",
       "/api/streaks",
     ]);
@@ -660,7 +633,6 @@ describe("Today", () => {
 
     await userEvent.press(await screen.findByRole("button", { name: "Done today (2)" }));
     expect(screen.getByRole("checkbox", { name: "Read done today" })).toBeChecked();
-    expect(await screen.findByLabelText("Health plan")).toBeOnTheScreen();
     expect(writes).toEqual([]);
 
     await act(() => onlineManager.setOnline(true));

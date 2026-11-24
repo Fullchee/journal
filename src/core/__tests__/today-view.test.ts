@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { torontoDate } from "./helpers/toronto";
 import { MISSED } from "@/core/habit-day";
 import { habitTime } from "@/core/habits-view";
-import { dueBox, dueToday, earliestReschedule, isInStorm, nextAction } from "@/core/today-view";
+import { dueBox, dueToday, earliestReschedule } from "@/core/today-view";
 import { makeHabit } from "./helpers/habit";
 
 // A Wednesday.
@@ -125,28 +125,6 @@ test("habitTime prefers the Alarm over usual when", () => {
     habitTime({ alarm: { time: "06:00", kind: "persistent" }, usualWhen: "09:00" }),
     "06:00",
   );
-});
-
-test("isInStorm reads only the newest Check-in", () => {
-  assert.equal(isInStorm([{ zone: "Storm" }, { zone: "Sun" }]), true);
-  assert.equal(isInStorm([{ zone: "Rain" }, { zone: "Storm" }]), false);
-  assert.equal(isInStorm([]), false);
-});
-
-test("nextAction returns the Next action section up to the next heading", () => {
-  const plan =
-    "## Care team\n- GP\n\n## Next action\nCall the clinic.\n\n### Detail\nAsk for Dr B.\n\n## Meds\nNone";
-
-  assert.equal(nextAction(plan), "Call the clinic.\n\n### Detail\nAsk for Dr B.");
-});
-
-test("nextAction accepts the plural heading and runs to the end", () => {
-  assert.equal(nextAction("# Next actions\n1. Book a visit"), "1. Book a visit");
-});
-
-test("nextAction is null without the section or with an empty one", () => {
-  assert.equal(nextAction("## Care team\n- GP"), null);
-  assert.equal(nextAction("## Next action\n\n## Meds"), null);
 });
 
 const oneOff = (id: string, startDate: string) =>

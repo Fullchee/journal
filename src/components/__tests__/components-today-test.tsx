@@ -4,7 +4,6 @@ import { render, screen, userEvent } from "@testing-library/react-native";
 import { CelebrationProvider } from "@/components/celebration";
 import { HabitsDueToday } from "@/components/today/habits-due-today";
 import { SeasonNudges } from "@/components/today/season-nudges";
-import { HealthPlanCard } from "@/components/today/health-plan-card";
 import type { HabitsBody } from "@/lib/data/habits";
 
 // eslint-disable-next-line no-restricted-imports -- jest/ sits outside src, so no @/ alias reaches it
@@ -47,7 +46,6 @@ const mockCheckIns: CheckInsState = {
 
 const mockData = {
   save: { mutate: jest.fn(), isPending: false, isError: false },
-  plan: { data: undefined },
 };
 
 const mockCheck = jest.fn();
@@ -62,11 +60,6 @@ jest.mock("@/lib/data/streaks", () => ({
 jest.mock("@/lib/data/check-ins", () => ({
   ...jest.requireActual<object>("@/lib/data/check-ins"),
   useCheckIns: () => mockCheckIns,
-}));
-
-jest.mock("@/lib/data/notes", () => ({
-  ...jest.requireActual<object>("@/lib/data/notes"),
-  useHealthPlan: () => mockData.plan,
 }));
 
 jest.mock("@/lib/data/habits", () => ({
@@ -192,13 +185,5 @@ describe("SeasonNudges", () => {
     );
 
     expect(screen.getByText("Couldn't save. Try again.")).toBeOnTheScreen();
-  });
-});
-
-describe("HealthPlanCard", () => {
-  it("shows only the way to the plan while the plan has not loaded", async () => {
-    await render(<HealthPlanCard />);
-
-    expect(screen.getByText("Open the Health plan")).toBeOnTheScreen();
   });
 });

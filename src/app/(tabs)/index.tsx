@@ -23,7 +23,6 @@ import { newPartButton } from "@/components/new-part-button";
 import { Section } from "@/components/screen";
 import { EveningReviewRow } from "@/components/today/evening-review-row";
 import { HabitsDueToday } from "@/components/today/habits-due-today";
-import { HealthPlanCard } from "@/components/today/health-plan-card";
 import { WorkAnchor } from "@/components/today/work-anchor";
 import { useIsWide } from "@/hooks/use-is-wide";
 import { useLogDraft } from "@/hooks/use-log-draft";
@@ -256,7 +255,6 @@ export default function TodayScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <FailedCaptures />
-          <HealthPlanCard />
           {isWide ? (
             <View className="flex-row items-start gap-8">
               <Column testID="today-left">{left}</Column>

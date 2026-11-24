@@ -1,5 +1,4 @@
 import { clockLabel, dayOfWeek, shiftDay, torontoDay } from "./calendar";
-import type { CheckIn } from "./check-in-view";
 import { habitDays, type HabitDay } from "./habit-day";
 import { isTree } from "./habit-tree";
 import { withOptOutDays } from "./opt-out";
@@ -104,33 +103,4 @@ export function earliestReschedule({ startDate }: Pick<Habit, "startDate">, toda
   const day = torontoDay(today);
 
   return startDate < day ? day : shiftDay(startDate, 1);
-}
-
-/** The API lists Check-ins newest first. */
-export const isInStorm = (checkIns: Pick<CheckIn, "zone">[]) => checkIns[0]?.zone === "Storm";
-
-const NEXT_ACTION_HEADING = /^(#{1,6})\s+next actions?\s*$/i;
-
-/** The body of the Health plan's "Next action" section, up to the next heading at its level or above. */
-export function nextAction(markdown: string) {
-  const lines = markdown.split("\n");
-
-  for (const [start, line] of lines.entries()) {
-    const level = NEXT_ACTION_HEADING.exec(line.trim())?.[1]?.length;
-
-    if (level === undefined) continue;
-    const rest = lines.slice(start + 1);
-
-    const end = rest.findIndex((next) => {
-      const nextLevel = /^(#{1,6})\s/.exec(next)?.[1]?.length;
-
-      return nextLevel !== undefined && nextLevel <= level;
-    });
-
-    const body = (end === -1 ? rest : rest.slice(0, end)).join("\n").trim();
-
-    return body === "" ? null : body;
-  }
-
-  return null;
 }
