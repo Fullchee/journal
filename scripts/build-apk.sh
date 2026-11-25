@@ -67,8 +67,10 @@ cp "$BUILT" "$APK"
 if [[ $install_on_phone == true ]]; then
 	adb -d install -r "$APK"
 else
-	tag="apk-$(date +%Y%m%d-%H%M)-$(git rev-parse --short HEAD)"
-	title="Journal for Android, $(date '+%B %-d, %Y at %-I:%M %p')"
+	# A release names the code it holds, so its date is the commit's, not the build's.
+	commit_time() { git show -s --format=%cd --date="format-local:$1" "$commit"; }
+	tag="apk-$(commit_time %Y%m%d-%H%M)-$(git rev-parse --short "$commit")"
+	title="Journal for Android, $(commit_time '%B %-d, %Y at %-I:%M %p')"
 	# The active gh account is the work one; the repo belongs to the personal account.
 	GH_TOKEN="$(gh auth token --user Fullchee)" gh release create "$tag" "$APK" \
 		--repo "$REPO" --target "$commit" --title "$title" --latest \
