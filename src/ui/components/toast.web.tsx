@@ -2,17 +2,21 @@ import { useEffect } from "react";
 import { Toaster as SonnerToaster, toast } from "sonner";
 
 import type { ToasterProps } from "./toast";
-import { followScreenReader, undoDuration, type UndoToast } from "./undo-toast";
+import { actionDuration, followScreenReader, type ActionToast, type UndoToast } from "./undo-toast";
 
-/** Shows one toast with an Undo button; a toast with the same id replaces it. The native twin is toast.tsx. */
-export function showUndoToast({ id, message, onUndo, onClose }: UndoToast) {
+/** Shows one toast with a button; a toast with the same id replaces it. The native twin is toast.tsx. */
+export function showActionToast({ id, message, actionLabel, onAction, onClose }: ActionToast) {
   toast(message, {
     id,
-    duration: undoDuration(),
+    duration: actionDuration(),
     // sonner dismisses the toast after the click.
-    action: { label: "Undo", onClick: onUndo },
+    action: { label: actionLabel, onClick: onAction },
     ...(onClose && { onDismiss: onClose, onAutoClose: onClose }),
   });
+}
+
+export function showUndoToast({ onUndo, ...toast }: UndoToast) {
+  showActionToast({ ...toast, actionLabel: "Undo", onAction: onUndo });
 }
 
 /** Mount once, above every screen. The DOM resolves `var(...)`, so the tokens follow night mode by themselves. */

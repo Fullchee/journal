@@ -24,6 +24,7 @@ import { useIsWide } from "@/hooks/use-is-wide";
 import { useNavigationTheme } from "@/hooks/use-navigation-theme";
 import { resolveImageSource } from "@/lib/api/image-source";
 import { useAlarmActions } from "@/lib/alarms/alarm-actions";
+import { useApkUpdateToast } from "@/lib/apk-update/use-apk-update-toast";
 import { useAlarmSchedule } from "@/lib/alarms/use-alarm-schedule";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { useCheckInPrompt } from "@/lib/check-in-prompt/use-check-in-prompt";
@@ -92,6 +93,7 @@ function RootLayout() {
   const theme = useNavigationTheme();
   const insets = useSafeAreaInsets();
   const aboveTabBar = useIsWide() ? 0 : TAB_BAR_HEIGHT;
+  useApkUpdateToast();
 
   // The Toaster's swipe to dismiss needs the gesture root above every screen.
   return (

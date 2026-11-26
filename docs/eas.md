@@ -7,7 +7,7 @@ Every push to `main` reaches the installed APK over the air. No manual step, unl
 1. **Push to `main`**: the `check` job passes, then the `release` job (`.github/workflows/ci.yml`) ships the web app and the Worker.
 2. **Same job, after the deploy**: runs `eas update --channel production --platform android --environment production`.
 3. **Phone**: the APK downloads the update at launch and runs it on the next launch.
-4. **Native change**: the fingerprint differs from the last update's. CI posts a warning and reopens the "Rebuild the APK" issue. Push, run `bun run android:apk`, install it from the release link, close the issue.
+4. **Native change**: the fingerprint differs from the last update's. CI posts a warning and reopens the "Rebuild the APK" issue. Push, run `bun run android:apk`, close the issue. On next launch the app shows an Install toast; tap it to download the APK.
 
 ## What is set up
 
@@ -20,6 +20,7 @@ Every push to `main` reaches the installed APK over the air. No manual step, unl
 | `eas.json`                                     | One `production` profile for an owner-started `eas build`: APK, `production` channel                                   |
 | `.github/workflows/ci.yml` → `update`          | Publishes each `main` push that changes more than docs; warns and reopens "Rebuild the APK" when the fingerprint moves |
 | `bun run android:apk` (`scripts/build-apk.sh`) | Local release APK, published as the latest GitHub release; the usual way to ship native changes                        |
+| `useApkUpdateToast`                            | On launch, shows an Install toast when the latest release's `runtime-version.txt` differs from the installed APK's     |
 | `plugins/release-signing.ts`                   | Signs release builds with the owner's keystore when `JOURNAL_KEYSTORE_PATH` is set                                     |
 
 ## One-time setup

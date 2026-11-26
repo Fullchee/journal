@@ -27,6 +27,7 @@ fi
 REPO="Fullchee/journal"
 BUILT="android/app/build/outputs/apk/release/app-release.apk"
 APK="android/app/build/outputs/apk/release/journal.apk"
+RUNTIME_VERSION="android/app/build/outputs/apk/release/runtime-version.txt"
 
 # Prebuild rewrites the android/ios scripts in package.json to `expo run:*`; keep the committed ones.
 cp package.json package.json.prebuild-backup
@@ -72,7 +73,9 @@ else
 	tag="apk-$(commit_time %Y%m%d-%H%M)-$(git rev-parse --short "$commit")"
 	title="Journal for Android, $(commit_time '%B %-d, %Y at %-I:%M %p')"
 	# The active gh account is the work one; the repo belongs to the personal account.
-	GH_TOKEN="$(gh auth token --user Fullchee)" gh release create "$tag" "$APK" \
+	# The app compares this with its own runtime version to offer a newer APK (use-apk-update-toast.android.ts).
+	unzip -p "$APK" assets/fingerprint >"$RUNTIME_VERSION"
+	GH_TOKEN="$(gh auth token --user Fullchee)" gh release create "$tag" "$APK" "$RUNTIME_VERSION" \
 		--repo "$REPO" --target "$commit" --title "$title" --latest \
 		--notes "Release APK for $commit. Later JS changes arrive as EAS updates."
 	echo "Published $tag. On the phone, open https://github.com/$REPO/releases/latest/download/journal.apk"

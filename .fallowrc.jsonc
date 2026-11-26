@@ -49,7 +49,10 @@
       ],
     },
     // Fallow resolves `./components/toast` to its `.web.tsx` twin; Metro loads this one on Android.
-    { "file": "src/ui/components/toast.tsx", "exports": ["showUndoToast", "Toaster"] },
+    {
+      "file": "src/ui/components/toast.tsx",
+      "exports": ["showActionToast", "showUndoToast", "Toaster"],
+    },
   ],
   // Dependencies point down: the app uses ui and core, the worker and ui use core, core uses nothing.
   "boundaries": {

@@ -2,22 +2,26 @@ import { useEffect } from "react";
 import { Toaster as SonnerToaster, toast } from "sonner-native";
 import { useCSSVariable } from "uniwind";
 
-import { followScreenReader, undoDuration, type UndoToast } from "./undo-toast";
+import { actionDuration, followScreenReader, type ActionToast, type UndoToast } from "./undo-toast";
 
-/** Shows one toast with an Undo button; a toast with the same id replaces it and restarts its clock. */
-export function showUndoToast({ id, message, onUndo, onClose }: UndoToast) {
+/** Shows one toast with a button; a toast with the same id replaces it and restarts its clock. */
+export function showActionToast({ id, message, actionLabel, onAction, onClose }: ActionToast) {
   toast(message, {
     id,
-    duration: undoDuration(),
+    duration: actionDuration(),
     action: {
-      label: "Undo",
+      label: actionLabel,
       onClick: () => {
         toast.dismiss(id);
-        onUndo();
+        onAction();
       },
     },
     ...(onClose && { onDismiss: onClose, onAutoClose: onClose }),
   });
+}
+
+export function showUndoToast({ onUndo, ...toast }: UndoToast) {
+  showActionToast({ ...toast, actionLabel: "Undo", onAction: onUndo });
 }
 
 const TOKENS = [
