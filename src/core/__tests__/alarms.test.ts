@@ -1,11 +1,5 @@
 import assert from "node:assert/strict";
-import {
-  alarmNote,
-  notificationId,
-  notificationsFor,
-  ringsLaterToday,
-  widgetAlarms,
-} from "@/core/alarms";
+import { alarmNote, notificationId, notificationsFor, widgetAlarms } from "@/core/alarms";
 import { makeHabit } from "./helpers/habit";
 
 const NOW = new Date(2026, 10, 22, 12, 0);
@@ -93,8 +87,6 @@ test("a tree rings and has a widget row again after a Rest mode day", () => {
 
   assert.equal(notificationsFor([tree], rest, NOW).length, 1);
   assert.equal(widgetAlarms([tree], rest, NOW).length, 1);
-  assert.equal(ringsLaterToday(tree, [], new Date(2026, 10, 22, 6, 0)), false);
-  assert.equal(ringsLaterToday(tree, rest, new Date(2026, 10, 22, 6, 0)), true);
 });
 
 test("notificationId is stable, distinct per Habit and weekday, and fits a 32-bit int", () => {
@@ -244,12 +236,4 @@ test("alarmNote names an Every N days or N× a month Habit's days", () => {
 
 test("widgetAlarms leaves out an Every N days Habit, since its days don't repeat weekly", () => {
   assert.deepEqual(widgetAlarms([everyThree], [], NOW), []);
-});
-
-test.each([
-  ["before its time today", wake, new Date(2026, 10, 6, 7, 0), true],
-  ["at or after its time today", wake, new Date(2026, 10, 6, 7, 15), false],
-  ["with no alarm", makeHabit(), new Date(2026, 10, 6, 6, 0), false],
-] as const)("ringsLaterToday: a Habit %s", (_name, habit, now, expected) => {
-  assert.equal(ringsLaterToday(habit, [], now), expected);
 });

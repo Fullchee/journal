@@ -2,6 +2,7 @@ import { render, screen, userEvent } from "@testing-library/react-native";
 
 import { CelebrationProvider } from "@/components/celebration";
 import { HabitsDueToday } from "@/components/today/habits-due-today";
+import type { RestPeriod } from "@/core";
 import type { HabitsBody } from "@/lib/data/habits";
 
 // eslint-disable-next-line no-restricted-imports -- jest/ sits outside src, so no @/ alias reaches it
@@ -45,10 +46,17 @@ interface TrackerState {
 
 const mockTracker: TrackerState = { data: undefined, isError: false };
 
+interface RestState {
+  periods: RestPeriod[];
+}
+
+const mockRest: RestState = { periods: [] };
+
 jest.mock("@/lib/data/streaks", () => ({
   ...jest.requireActual<object>("@/lib/data/streaks"),
   useHabitStreaks: () => () => null,
-  useRestPeriods: () => [],
+  useHabitRecords: () => null,
+  useRestPeriods: () => mockRest.periods,
 }));
 
 jest.mock("@/lib/data/check-ins", () => ({
@@ -66,7 +74,10 @@ jest.mock("@/lib/data/habits", () => ({
 }));
 
 // Friday 2026-11-06 at local noon: the same Day in Toronto and in UTC, where CI runs.
-beforeEach(() => jest.setSystemTime(new Date(2026, 10, 6, 12, 0)));
+beforeEach(() => {
+  jest.setSystemTime(new Date(2026, 10, 6, 12, 0));
+  mockRest.periods = [];
+});
 
 const evening = { time: "18:00", kind: "alarm" } as const;
 
@@ -130,5 +141,14 @@ describe("silencing today's alarm from Today", () => {
     await userEvent.press(screen.getByRole("button", { name: "Done today (1)" }));
 
     expect(screen.getByRole("checkbox", silence("Walk"))).toBeOnTheScreen();
+  });
+
+  it("isn't offered during Rest mode, which already keeps the ring quiet", async () => {
+    mockRest.periods = [{ start: "2026-11-05", end: "2026-11-08" }];
+
+    await showToday({ habits: [habit({ alarm: evening })] });
+
+    expect(screen.getByRole("checkbox", { name: "Walk done today" })).toBeOnTheScreen();
+    expect(screen.queryByRole("checkbox", silence("Walk"))).not.toBeOnTheScreen();
   });
 });

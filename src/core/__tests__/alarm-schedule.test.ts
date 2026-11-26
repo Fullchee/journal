@@ -1,5 +1,10 @@
 import assert from "node:assert/strict";
-import { firstTrigger, reschedulePlan, type TodayRecords } from "@/core/alarm-schedule";
+import {
+  firstTrigger,
+  reschedulePlan,
+  ringsLaterToday,
+  type TodayRecords,
+} from "@/core/alarm-schedule";
 import { notificationId } from "@/core/alarms";
 import { daysFrom, isoAt } from "@/core/calendar";
 import type { StreakRecords } from "@/core/habit-day";
@@ -439,5 +444,63 @@ describe("reschedulePlan for a plant", () => {
 
     assert.deepEqual(firstRings(plant, never), [daily("2026-11-22")]);
     assert.deepEqual(firstRings({ ...plant, alarm: null }, history()), []);
+  });
+
+  test("a plant whose next ring is held back has no ring left today to silence", () => {
+    const logged = { counts: {} };
+
+    assert.equal(
+      ringsLaterToday(plant, sunday, { restPeriods: [], logged, records: history() }),
+      false,
+    );
+    assert.equal(
+      ringsLaterToday(plant, sunday, {
+        restPeriods: [],
+        logged,
+        records: history({ "2026-11-21": null }),
+      }),
+      true,
+    );
+  });
+});
+
+describe("ringsLaterToday", () => {
+  const tree: Habit = { ...wake, trees: [{ start: "2026-11-01", end: null }] };
+  const nothing = { counts: {} };
+
+  const ask = (
+    habit: Habit,
+    now: Date,
+    more: Partial<Parameters<typeof ringsLaterToday>[2]> = {},
+  ) => ringsLaterToday(habit, now, { restPeriods: [], logged: nothing, records: null, ...more });
+
+  test.each([
+    ["before its time today", wake, new Date(2026, 10, 6, 7, 0), true],
+    ["at or after its time today", wake, new Date(2026, 10, 6, 7, 15), false],
+    ["with no alarm", makeHabit(), new Date(2026, 10, 6, 6, 0), false],
+    ["that is a tree", tree, new Date(2026, 10, 6, 6, 0), false],
+  ] as const)("a Habit %s", (_name, habit, now, expected) => {
+    assert.equal(ask(habit, now), expected);
+  });
+
+  test("a Day logged today keeps the ring quiet", () => {
+    const early = new Date(2026, 10, 6, 6, 0);
+
+    assert.equal(
+      ask(wake, early, { logged: { counts: { "2026-11-06": { "out-of-bed": 1 } } } }),
+      false,
+    );
+  });
+
+  test("Rest mode keeps today's ring quiet", () => {
+    const rest = [{ start: "2026-11-05", end: "2026-11-08" }];
+
+    assert.equal(ask(wake, new Date(2026, 10, 6, 6, 0), { restPeriods: rest }), false);
+  });
+
+  test("a Habit between Seasons doesn't ring today", () => {
+    const seasonal = { ...wake, seasons: [{ start: "2026-04-01", end: "2026-10-31" }] };
+
+    assert.equal(ask(seasonal, new Date(2026, 10, 6, 6, 0)), false);
   });
 });

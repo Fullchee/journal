@@ -156,6 +156,22 @@ function thinPlant(
   return plan(notificationsFor([habit], restPeriods, after), after);
 }
 
+interface PlanContext {
+  restPeriods: RestPeriod[];
+  today: TodayRecords;
+  records: StreakRecords | null;
+}
+
+function habitPlan(habit: Habit, now: Date, { restPeriods, today, records }: PlanContext) {
+  const quietToday = today.silenced.includes(habit.id) || isLoggedToday(habit, today, now);
+  const from = habitRingsFrom(habit, now, quietUntil(restPeriods, now), quietToday);
+
+  if (from === null) return [];
+  const planned = plan(notificationsFor([habit], restPeriods, from), from);
+
+  return records === null ? planned : thinPlant(habit, planned, { records, restPeriods, now });
+}
+
 /**
  * Everything one reschedule hands the phone. `undefined` means that list never loaded:
  * no Habits keeps the last schedule (null), so an offline launch still rings; no Connections drops only their reminders.
@@ -174,17 +190,10 @@ export function reschedulePlan(
   }: { restPeriods?: RestPeriod[]; today?: TodayRecords; records?: StreakRecords | null } = {},
 ): AlarmSchedule | null {
   if (!habits) return null;
-  const quiet = quietUntil(restPeriods, now);
 
-  const habitNotifications = habits.flatMap((habit) => {
-    const quietToday = today.silenced.includes(habit.id) || isLoggedToday(habit, today, now);
-    const from = habitRingsFrom(habit, now, quiet, quietToday);
-
-    if (from === null) return [];
-    const planned = plan(notificationsFor([habit], restPeriods, from), from);
-
-    return records === null ? planned : thinPlant(habit, planned, { records, restPeriods, now });
-  });
+  const habitNotifications = habits.flatMap((habit) =>
+    habitPlan(habit, now, { restPeriods, today, records }),
+  );
 
   return {
     notifications: [
@@ -198,4 +207,31 @@ export function reschedulePlan(
       now,
     ),
   };
+}
+
+/**
+ * The Habit's alarm rings again before the phone's midnight, as `reschedulePlan` schedules it, so the owner can
+ * silence today's ring. A logged Day, Rest mode, a Season ahead and a plant's held-back ring all keep it quiet.
+ */
+export function ringsLaterToday(
+  habit: Habit,
+  now: Date,
+  {
+    restPeriods,
+    logged,
+    records,
+  }: {
+    restPeriods: RestPeriod[];
+    logged: Omit<TodayRecords, "silenced">;
+    records: StreakRecords | null;
+  },
+) {
+  const midnight = new Date(now);
+
+  midnight.setHours(24, 0, 0, 0);
+  const today = { ...logged, silenced: [] };
+
+  return habitPlan(habit, now, { restPeriods, today, records }).some(
+    ({ trigger }) => trigger.timestamp < midnight.getTime(),
+  );
 }

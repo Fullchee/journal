@@ -53,6 +53,7 @@ const mockCheck = jest.fn();
 jest.mock("@/lib/data/streaks", () => ({
   ...jest.requireActual<object>("@/lib/data/streaks"),
   useHabitStreaks: () => () => null,
+  useHabitRecords: () => null,
   useRestPeriods: () => [],
   useCheckInStreak: () => null,
 }));

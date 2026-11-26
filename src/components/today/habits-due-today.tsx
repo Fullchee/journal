@@ -8,7 +8,6 @@ import {
   torontoDay,
   isOneOff,
   isTimed,
-  isLoggedToday,
   isTinyDay,
   MISSED,
   type Counts,
@@ -53,7 +52,7 @@ import {
   type HabitCheck,
   type HabitsBody,
 } from "@/lib/data/habits";
-import { useRestPeriods } from "@/lib/data/streaks";
+import { useHabitRecords, useRestPeriods } from "@/lib/data/streaks";
 
 // Minutes typed now were just spent, so the entry starts that long ago, but never before midnight.
 const startedAgo = (now: Date, minutes: number) =>
@@ -116,6 +115,14 @@ function useSentChecks(fetched: HabitsBody) {
   };
 }
 
+/** The Habit's alarm still rings today, as the alarm schedule plans it. */
+function useRingsLaterToday(habit: Habit, logged: HabitsBody, now: Date) {
+  const restPeriods = useRestPeriods();
+  const records = useHabitRecords(logged);
+
+  return ringsLaterToday(habit, now, { restPeriods, logged, records });
+}
+
 function DueHabits({ body: fetched }: { body: HabitsBody }) {
   const { body, lay } = useSentChecks(fetched);
   const check = useCheckHabit(lay);
@@ -153,7 +160,7 @@ function DueHabits({ body: fetched }: { body: HabitsBody }) {
       due={due}
       today={today}
       tinyDay={tinyDay}
-      loggedToday={isLoggedToday(due.habit, body, today)}
+      logged={body}
       onAnswer={(count) => answer(due, count)}
       onOpenDay={(habit) => setDetail({ habit, date })}
       onReschedule={() => setRescheduling(due.habit)}
@@ -254,7 +261,7 @@ function DueRow({
   due,
   today,
   tinyDay,
-  loggedToday,
+  logged,
   onAnswer,
   onOpenDay,
   onReschedule,
@@ -264,8 +271,8 @@ function DueRow({
   today: Date;
   /** The day's newest Check-in is Rain or Storm. */
   tinyDay: boolean;
-  /** Today's Day keeps the alarm quiet on its own, as the alarm schedule decides. */
-  loggedToday: boolean;
+  /** Today's records, with unsent taps: a logged Day already keeps the alarm quiet. */
+  logged: HabitsBody;
   onAnswer: (count: number) => void;
   onOpenDay: (habit: TimedHabit) => void;
   onReschedule: () => void;
@@ -275,7 +282,7 @@ function DueRow({
   const { mutate: addDuration } = useAddDuration();
   const isOnline = useIsOnline();
   const silenced = useSilencedAlarms();
-  const restPeriods = useRestPeriods();
+  const ringsLater = useRingsLaterToday(habit, logged, today);
 
   const props: HabitDueRowProps = {
     habit,
@@ -299,8 +306,7 @@ function DueRow({
     // A recurring Habit's Not done is a Skip; a One-off keeps Not done.
     ...(!isOneOff(habit) && { onSkip }),
     ...(canSilence() &&
-      !loggedToday &&
-      ringsLaterToday(habit, restPeriods, today) && {
+      ringsLater && {
         alarm: {
           silenced: silenced.includes(habit.id),
           onSilence: () => toggleSilenced(habit.id),
