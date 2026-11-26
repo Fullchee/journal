@@ -28,10 +28,10 @@ Built for one person's personal practice, not a general habit tracker. Its model
 
 ## Operating Context
 
-- Tabs: Today, Habits, Check-ins, Connections and Notes. Notes holds the Health plan, Health records and the Library.
+- Tabs: Check-in (home) and Today (the Habits due, plus the Work Anchor, Evening review, Connections and plan). A sidebar holds every page: Habits, Check-ins, Connections, Notes and the rest. Notes holds the Health plan, Health records and the Library.
 - Android adds Alarms, Connection reminders, the Check-in prompt and the Place guess from GPS. The Check-in prompt shows at 12:30 on a Day with no Check-in yet, outside Rest mode, with one-tap zone buttons (Bidargaddi et al. 2018); Android's channel settings turn it off.
 - The Log box (one sentence in, Habit logs out) and Plan the day (Todoist plus Google Calendar) need a connection.
-- The website is the wide layout: a centred page frame with a compact top tab bar.
+- The website is the wide layout: a centred page frame with the sidebar open beside the page.
 - It replaces the older `journal` web app; every `journal` URL must keep working (`docs/url-parity.md`).
 
 ## Capabilities and Constraints

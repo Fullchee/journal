@@ -115,16 +115,49 @@ describe("phone layout", () => {
     mockWindow.width = 390;
   });
 
-  it("opens on Today with all five tabs and the log composer", async () => {
+  it("opens on Check-in with two tabs and the log composer", async () => {
     await renderRouter(APP_DIR);
 
     expect(screen).toHavePathname("/");
-
-    for (const name of ["Today", "Habits", "Check-ins", "Connections", "Notes"]) {
-      expect(tab(name)).toBeOnTheScreen();
-    }
-
+    expect(tab("Check-in")).toBeOnTheScreen();
+    expect(tab("Today")).toBeOnTheScreen();
     expect(screen.getByLabelText("Log something")).toBeOnTheScreen();
+  });
+
+  it("hides the other pages' tabs", async () => {
+    await renderRouter(APP_DIR);
+
+    for (const name of ["Habits", "Check-ins"]) {
+      expect(screen.queryByRole("button", { name })).not.toBeOnTheScreen();
+    }
+  });
+
+  it("opens every page from the sidebar and marks the open one", async () => {
+    await renderRouter(APP_DIR);
+
+    await userEvent.press(screen.getByRole("button", { name: "Open sidebar" }));
+    const sidebar = within(screen.getByTestId("sidebar"));
+
+    expect(sidebar.getByRole("link", { name: "Check-in" })).toBeSelected();
+    expect(sidebar.getAllByRole("link")).toHaveLength(9);
+
+    await userEvent.press(sidebar.getByRole("link", { name: "Habits" }));
+
+    expect(screen).toHavePathname("/habits");
+    expect(screen.queryByTestId("sidebar")).not.toBeOnTheScreen();
+  });
+
+  it("closes the sidebar from the scrim and from Back", async () => {
+    await renderRouter(APP_DIR, { initialUrl: "/notes" });
+
+    await userEvent.press(screen.getByRole("button", { name: "Open sidebar" }));
+    await userEvent.press(screen.getByRole("button", { name: "Close sidebar" }));
+    expect(screen.queryByTestId("sidebar")).not.toBeOnTheScreen();
+
+    await userEvent.press(screen.getByRole("button", { name: "Open sidebar" }));
+    // The Modal hears Back as requestClose, which bubbles up from inside it.
+    await fireEvent(screen.getByLabelText("Sidebar"), "requestClose");
+    expect(screen.queryByTestId("sidebar")).not.toBeOnTheScreen();
   });
 
   it.each([
@@ -142,9 +175,9 @@ describe("phone layout", () => {
   it("switches tabs from the tab bar", async () => {
     await renderRouter(APP_DIR);
 
-    await userEvent.press(tab("Notes"));
+    await userEvent.press(tab("Today"));
 
-    expect(screen).toHavePathname("/notes");
+    expect(screen).toHavePathname("/today");
   });
 
   it.each([
@@ -228,7 +261,7 @@ describe("phone layout", () => {
     expect(screen.getByText("Offline")).toBeOnTheScreen();
     expect(mockStatusBarStyles).toContain("inverted");
 
-    await userEvent.press(tab("Notes"));
+    await userEvent.press(tab("Today"));
     expect(screen.getByText("Offline")).toBeOnTheScreen();
 
     await act(() => setOnline(true));
@@ -245,12 +278,12 @@ describe("phone layout", () => {
   it("sets tab labels at 13px and caps how far large system text grows them", async () => {
     await renderRouter(APP_DIR);
 
-    const label = within(tab("Habits")).getByText("Habits");
+    const label = within(tab("Today")).getByText("Today");
 
     expect(label).toHaveStyle({ fontSize: 13, lineHeight: 16 });
     expect(label).toHaveProp("maxFontSizeMultiplier", 1.3);
     // The bar grows past React Navigation's 49dp, so the capped label fits under the icon.
-    expect(tab("Habits").parent?.parent?.parent).toHaveStyle({ height: 60 });
+    expect(tab("Today").parent?.parent?.parent).toHaveStyle({ height: 60 });
   });
 
   it("shows no list pane", async () => {
@@ -265,10 +298,25 @@ describe("wide layout", () => {
     mockWindow.width = 1024;
   });
 
-  it("sizes each top-bar tab to its label instead of spreading the tabs across the window", async () => {
+  it("lists every page in a sidebar beside the page, with no tab bar or menu button", async () => {
     await renderRouter(APP_DIR);
 
-    expect(tab("Today").parent).toHaveStyle({ maxWidth: 144 });
+    expect(screen.queryByRole("button", { name: "Today" })).not.toBeOnTheScreen();
+    expect(screen.queryByRole("button", { name: "Open sidebar" })).not.toBeOnTheScreen();
+
+    await userEvent.press(screen.getByRole("link", { name: "Today" }));
+
+    expect(screen).toHavePathname("/today");
+    expect(screen.getByTestId("sidebar")).toBeOnTheScreen();
+  });
+
+  it("marks a page's sidebar link on its child pages too", async () => {
+    await renderRouter(APP_DIR, { initialUrl: "/connections/3" });
+
+    const sidebar = within(screen.getByTestId("sidebar"));
+
+    expect(sidebar.getByRole("link", { name: "Connections" })).toBeSelected();
+    expect(sidebar.getByRole("link", { name: "Check-in" })).not.toBeSelected();
   });
 
   it("opens Notes on the Health plan beside the list, with its row marked", async () => {

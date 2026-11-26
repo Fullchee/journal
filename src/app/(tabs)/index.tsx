@@ -1,22 +1,16 @@
-import { fixHolds, ZONES, type Position, type Zone, TIME_ZONE } from "@/core";
-import { Button, CheckInCard, PlanNext, Text } from "@/ui";
+import { fixHolds, ZONES, type Position, type Zone } from "@/core";
+import { Button, CheckInCard, Text } from "@/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
-import { Tabs } from "expo-router/js-tabs";
 import { useHeaderHeight } from "expo-router/react-navigation";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import { KeyboardAvoidingView, RefreshControl, ScrollView, View } from "react-native";
 
 import { CelebrationSpot, useCelebrate } from "@/components/celebration";
-import { ConnectionsTodaySection } from "@/components/connections-today-section";
 import { LogComposer } from "@/components/log-composer";
 import { newPartButton } from "@/components/new-part-button";
-import { Section } from "@/components/screen";
-import { EveningReviewRow } from "@/components/today/evening-review-row";
-import { HabitsDueToday } from "@/components/today/habits-due-today";
-import { WorkAnchor } from "@/components/today/work-anchor";
-import { useIsWide } from "@/hooks/use-is-wide";
 import { useLogDraft } from "@/hooks/use-log-draft";
+import { useRefresh } from "@/hooks/use-refresh";
 import { dismissCapture, retryCapture, useFailedCaptures } from "@/lib/data/captures";
 import {
   guessPlace,
@@ -27,16 +21,7 @@ import {
 } from "@/lib/data/check-ins";
 import { useIsOnline } from "@/lib/data/data-provider";
 import { useHabitNames } from "@/lib/data/habits";
-import { usePlanNext } from "@/lib/data/plan";
 import { currentPosition } from "@/lib/location/current-position";
-
-const todayTitle = () =>
-  new Date().toLocaleDateString(undefined, {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    timeZone: TIME_ZONE,
-  });
 
 // Widgets and shortcuts link to `?zone=<Zone>` and `?log`; each acts once, then drops so a reload doesn't repeat it.
 // The hook's router works during a deep link's first render; the imperative one isn't bound yet.
@@ -174,76 +159,31 @@ function FailedCaptures() {
   );
 }
 
-function PlanSection() {
-  const isOnline = useIsOnline();
-  const { push } = useRouter();
-
-  return (
-    <Section title="Plan the day">
-      <PlanNext {...usePlanNext()} offline={!isOnline} onOpenPlan={() => push("/plan")} />
-    </Section>
-  );
-}
-
-function Column({ testID, children }: { testID: string; children: ReactNode }) {
-  return (
-    <View testID={testID} className="flex-1 gap-6">
-      {children}
-    </View>
-  );
-}
-
-/** Every daily capture shares this one screen, so none needs navigation. */
-export default function TodayScreen() {
+/** The home tab: a Check-in now or at a time picked, with the Log box below. */
+export default function CheckInScreen() {
   const asked = useDeepLinkParams();
-  const isWide = useIsWide();
-  const client = useQueryClient();
   const headerHeight = useHeaderHeight();
-  const [refreshing, setRefreshing] = useState(false);
-
-  const refresh = async () => {
-    setRefreshing(true);
-    // Active queries are the ones on screen: every Today section, plus any tab already opened.
-    await client.refetchQueries({ type: "active" });
-    setRefreshing(false);
-  };
-
-  const left = [
-    <CheckInSection key={`check-in-${asked.at}`} zone={asked.zone} />,
-    <WorkAnchor key="anchor" />,
-    <HabitsDueToday key="habits" />,
-    <EveningReviewRow key="evening-review" />,
-  ];
-
-  const right = [<ConnectionsTodaySection key="connections" />, <PlanSection key="plan" />];
+  const { refreshing, refresh } = useRefresh();
 
   return (
     <View className="bg-background flex-1">
-      <Tabs.Screen options={{ headerTitle: todayTitle() }} />
       {/* Edge-to-edge Android no longer resizes for the keyboard, so padding keeps the composer above it.
           The view measures itself from below the header, so the offset adds the header back. */}
       <KeyboardAvoidingView
         behavior="padding"
         keyboardVerticalOffset={headerHeight}
         className="flex-1"
-        testID="today-keyboard-avoider"
+        testID="check-in-keyboard-avoider"
       >
         <ScrollView
-          testID="today-scroll"
+          testID="check-in-scroll"
           className="flex-1"
-          contentContainerClassName="w-full max-w-5xl gap-6 self-center p-4"
+          contentContainerClassName="w-full max-w-2xl gap-6 self-center p-4"
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
           keyboardShouldPersistTaps="handled"
         >
           <FailedCaptures />
-          {isWide ? (
-            <View className="flex-row items-start gap-8">
-              <Column testID="today-left">{left}</Column>
-              <Column testID="today-right">{right}</Column>
-            </View>
-          ) : (
-            [...left, ...right]
-          )}
+          <CheckInSection key={`check-in-${asked.at}`} zone={asked.zone} />
         </ScrollView>
         <LogComposer />
       </KeyboardAvoidingView>

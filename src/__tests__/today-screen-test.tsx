@@ -137,10 +137,18 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-const renderToday = async (url = "/") => {
+const renderToday = async () => {
+  const { writes } = fakeApi(todayRoutes({}));
+  await renderRouter(APP_DIR, { initialUrl: "/today" });
+  await screen.findByText("Read");
+
+  return writes;
+};
+
+const renderCheckIn = async (url = "/") => {
   const { writes } = fakeApi(todayRoutes({}));
   await renderRouter(APP_DIR, { initialUrl: url });
-  await screen.findByText("Read");
+  await screen.findByRole("button", { name: "Storm, lower half" });
 
   return writes;
 };
@@ -191,7 +199,7 @@ function oneOffApi(startDate: string) {
 
 const renderOneOff = async (startDate = daysAgo(3)) => {
   const { writes } = oneOffApi(startDate);
-  await renderRouter(APP_DIR, { initialUrl: "/" });
+  await renderRouter(APP_DIR, { initialUrl: "/today" });
   await screen.findByText("Portage");
 
   return writes;
@@ -344,7 +352,7 @@ describe("Today with an Opt-out Habit", () => {
         durations: {},
       }),
     });
-    await renderRouter(APP_DIR, { initialUrl: "/" });
+    await renderRouter(APP_DIR, { initialUrl: "/today" });
 
     expect(await screen.findByText("Planned: counts unless skipped")).toBeOnTheScreen();
     expect(screen.getByRole("checkbox", { name: "Skip Dragon boat today" })).toBeOnTheScreen();
@@ -354,7 +362,7 @@ describe("Today with an Opt-out Habit", () => {
 describe("Today", () => {
   it("draws a big sprout over the Check-in card after a new Check-in, and not after an edit", async () => {
     drawBigSprout();
-    await renderToday();
+    await renderCheckIn();
 
     expect(sprout()).not.toBeOnTheScreen();
     await userEvent.press(screen.getByRole("button", { name: "Cloud, upper half" }));
@@ -371,7 +379,7 @@ describe("Today", () => {
 
   it("draws the mini tick on the Check-in card when the draw misses the big odds", async () => {
     drawMini();
-    await renderToday();
+    await renderCheckIn();
 
     await userEvent.press(screen.getByRole("button", { name: "Cloud, upper half" }));
 
@@ -381,7 +389,7 @@ describe("Today", () => {
 
   it("keeps the details editor tappable while the celebration plays", async () => {
     drawBigSprout();
-    await renderToday();
+    await renderCheckIn();
 
     await userEvent.press(screen.getByRole("button", { name: "Cloud, upper half" }));
 
@@ -396,7 +404,7 @@ describe("Today", () => {
     jest.mocked(notificationAsync).mockClear();
     jest.replaceProperty(Platform, "OS", "android");
     drawBigSprout();
-    await renderToday();
+    await renderCheckIn();
 
     await userEvent.press(screen.getByRole("button", { name: "Cloud, upper half" }));
 
@@ -407,7 +415,7 @@ describe("Today", () => {
     jest.mocked(notificationAsync).mockClear();
     jest.replaceProperty(Platform, "OS", "android");
     drawMini();
-    await renderToday();
+    await renderCheckIn();
 
     await userEvent.press(screen.getByRole("button", { name: "Cloud, upper half" }));
 
@@ -417,7 +425,7 @@ describe("Today", () => {
   it("skips the haptic off Android", async () => {
     jest.mocked(notificationAsync).mockClear();
     drawBigSprout();
-    await renderToday();
+    await renderCheckIn();
 
     await userEvent.press(screen.getByRole("button", { name: "Cloud, upper half" }));
 
@@ -454,7 +462,7 @@ describe("Today", () => {
         ],
       }),
     );
-    await renderRouter(APP_DIR, { initialUrl: "/" });
+    await renderRouter(APP_DIR, { initialUrl: "/today" });
     await screen.findByText("Read");
 
     const names = screen.getAllByText(/^(Stretch|Read)$/).map((name) => name.children.at(0));
@@ -515,7 +523,7 @@ describe("Today", () => {
       todayRoutes({ habits: [habit({ id: "water", name: "Water", record: "count" })] }),
     );
 
-    await renderRouter(APP_DIR, { initialUrl: "/" });
+    await renderRouter(APP_DIR, { initialUrl: "/today" });
 
     const field = await screen.findByLabelText("Water count today");
     await userEvent.paste(field, "4");
@@ -533,7 +541,7 @@ describe("Today", () => {
       todayRoutes({ habits: [timedHabit({ id: "sit", name: "Sit", targetMinutes: 20 })] }),
     );
 
-    await renderRouter(APP_DIR, { initialUrl: "/" });
+    await renderRouter(APP_DIR, { initialUrl: "/today" });
 
     const field = await screen.findByLabelText("Sit minutes today");
     await userEvent.paste(field, "15");
@@ -548,7 +556,7 @@ describe("Today", () => {
 
   it("says so when no Habit is due", async () => {
     fakeApi(todayRoutes({ habits: [] }));
-    await renderRouter(APP_DIR, { initialUrl: "/" });
+    await renderRouter(APP_DIR, { initialUrl: "/today" });
 
     expect(await screen.findByText("Nothing due today.")).toBeOnTheScreen();
   });
@@ -560,7 +568,7 @@ describe("Today", () => {
         throw new Error("offline");
       },
     });
-    await renderRouter(APP_DIR, { initialUrl: "/" });
+    await renderRouter(APP_DIR, { initialUrl: "/today" });
 
     expect(await screen.findByText("Couldn't load Habits.")).toBeOnTheScreen();
     expect(screen.getByText("All habits")).toBeOnTheScreen();
@@ -613,6 +621,27 @@ describe("Today", () => {
       "/api/circles",
       "/api/connections",
       "/api/habits",
+      "/api/streaks",
+    ]);
+  });
+
+  it("refetches the Check-in's lists on pull to refresh", async () => {
+    await renderCheckIn();
+    jest.mocked(apiFetch).mockClear();
+
+    const refreshControl: unknown = screen.getByTestId("check-in-scroll").props["refreshControl"];
+
+    if (!isValidElement<RefreshControlProps>(refreshControl))
+      throw new Error("Check-in has no pull to refresh");
+    await act(() => refreshControl.props.onRefresh?.());
+
+    const paths = jest
+      .mocked(apiFetch)
+      .mock.calls.map(([path]) => new URL(path, "https://journal.test").pathname);
+
+    expect(paths.toSorted((a, b) => a.localeCompare(b))).toEqual([
+      "/api/check-ins",
+      "/api/habits",
       "/api/parts",
       "/api/streaks",
     ]);
@@ -620,13 +649,14 @@ describe("Today", () => {
 
   it("saves a Check-in, a Habit check and a Reached out made offline after reconnecting", async () => {
     drawBigSprout();
-    const writes = await renderToday();
+    const writes = await renderCheckIn();
     await act(() => onlineManager.setOnline(false));
 
     expect(screen.getByText("Offline")).toBeOnTheScreen();
     await userEvent.press(screen.getByRole("button", { name: "Storm, lower half" }));
     expect(sprout()).toBeOnTheScreen();
-    await userEvent.press(screen.getByRole("checkbox", { name: "Read done today" }));
+    await userEvent.press(screen.getByRole("button", { name: "Today" }));
+    await userEvent.press(await screen.findByRole("checkbox", { name: "Read done today" }));
     await userEvent.press(screen.getByRole("button", { name: "Reached out" }));
     await userEvent.press(screen.getByRole("button", { name: "Log" }));
 
@@ -646,7 +676,7 @@ describe("Today", () => {
   });
 
   it("marks the zone from ?zone and drops the param", async () => {
-    await renderToday("/?zone=Storm");
+    await renderCheckIn("/?zone=Storm");
 
     await waitFor(() => expect(screen).toHaveSearchParams({}));
     expect(CheckInCard).toHaveBeenLastCalledWith(
@@ -669,7 +699,7 @@ describe("Today", () => {
   });
 
   it('logs "What were you doing?" at once and shows the Receipt in the Log box', async () => {
-    const writes = await renderToday();
+    const writes = await renderCheckIn();
 
     await userEvent.press(screen.getByRole("button", { name: "Sun, upper half" }));
     await userEvent.press(
@@ -693,7 +723,7 @@ describe("Today", () => {
 
   it("saves the details but drafts no log while offline", async () => {
     mockDraftLog.mockClear();
-    await renderToday();
+    await renderCheckIn();
     await act(() => onlineManager.setOnline(false));
 
     await userEvent.press(screen.getByRole("button", { name: "Sun, upper half" }));
@@ -719,7 +749,7 @@ describe("Today", () => {
   });
 
   it("takes the first tap on Save details while the keyboard is open", async () => {
-    await renderToday();
+    await renderCheckIn();
 
     await userEvent.press(screen.getByRole("button", { name: "Sun, upper half" }));
 
@@ -730,9 +760,9 @@ describe("Today", () => {
   });
 
   it("lifts the composer by the header height too, since the keyboard view sits below the header", async () => {
-    await renderToday();
+    await renderCheckIn();
 
-    const avoider = screen.getByTestId("today-keyboard-avoider");
+    const avoider = screen.getByTestId("check-in-keyboard-avoider");
 
     const keyboard = {
       duration: 0,
@@ -753,7 +783,7 @@ describe("Today", () => {
   });
 
   it("logs a clean draft at once when the composer sends", async () => {
-    await renderToday();
+    await renderCheckIn();
 
     await userEvent.paste(screen.getByLabelText("Log something"), "walked");
     await userEvent.press(screen.getByRole("button", { name: "Send" }));
@@ -762,27 +792,23 @@ describe("Today", () => {
     expect(screen).toHavePathname("/");
   });
 
-  it("shows the Work day's Anchor between the Check-in card and Habits in job hours", async () => {
+  it("shows the Work day's Anchor below the Habits in job hours", async () => {
     jest.setSystemTime(new Date(`${TODAY}T10:00:00-05:00`));
     fakeApi({
       ...todayRoutes({}),
       [`/api/work/days?day=${TODAY}`]: () => ({ days: [{ day: TODAY, anchor: "Review APP-101" }] }),
     });
-    await renderRouter(APP_DIR, { initialUrl: "/" });
+    await renderRouter(APP_DIR, { initialUrl: "/today" });
 
     expect(await screen.findByText("Review APP-101")).toBeOnTheScreen();
 
-    // getAll returns matches in screen order: the Check-in card's "When?", the Anchor, then a Habit.
-    const marks = screen.getAllByText(/^(When\?|Review APP-101|Read)$/);
+    // getAll returns matches in screen order: a Habit, then the Anchor.
+    const marks = screen.getAllByText(/^(Review APP-101|Read)$/);
 
-    expect(marks).toEqual([
-      screen.getByText("When?"),
-      screen.getByText("Review APP-101"),
-      screen.getByText("Read"),
-    ]);
+    expect(marks).toEqual([screen.getByText("Read"), screen.getByText("Review APP-101")]);
   });
 
-  it("puts Check-in and Habits beside Connections and Plan from 768px", async () => {
+  it("puts Habits beside Connections and Plan from 768px", async () => {
     mockWindow.width = 1024;
     await renderToday();
 
@@ -818,7 +844,7 @@ async function renderRefused() {
   });
 
   await renderRouter(APP_DIR, { initialUrl: "/" });
-  await screen.findByText("Read");
+  await screen.findByRole("button", { name: "Storm, lower half" });
   await userEvent.press(screen.getByRole("button", { name: "Storm, lower half" }));
 
   expect(await screen.findByText(/^Couldn't save the .* Storm Check-in$/)).toBeOnTheScreen();
@@ -863,7 +889,7 @@ describe("Today's Check-in position", () => {
     });
 
     await renderRouter(APP_DIR, { initialUrl: "/" });
-    await screen.findByText("Read");
+    await screen.findByRole("button", { name: "Storm, lower half" });
 
     await userEvent.press(screen.getByRole("button", { name: "Cloud, upper half" }));
 
@@ -884,7 +910,7 @@ describe("Today's Check-in position", () => {
 
   it("saves the position on a Check-in from the widget's ?zone link", async () => {
     mockLocation.position = OFFICE;
-    const writes = await renderToday("/?zone=Storm");
+    const writes = await renderCheckIn("/?zone=Storm");
 
     await userEvent.press(screen.getByRole("button", { name: "Storm, lower half" }));
 
@@ -892,7 +918,7 @@ describe("Today's Check-in position", () => {
   });
 
   it("saves the Check-in alone and guesses from the time when no position comes", async () => {
-    const writes = await renderToday();
+    const writes = await renderCheckIn();
 
     await userEvent.press(screen.getByRole("button", { name: "Cloud, upper half" }));
 
@@ -903,7 +929,7 @@ describe("Today's Check-in position", () => {
 
   it("queues the position offline and skips the guess", async () => {
     mockLocation.position = OFFICE;
-    const writes = await renderToday();
+    const writes = await renderCheckIn();
     await act(() => onlineManager.setOnline(false));
 
     await userEvent.press(screen.getByRole("button", { name: "Cloud, upper half" }));
@@ -917,7 +943,7 @@ describe("Today's Check-in position", () => {
 
   it("reads no position for a Check-in set more than an hour back", async () => {
     mockLocation.position = OFFICE;
-    await renderToday();
+    await renderCheckIn();
 
     const card = jest.mocked(CheckInCard).mock.lastCall?.[0];
 

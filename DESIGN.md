@@ -231,8 +231,8 @@ Each role names one loaded face, not a family plus a weight: Android can't pick 
 ## Layout
 
 - **Phones (below 768px)**: one column with a 1rem gutter and a bottom tab bar.
-- **Wide (768px and up)**: the tabs move to a compact top bar sized to each label (at most 144px a tab), and list screens show their detail beside them (two panes).
-- **Page frame (1024px and up)**: the app keeps a centred 64rem frame with sepia hairlines at its sides, on a pressed-tint ground. Tab bar, headers and panes share its edges.
+- **Wide (768px and up)**: the tab bar hides and the sidebar stays open beside the page; list screens show their detail beside them (two panes).
+- **Page frame (1024px and up)**: the app keeps a centred 64rem frame with sepia hairlines at its sides, on a pressed-tint ground. Sidebar, headers and panes share its edges.
 - **Zone plates**: four columns on one shared baseline, Storm left to Sun right.
 - **Habit tracker**: each row stacks name over a fixed seven-day strip on phones; on wide screens the name sits left and the strip right. The strip never scrolls sideways.
 - **Rhythm**: sections open with a double rule and 1.25rem above the heading; fields step 1.25rem apart; chips and buttons sit 0.5rem apart.
@@ -302,9 +302,10 @@ Pressed into the paper, not floating on it. `Button` in `src/ui`.
 
 ### Navigation
 
-- **Tabs:** Today, Habits, Check-ins, Connections and Notes, each a 1.5px line icon (lucide) with a small-caps label. Five is Android's maximum, so nothing hides behind a More sheet.
+- **Tabs:** Check-in (home) and Today, each a 1.5px line icon (lucide) with a small-caps label.
+- **Sidebar:** every page: Check-in, Today, Habits, Check-ins, Connections, Notes, Plan the day, Evening review and Weekly retro. On phones the header's menu button opens it over a scrim; Back or a tap on the scrim closes it.
 - **Phones:** a bottom tab bar on the cream ground, under a double rule.
-- **Wide:** a compact top bar inside the page frame, icon beside label.
+- **Wide:** no tab bar; the sidebar sits beside the page inside the page frame.
 - **States:** inactive in graphite; active in leaf green.
 
 ### Zone Plate

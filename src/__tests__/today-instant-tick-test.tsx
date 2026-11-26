@@ -68,7 +68,7 @@ async function renderWithPendingWrites() {
     .mockImplementation((...request) =>
       request[1].method === "POST" ? new Promise<never>(jest.fn()) : answer!(...request),
     );
-  await renderRouter(APP_DIR, { initialUrl: "/" });
+  await renderRouter(APP_DIR, { initialUrl: "/today" });
   await screen.findByText("Read");
 }
 

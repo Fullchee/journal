@@ -139,7 +139,7 @@ afterEach(() => {
 
 describe("Habit actions on Today", () => {
   it("toasts a Done, ticks its row, and Undo clears the day", async () => {
-    const writes = await renderAt("/", "Read");
+    const writes = await renderAt("/today", "Read");
 
     await userEvent.press(screen.getByRole("checkbox", { name: "Read done today" }));
 
@@ -161,7 +161,7 @@ describe("Habit actions on Today", () => {
   });
 
   it("folds a Done into Done today before the server answers", async () => {
-    await renderAt("/", "Read");
+    await renderAt("/today", "Read");
     const answer = jest.mocked(apiFetch).getMockImplementation();
     jest
       .mocked(apiFetch)
@@ -178,7 +178,7 @@ describe("Habit actions on Today", () => {
   it("keeps a Done in Done today after it cancels a hanging Habits refetch", async () => {
     const client = createQueryClient();
     setRouteQueryClient(client);
-    await renderAt("/", "Read");
+    await renderAt("/today", "Read");
     jest.mocked(apiFetch).mockImplementation(unanswered);
     void client.invalidateQueries();
 
@@ -189,7 +189,7 @@ describe("Habit actions on Today", () => {
 
   it("plays a big drawing over the screen instead of the tick, and Undo stops it", async () => {
     drawBig();
-    await renderAt("/", "Read");
+    await renderAt("/today", "Read");
 
     await userEvent.press(screen.getByRole("checkbox", { name: "Read done today" }));
 
@@ -202,7 +202,7 @@ describe("Habit actions on Today", () => {
   });
 
   it("toasts a Skip, keeps one toast when the cause is saved, and Undo clears the Skip and its cause", async () => {
-    const writes = await renderAt("/", "Read");
+    const writes = await renderAt("/today", "Read");
 
     await userEvent.press(screen.getByRole("checkbox", { name: "Skip Read today" }));
     expect(toastText()).toBe("Skipped · Read");
@@ -224,7 +224,7 @@ describe("Habit actions on Today", () => {
   });
 
   it("toasts a One-off Not done, and Undo makes it overdue again", async () => {
-    const writes = await renderAt("/", "Portage");
+    const writes = await renderAt("/today", "Portage");
 
     await userEvent.press(screen.getByRole("checkbox", { name: "Portage not done today" }));
 
@@ -245,7 +245,7 @@ describe("Habit actions on Today", () => {
   });
 
   it("undoes a moved answer on both days: Not done back on the due date, Done off today", async () => {
-    const writes = await renderAt("/", "Portage");
+    const writes = await renderAt("/today", "Portage");
 
     await userEvent.press(screen.getByRole("checkbox", { name: "Portage not done today" }));
     await userEvent.press(await screen.findByRole("button", { name: "Done today (1)" }));
@@ -262,7 +262,7 @@ describe("Habit actions on Today", () => {
   });
 
   it("toasts a Reschedule, and Undo puts the One-off back on its date", async () => {
-    const writes = await renderAt("/", "Portage");
+    const writes = await renderAt("/today", "Portage");
 
     await userEvent.press(screen.getByRole("button", { name: "Reschedule Portage" }));
     await userEvent.press(screen.getByRole("radio", { name: "Put it off" }));
@@ -285,7 +285,7 @@ describe("Habit actions on Today", () => {
 
   it("offers no Undo for a clear, and a toast leaves after 10 s", async () => {
     jest.useFakeTimers({ doNotFake: ["nextTick", "setImmediate"] });
-    await renderAt("/", "Read");
+    await renderAt("/today", "Read");
 
     await userEvent.press(screen.getByRole("checkbox", { name: "Read done today" }));
     await act(() => jest.advanceTimersByTime(10_000));
@@ -322,7 +322,7 @@ describe("Habit actions on the Habits tab", () => {
   });
 
   it("plays the tick over the screen even while Today, with its row, stays mounted underneath", async () => {
-    await renderAt("/", "Read");
+    await renderAt("/today", "Read");
     await act(() => router.navigate("/habits"));
 
     await userEvent.press(await screen.findByRole("checkbox", { name: "Read today" }));

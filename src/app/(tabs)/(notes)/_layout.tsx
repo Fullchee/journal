@@ -1,6 +1,7 @@
 import { Stack } from "expo-router";
 
 import { NotesList } from "@/components/notes-list";
+import { SidebarButton } from "@/components/sidebar";
 import { TwoPane } from "@/components/two-pane";
 
 const ANCHOR = "notes/index";
@@ -38,7 +39,7 @@ export default function NotesLayout() {
   return (
     <TwoPane list={<NotesList />}>
       <Stack screenListeners={keepNotesBelow}>
-        <Stack.Screen name="notes/index" options={{ title: "Notes" }} />
+        <Stack.Screen name="notes/index" options={{ title: "Notes", headerLeft: SidebarButton }} />
         <Stack.Screen name="notes/[type]/[id]" options={{ title: "Note" }} />
         <Stack.Screen name="library/index" options={{ title: "Library" }} />
         <Stack.Screen name="library/[id]" options={{ title: "Habit" }} />

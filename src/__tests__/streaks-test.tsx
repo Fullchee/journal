@@ -260,7 +260,7 @@ describe("Streaks on Today", () => {
   it("plays the big celebration when a Done reaches a 7-day Streak", async () => {
     jest.spyOn(Math, "random").mockReturnValue(0.9);
     serveToday(doneUpToYesterday(6));
-    await renderRouter(APP_DIR);
+    await renderRouter(APP_DIR, { initialUrl: "/today" });
 
     await userEvent.press(await screen.findByRole("checkbox", { name: "Walk done today" }));
 
@@ -274,7 +274,7 @@ describe("Streaks on Today", () => {
   it("plays only the tick when a Done reaches no milestone", async () => {
     jest.spyOn(Math, "random").mockReturnValue(0.9);
     serveToday(doneUpToYesterday(4));
-    await renderRouter(APP_DIR);
+    await renderRouter(APP_DIR, { initialUrl: "/today" });
 
     await userEvent.press(await screen.findByRole("checkbox", { name: "Walk done today" }));
 

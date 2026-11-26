@@ -75,7 +75,7 @@ describe("Season nudge on Today", () => {
     ["Not this year", { seasonQuietUntil: `${String(YEAR)}-12-31` }],
   ])("asks whether the Season started; %s saves the answer", async (answer, patch) => {
     const writes = serveToday([boat]);
-    await renderRouter(APP_DIR);
+    await renderRouter(APP_DIR, { initialUrl: "/today" });
 
     expect(await screen.findByText("Has Dragon boat season started?")).toBeOnTheScreen();
     await userEvent.press(screen.getByRole("button", { name: answer }));
@@ -87,7 +87,7 @@ describe("Season nudge on Today", () => {
 
   it("stays quiet for a Habit without Seasons", async () => {
     serveToday([habit()]);
-    await renderRouter(APP_DIR);
+    await renderRouter(APP_DIR, { initialUrl: "/today" });
 
     await screen.findByText("Walk");
 

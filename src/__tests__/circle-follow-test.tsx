@@ -96,7 +96,7 @@ const circleWrites = (writes: Write[]) =>
 describe("Today's Who you'll see", () => {
   it("lists the members of the Circle a due Habit follows, and never asks who came", async () => {
     serve([practice], [team()]);
-    await renderRouter(APP_DIR);
+    await renderRouter(APP_DIR, { initialUrl: "/today" });
 
     expect(await screen.findByText("Who you'll see: Ana, Ben")).toBeOnTheScreen();
     expect(screen.queryByText(/who came|attend/i)).not.toBeOnTheScreen();
@@ -110,7 +110,7 @@ describe("Today's Who you'll see", () => {
       ],
       [team()],
     );
-    await renderRouter(APP_DIR);
+    await renderRouter(APP_DIR, { initialUrl: "/today" });
 
     await screen.findByText("Walk");
 
@@ -119,7 +119,7 @@ describe("Today's Who you'll see", () => {
 
   it("offers one tap to start this year’s Circle with last year’s members", async () => {
     const writes = serve([practice], [team()]);
-    await renderRouter(APP_DIR);
+    await renderRouter(APP_DIR, { initialUrl: "/today" });
 
     await userEvent.press(
       await screen.findByRole("button", {
@@ -141,7 +141,7 @@ describe("Today's Who you'll see", () => {
 
   it("makes no offer once the Season is a week old", async () => {
     serve([{ ...practice, seasons: [{ start: shiftDay(TODAY, -7), end: null }] }], [team()]);
-    await renderRouter(APP_DIR);
+    await renderRouter(APP_DIR, { initialUrl: "/today" });
 
     await screen.findByText("Who you'll see: Ana, Ben");
 
