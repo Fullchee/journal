@@ -779,6 +779,27 @@ describe("Habit editor", () => {
     expect(await screen.findByRole("heading", { name: "New habit" })).toBeOnTheScreen();
   });
 
+  it("keeps Save off and says which field is missing until each is filled", async () => {
+    await renderAt("/habits?edit=new");
+    await screen.findByLabelText("Name");
+    const save = () => screen.getByRole("button", { name: "Save" });
+
+    expect(screen.getByText("Name the habit, in 200 characters or fewer.")).toBeOnTheScreen();
+    expect(save()).toBeDisabled();
+
+    await userEvent.paste(screen.getByLabelText("Name"), "Read");
+    await userEvent.press(screen.getByRole("button", { name: "Add time" }));
+    await userEvent.press(chip("Record", "Minutes"));
+
+    expect(screen.getByText("Enter the minutes a day, from 1 to 1440.")).toBeOnTheScreen();
+    expect(save()).toBeDisabled();
+
+    await userEvent.paste(screen.getByLabelText("Minutes a day"), "30");
+
+    expect(screen.queryByText("Enter the minutes a day, from 1 to 1440.")).not.toBeOnTheScreen();
+    expect(save()).toBeEnabled();
+  });
+
   it("says why a save failed", async () => {
     await renderAt("/habits?edit=walk");
     await screen.findByLabelText("Name");
@@ -792,7 +813,7 @@ describe("Habit editor", () => {
     await userEvent.press(screen.getByRole("button", { name: "Save" }));
 
     expect(
-      await screen.findByText("Couldn't save. Check the name and try again."),
+      await screen.findByText("Couldn't save. The habit it comes after or a Goal may be gone."),
     ).toBeOnTheScreen();
     expect(screen).toHavePathname("/habit/walk");
   });

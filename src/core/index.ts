@@ -22,6 +22,8 @@ export * from "./habit-day";
 
 export * from "./habit-filters";
 
+export * from "./habit-draft";
+
 export * from "./habit-places";
 
 export * from "./habits-view";

@@ -1,5 +1,6 @@
 import {
   blankHabit,
+  checkDraft,
   MISSED,
   RESCHEDULE_CAUSES,
   shiftDay,
@@ -18,7 +19,6 @@ import {
   deleteUnusedHabit,
   insertHabitStatement,
   newHabitId,
-  readHabit,
   readHabits,
   readNotes,
   readRecords,
@@ -267,7 +267,7 @@ export function oneOffHabit(oneOff: ModelOneOff | null, today: string): Habit | 
   if (!isShortText(name) || !isDueDate(date, today) || !isShortText(usualWhen)) return null;
 
   // `check`, because only that Record style can be answered Not done.
-  const draft = readHabit({
+  const { draft } = checkDraft({
     ...blankHabit("good"),
     name,
     usualWhen: usualWhen.trim(),

@@ -7,7 +7,6 @@ import {
   cueChoices,
   newHabitDraft,
   descriptionBody,
-  cueMissing,
   loopSentence,
   scheduleSummary,
   stackCandidates,
@@ -56,28 +55,6 @@ test("blankHabit starts a daily Habit of the given kind, never a tree, starting 
 
 test("blankHabit leaves the cue type unset", () => {
   assert.equal(blankHabit("good").cueType, "");
-});
-
-test("cueMissing names a stacked cue with no habit", () => {
-  assert.equal(cueMissing(makeHabit({ cueType: "stacked", stackedAfter: null })), "stacked");
-  assert.equal(cueMissing(makeHabit({ cueType: "stacked", stackedAfter: "a" })), null);
-  assert.equal(cueMissing(makeHabit({ cueType: "", stackedAfter: null })), null);
-});
-
-test("cueMissing names a Scheduled cue with no time", () => {
-  assert.equal(cueMissing(makeHabit({ cueType: "time", usualWhen: "" })), "time");
-  assert.equal(cueMissing(makeHabit({ cueType: "time", usualWhen: "08:00" })), null);
-  assert.equal(
-    cueMissing(makeHabit({ cueType: "time", alarm: { time: "07:00", kind: "alarm" } })),
-    null,
-  );
-});
-
-test("cueMissing ignores a One-off, which has no cue", () => {
-  assert.equal(
-    cueMissing(makeHabit({ cueType: "time", target: { type: "once", count: 1, days: [] } })),
-    null,
-  );
 });
 
 test("newHabitDraft starts a good Habit Scheduled and a bad one with no cue", () => {

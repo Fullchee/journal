@@ -1,5 +1,4 @@
-import { cleanNote, type DraftEntry, type LogDraft, type LogEntry } from "@/core";
-import { isMinutes } from "./habit-records";
+import { cleanNote, isMinutes, type DraftEntry, type LogDraft, type LogEntry } from "@/core";
 import {
   ASK_AGAIN,
   candidateIds,

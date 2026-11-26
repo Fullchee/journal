@@ -1,23 +1,9 @@
 import {
-  ALARM_KINDS,
-  blankHabit,
-  ClockTime,
-  CueType,
-  Kind,
-  Priority,
-  RecordStyle,
-  TARGET_TYPES,
-  targetCountRange,
-  UsualWhen,
   type Counts,
   type DayNotes,
   type Durations,
   type Draft,
   type Habit,
-  type Target,
-  normalizePlaces,
-  canOptOut,
-  hasTinyVersion,
   MISSED,
   optOutLogs,
   Season,
@@ -31,17 +17,11 @@ import {
 } from "@/core";
 import * as z from "zod/mini";
 import type { D1, D1Statement, Env, SqlValue } from "./env";
-import { MAX_BODY_BYTES } from "./note-body";
 
 export const DATE = /^\d{4}-\d{2}-\d{2}$/;
-const HABIT_ID = /^[\da-z-]{1,32}$/;
 export const MAX_COUNT = 99;
 
-const MAX_NAME = 200;
-
 export const IsoDate = z.string().check(z.regex(DATE));
-
-export const HabitId = z.string().check(z.regex(HABIT_ID));
 
 // Each `habits` column besides `id`, and how a Habit fills it; the SELECT, INSERT and UPDATE lists all follow this order.
 const COLUMNS = {
@@ -247,137 +227,6 @@ export async function updateHabit(env: Env, habit: Habit) {
   return meta.changes > 0;
 }
 
-/** A day has 1440 minutes, so a duration Habit's bar cannot exceed it. */
-export const isMinutes = (value: number | null | undefined): value is number =>
-  value !== null &&
-  value !== undefined &&
-  Number.isSafeInteger(value) &&
-  value >= 1 &&
-  value <= 1440;
-
-const Weekday = z.int().check(z.gte(0), z.lte(6));
-
-const Weekdays = z.array(Weekday);
-
-const Days = z.array(z.number());
-
-/** `count` and `days` mean nothing on a Reference Habit (`none`), so only a tracked target checks them. */
-const TargetChange = z.object({
-  type: z.enum(TARGET_TYPES),
-  count: z.optional(z.number()),
-  days: z.optional(Days),
-});
-
-type TargetChange = z.infer<typeof TargetChange>;
-
-// D1 rejects an oversized statement with a 500, so a long description is refused up front.
-const fitsInRow = (text: string) => new TextEncoder().encode(text).length <= MAX_BODY_BYTES;
-
-export const Name = z.string().check(
-  z.maxLength(MAX_NAME),
-  z.refine((name) => name.trim() !== ""),
-);
-
-const Description = z.string().check(z.refine(fitsInRow));
-
-const AlarmChange = z.object({
-  time: ClockTime,
-  kind: z.enum(ALARM_KINDS),
-});
-
-const GoalId = z.int().check(z.gt(0));
-
-const MAX_PLACES = 20;
-
-const MAX_PLACE = 200;
-
-const Places = z.array(z.string().check(z.maxLength(MAX_PLACE))).check(z.maxLength(MAX_PLACES));
-
-const MAX_SEASONS = 100;
-
-const SeasonChange = z
-  .object({ start: IsoDate, end: z.nullable(IsoDate) })
-  .check(z.refine(({ start, end }) => end === null || end >= start));
-
-const DraftFields = z.object({
-  name: Name,
-  description: Description,
-  usualWhen: UsualWhen,
-  places: Places,
-  kind: Kind,
-  trees: z.array(TreeSpan),
-  treeAskFrom: z.nullable(IsoDate),
-  priority: Priority,
-  active: z.boolean(),
-  autoLogged: z.boolean(),
-  optOutFrom: z.nullable(IsoDate),
-  usualMinutes: z.nullable(z.number()),
-  startDate: z.union([z.literal(""), IsoDate]),
-  cueType: z.union([CueType, z.literal("")]),
-  stackedAfter: z.nullable(HabitId),
-  target: TargetChange,
-  record: RecordStyle,
-  targetMinutes: z.nullable(z.number()),
-  goals: z.array(GoalId),
-  alarm: z.nullable(AlarmChange),
-  seasons: z.array(SeasonChange).check(z.maxLength(MAX_SEASONS)),
-  seasonQuietUntil: z.nullable(IsoDate),
-  tinyVersion: z.string().check(z.maxLength(MAX_NAME)),
-});
-
-/**
- * A Habit change as the client sends it: any field may be missing until readHabit fills the defaults. The tree
- * fields change only through a tree answer, so an edit keeps the saved ones.
- */
-export const HabitChange = z.partial(z.omit(DraftFields, { trees: true, treeAskFrom: true }));
-
-export type HabitChange = z.infer<typeof HabitChange>;
-
-type DraftFields = z.infer<typeof DraftFields>;
-
-const isValidTarget = ({ type, count = 7, days = [] }: TargetChange) =>
-  type === "none" ||
-  type === "once" ||
-  (Number.isSafeInteger(count) &&
-    count >= targetCountRange(type).min &&
-    count <= targetCountRange(type).max &&
-    Weekdays.safeParse(days).success &&
-    (type !== "days" || days.length > 0));
-
-// An Opt-out `duration` Habit logs its usual length on each counted day, so it needs one.
-const hasUsualLength = ({ record, optOutFrom, usualMinutes }: DraftFields) =>
-  record !== "duration" || optOutFrom === null || isMinutes(usualMinutes);
-
-// A One-off's start date is its due date, and an Every N days Habit counts its due days from it, so both need one.
-const fieldsAgree = (draft: DraftFields) => {
-  const { cueType, stackedAfter, record, targetMinutes, target, startDate } = draft;
-
-  return (
-    ((target.type !== "once" && target.type !== "interval") || startDate !== "") &&
-    (cueType === "stacked") === (stackedAfter !== null) &&
-    (record !== "duration" || isMinutes(targetMinutes)) &&
-    (!canOptOut(draft) || hasUsualLength(draft)) &&
-    isValidTarget(target)
-  );
-};
-
-const ValidDraft = DraftFields.check(z.refine(fieldsAgree));
-
-// A Reference Habit and a One-off have no weekly count or weekdays.
-function cleanTarget({ type, count = 7, days = [] }: TargetChange): Target {
-  if (type === "none") return { type, count: 7, days: [] };
-
-  if (type === "once") return { type, count: 1, days: [] };
-
-  return { type, count, days: [...new Set(days)].toSorted((a, b) => a - b) };
-}
-
-// Only a recurring Habit is due in Seasons; they keep earliest first, which the due and alarm rules read.
-const cleanSeasons = ({ target, seasons }: Pick<DraftFields, "target" | "seasons">) =>
-  target.type === "once" || target.type === "none"
-    ? []
-    : seasons.toSorted((a, b) => a.start.localeCompare(b.start));
-
 /** Stores a Habit's tree answers; false when no Habit has that id. */
 export async function updateTrees(
   env: Env,
@@ -391,40 +240,6 @@ export async function updateTrees(
     .run();
 
   return meta.changes > 0;
-}
-
-/** Returns the cleaned Habit fields, or null when the change is invalid. A missing field takes the new-Habit form's default. */
-export function readHabit(
-  change: HabitChange & Partial<Pick<DraftFields, "trees" | "treeAskFrom">>,
-): Draft | null {
-  const defaults = blankHabit(change.kind ?? "good");
-  const stacked = change.stackedAfter !== undefined && change.stackedAfter !== null;
-
-  const { data } = ValidDraft.safeParse({
-    ...defaults,
-    cueType: stacked ? "stacked" : defaults.cueType,
-    ...change,
-  });
-
-  if (data === undefined) return null;
-
-  const { target, record, targetMinutes, alarm } = data;
-  const optOutFrom = canOptOut(data) ? data.optOutFrom : null;
-
-  return {
-    ...data,
-    name: data.name.trim(),
-    places: normalizePlaces(data.places),
-    target: cleanTarget(target),
-    targetMinutes: record === "duration" ? targetMinutes : null,
-    optOutFrom,
-    usualMinutes: record === "duration" && optOutFrom !== null ? data.usualMinutes : null,
-    goals: [...new Set(data.goals)].toSorted((a, b) => a - b),
-    // A Reference Habit has no days to ring on.
-    alarm: target.type === "none" ? null : alarm,
-    seasons: cleanSeasons(data),
-    tinyVersion: hasTinyVersion(data) ? data.tinyVersion.trim() : "",
-  };
 }
 
 // Every read and write of a Habit's Days goes through the functions below: habit_checks, habit_durations and

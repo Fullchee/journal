@@ -4,6 +4,9 @@ import {
   TREE_ANSWERS,
   answerTree,
   canFixStartDate,
+  checkDraft,
+  HabitChange,
+  HabitId,
   torontoDay,
   type Goal,
   type Habit,
@@ -24,13 +27,10 @@ import {
   clearCheck,
   DATE,
   deleteHabitRecords,
-  HabitChange,
-  HabitId,
   IsoDate,
   MAX_COUNT,
   insertHabit,
   newHabitId,
-  readHabit,
   readHabits,
   readRecords,
   removeDurations,
@@ -40,6 +40,7 @@ import {
   writeSkip,
 } from "@worker/lib/habit-records";
 import { json } from "@worker/lib/json";
+import { MAX_BODY_BYTES } from "@worker/lib/note-body";
 import * as z from "zod/mini";
 
 const Check = z.object({
@@ -53,7 +54,16 @@ const Check = z.object({
   note: z.optional(Note),
 });
 
-const HabitEdit = z.extend(HabitChange, { type: z.literal("habit"), id: z.optional(HabitId) });
+// D1 rejects an oversized statement with a 500, so a long description is refused up front.
+const Description = z
+  .string()
+  .check(z.refine((text) => new TextEncoder().encode(text).length <= MAX_BODY_BYTES));
+
+const HabitEdit = z.extend(HabitChange, {
+  type: z.literal("habit"),
+  id: z.optional(HabitId),
+  description: z.optional(Description),
+});
 
 const DurationEntry = z.object({
   date: IsoDate,
@@ -229,7 +239,7 @@ async function applyHabit(env: Env, change: z.infer<typeof HabitEdit>): Promise<
 
   // An edit may name only the fields it changes; the rest keep their saved values.
   const [saved] = isNew ? [] : await readHabits(env, "WHERE id = ?", given);
-  const habit = readHabit({ ...saved, ...change });
+  const { draft: habit } = checkDraft({ ...saved, ...change });
 
   if (habit === null || (await movesOneOff(env, saved, habit))) return false;
   const id = isNew ? newHabitId(habit.name) : given;

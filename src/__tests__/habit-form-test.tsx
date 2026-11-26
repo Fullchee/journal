@@ -171,7 +171,6 @@ describe("HabitForm", () => {
     await renderForm(habit({ cueType: "time", target: { type: "none", count: 7, days: [] } }));
 
     expect(screen.getByRole("button", { name: "Add time" })).toBeOnTheScreen();
-    expect(screen.getByText("Choose a time.")).toBeOnTheScreen();
     expect(screen.queryByLabelText("Record")).not.toBeOnTheScreen();
   });
 });

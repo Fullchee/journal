@@ -1,7 +1,9 @@
 import {
   LogEntry,
   NewHabit,
-  cueMissing,
+  checkDraft,
+  DRAFT_PROBLEMS,
+  type DraftProblem,
   draftOfNewHabit,
   dueDateLabel,
   canFixDate,
@@ -45,9 +47,10 @@ import {
 } from "@/lib/data/habits";
 import { useHabitHistory } from "@/lib/data/streaks";
 
+// The form checks each field before Save, so the server refuses only over what the database holds.
 const saveError = (error: Error) =>
   error instanceof ApiError
-    ? "Couldn't save. Check the name and try again."
+    ? "Couldn't save. The habit it comes after or a Goal may be gone."
     : "Couldn't reach the server. Try again.";
 
 // The log box passes what the sentence said was done in `?entry`, to log once the Habit exists.
@@ -217,6 +220,7 @@ function Editor({
   };
 
   const busy = save.isPending || remove.isPending;
+  const { problem } = checkDraft(draft);
 
   return (
     <View className="flex-1">
@@ -250,7 +254,8 @@ function Editor({
       <EditorFooter
         saveFailure={save.error}
         isDeleteFailed={remove.isError}
-        canSave={isOnline && !busy && cueMissing(draft) === null}
+        problem={problem}
+        canSave={isOnline && !busy && problem === null}
         saveLabel={entry ? "Save and log" : "Save"}
         onSave={() => save.mutate(draft, { onSuccess: afterSave })}
       />
@@ -272,18 +277,22 @@ function SavedHabitImports({ id, record }: { id: string; record: Draft["record"]
 function EditorFooter({
   saveFailure,
   isDeleteFailed,
+  problem,
   canSave,
   saveLabel,
   onSave,
 }: {
   saveFailure: Error | null;
   isDeleteFailed: boolean;
+  /** Why the Habit draft can't be saved; null when it can. */
+  problem: DraftProblem | null;
   canSave: boolean;
   saveLabel: string;
   onSave: () => void;
 }) {
   return (
     <View className="border-border gap-2 border-t p-4">
+      {problem !== null && <Text variant="muted">{DRAFT_PROBLEMS[problem]}</Text>}
       {saveFailure && <Text className="text-destructive">{saveError(saveFailure)}</Text>}
       {isDeleteFailed && <Text className="text-destructive">{"Couldn't delete. Try again."}</Text>}
       <View className="flex-row gap-2">

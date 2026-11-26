@@ -3,21 +3,7 @@ import { onRequestGet, onRequestPost } from "@worker/api/habits";
 import { makeD1 } from "./helpers/d1";
 import type { Env, Json } from "@worker/lib/env";
 import { MAX_BODY_BYTES } from "@worker/lib/note-body";
-import {
-  MISSED,
-  type Counts,
-  type Durations,
-  type Goal,
-  type Skips,
-  ALARM_KINDS,
-  CUE_TYPES,
-  KINDS,
-  PRIORITIES,
-  RECORD_STYLES,
-  TARGET_TYPES,
-  torontoDay,
-  type Habit,
-} from "@/core";
+import { MISSED, type Counts, type Durations, type Goal, type Skips, type Habit } from "@/core";
 import { apiRequest, makeEnv, OWNER } from "./helpers/env";
 import { readJson } from "./helpers/json";
 
@@ -100,21 +86,11 @@ const INVALID_CHANGES: [string, Json][] = [
   ["bad_date", check("yesterday", "up", true)],
   ["bad_habit", check("2026-11-04", "Up Now!", true)],
   ["non_boolean_on", check("2026-11-04", "up", "yes")],
-  ["bad_start_date", { type: "habit", name: "X", startDate: "last week" }],
   ["stacked_after_unknown_habit", { type: "habit", name: "X", stackedAfter: "nope" }],
   ["links_to_itself", { type: "habit", id: "up", name: "Up", stackedAfter: "up" }],
   ["retired_text_type", { type: "text", focus: "", discuss: "" }],
   ["unknown_type", { type: "wipe" }],
   ["not_json", "{nope"],
-  [
-    "too_many_places",
-    {
-      type: "habit",
-      name: "X",
-      places: Array.from({ length: 21 }, (_, i) => `Place ${String(i)}`),
-    },
-  ],
-  ["place_too_long", { type: "habit", name: "X", places: ["x".repeat(201)] }],
 ];
 
 for (const [id, body] of INVALID_CHANGES) {
@@ -193,12 +169,6 @@ test("the owner adds a habit with a generated id", async () => {
   assert.equal("usualFrequency" in habit, false);
 });
 
-test("the owner saves a habit's Places trimmed, without blanks or repeats", async () => {
-  const env = makeEnv();
-  await post(env, OWNER, { ...GARDEN, places: [" Gym ", "", "gym", "Home"] });
-  assert.deepEqual((await habitNamed(env, GARDEN.name)).places, ["Gym", "Home"]);
-});
-
 test("an old client's dropped Habit fields are ignored, not refused", async () => {
   const env = makeEnv();
 
@@ -248,22 +218,6 @@ test("the owner saves a good Habit's Tiny version trimmed, and an edit keeps it"
 
   await post(env, OWNER, { type: "habit", id: saved.id, priority: "low" });
   assert.equal((await habitNamed(env, RUN.name)).tinyVersion, "Put on running shoes");
-});
-
-test("a Habit saved without a Tiny version has an empty one", async () => {
-  const env = makeEnv();
-  await post(env, OWNER, RUN);
-  assert.equal((await habitNamed(env, RUN.name)).tinyVersion, "");
-});
-
-test.each([
-  ["a bad Habit", { kind: "bad" }],
-  ["a One-off", { target: { type: "once", count: 1, days: [] } }],
-  ["a Reference Habit", { target: { type: "none", count: 7, days: [] } }],
-])("%s drops its Tiny version", async (_name, change) => {
-  const env = makeEnv();
-  await post(env, OWNER, { ...RUN, ...change, tinyVersion: "Put on running shoes" });
-  assert.equal((await habitNamed(env, RUN.name)).tinyVersion, "");
 });
 
 test("GET lists the Goals a habit can point at, retired ones included", async () => {
@@ -317,25 +271,6 @@ test("deleting a habit removes its Goal links", async () => {
     .all<{ goal_id: number }>();
 
   assert.deepEqual(results, []);
-});
-
-test("the owner saves a Reference Habit with no target, its count and days reset", async () => {
-  const env = makeEnv();
-  await post(env, OWNER, { ...GARDEN, target: { type: "none", count: 3, days: [2] } });
-  assert.deepEqual((await habitNamed(env, GARDEN.name)).target, {
-    type: "none",
-    count: 7,
-    days: [],
-  });
-});
-
-test.each([
-  ["monthly", 31],
-  ["interval", 30],
-])("the owner saves a %s Habit at its highest count", async (type, count) => {
-  const env = makeEnv();
-  await post(env, OWNER, { ...GARDEN, target: { type, count, days: [] } });
-  assert.deepEqual((await habitNamed(env, GARDEN.name)).target, { type, count, days: [] });
 });
 
 test("the owner saves a One-off on its date, its count and days reset", async () => {
@@ -402,16 +337,6 @@ test("the owner sets a habit's alarm time and kind", async () => {
   const alarm = { time: "21:30", kind: "persistent" };
   await post(env, OWNER, { ...GARDEN, alarm });
   assert.deepEqual((await habitNamed(env, GARDEN.name)).alarm, alarm);
-});
-
-test("a Reference Habit drops its alarm", async () => {
-  const env = makeEnv();
-  await post(env, OWNER, {
-    ...GARDEN,
-    target: { type: "none", count: 7, days: [] },
-    alarm: { time: "07:00", kind: "alarm" },
-  });
-  assert.equal((await habitNamed(env, GARDEN.name)).alarm, null);
 });
 
 test("an edit that names only some fields keeps the others", async () => {
@@ -492,50 +417,13 @@ const ADD_DURATION = {
 
 const INVALID_HABIT_CHANGES: [string, Json][] = [
   ["blank_name", { ...GARDEN, name: " " }],
-  ["bad_kind", { ...GARDEN, kind: "break" }],
-  ["bad_kind_without_record", { type: "habit", name: "X", kind: "break" }],
-  ["bad_priority", { ...GARDEN, priority: "urgent" }],
-  ["bad_cue_type", { ...GARDEN, cueType: "smell" }],
   ["stacked_without_habit", { type: "habit", name: "X", cueType: "stacked" }],
-  [
-    "typed_cue_with_stacked_habit",
-    { type: "habit", name: "X", cueType: "time", stackedAfter: "sit" },
-  ],
-  ["active_not_boolean", { ...GARDEN, active: "yes" }],
-  ["days_without_weekdays", { ...GARDEN, target: { type: "days", count: 1, days: [] } }],
   ["once_without_date", { ...GARDEN, startDate: "", target: { type: "once", count: 1, days: [] } }],
-  ["weekly_count_zero", { ...GARDEN, target: { type: "weekly", count: 0, days: [] } }],
-  ["weekly_count_eight", { ...GARDEN, target: { type: "weekly", count: 8, days: [] } }],
-  ["monthly_count_32", { ...GARDEN, target: { type: "monthly", count: 32, days: [] } }],
-  [
-    "interval_without_date",
-    { ...GARDEN, startDate: "", target: { type: "interval", count: 3, days: [] } },
-  ],
-  ["interval_every_day", { ...GARDEN, target: { type: "interval", count: 1, days: [] } }],
-  ["interval_count_31", { ...GARDEN, target: { type: "interval", count: 31, days: [] } }],
-  ["goals_not_a_list", { ...GARDEN, goals: 1 }],
-  ["usual_when_free_text", { ...GARDEN, usualWhen: "evening" }],
-  ["usual_when_twelve_hour", { ...GARDEN, usualWhen: "7:45 a.m." }],
-  ["usual_when_bad_hour", { ...GARDEN, usualWhen: "24:00" }],
-  ["alarm_bad_time", { ...GARDEN, alarm: { time: "24:00", kind: "alarm" } }],
-  ["alarm_bad_kind", { ...GARDEN, alarm: { time: "07:00", kind: "snooze" } }],
-  ["alarm_not_an_object", { ...GARDEN, alarm: "07:00" }],
-  [
-    "season_ends_before_it_starts",
-    { ...GARDEN, seasons: [{ start: "2026-05-03", end: "2026-05-02" }] },
-  ],
-  ["season_bad_date", { ...GARDEN, seasons: [{ start: "May 3", end: null }] }],
-  ["season_quiet_bad_date", { ...GARDEN, seasonQuietUntil: "soon" }],
-  ["tiny_version_not_a_string", { ...GARDEN, tinyVersion: 3 }],
-  ["tiny_version_too_long", { ...GARDEN, tinyVersion: "x".repeat(201) }],
   ["unknown_goal", { ...GARDEN, goals: [9999] }],
   ["unknown_habit_id", { ...GARDEN, id: "nope" }],
   ["count_zero", { ...check("2026-11-04", "up", true), count: 0 }],
   ["delete_bad_id", { type: "delete-habit", id: "BAD ID" }],
   ["duration_without_minutes", { ...GARDEN, record: "duration" }],
-  ["duration_zero_minutes", { ...GARDEN, record: "duration", targetMinutes: 0 }],
-  ["duration_over_a_day", { ...GARDEN, record: "duration", targetMinutes: 1441 }],
-  ["duration_fractional_minutes", { ...GARDEN, record: "duration", targetMinutes: 1.5 }],
   ["delete_duration_not_a_number", { type: "delete-duration", entry: "1" }],
   ["delete_duration_unknown", { type: "delete-duration", entry: 999 }],
   ["add_duration_zero_minutes", { ...ADD_DURATION, minutes: 0 }],
@@ -551,80 +439,6 @@ for (const [id, body] of INVALID_HABIT_CHANGES) {
     assert.equal((await post(makeEnv(), OWNER, body)).status, 400);
   });
 }
-
-const accepts = (
-  field: string,
-  values: readonly string[],
-  patch: (value: string) => Record<string, Json>,
-  read: (habit: Habit) => string | undefined,
-) => values.map((value) => ({ field, value, patch: patch(value), read }));
-
-// Every value the client lists is one the server stores; "sit" is a seeded habit to stack after.
-const ACCEPTED_VALUES = [
-  ...accepts(
-    "kind",
-    KINDS,
-    (kind) => ({ kind }),
-    (h) => h.kind,
-  ),
-  ...accepts(
-    "priority",
-    PRIORITIES.map((p) => p.id),
-    (priority) => ({ priority }),
-    (h) => h.priority,
-  ),
-  ...accepts(
-    "record",
-    RECORD_STYLES,
-    (record) => ({ record, targetMinutes: 30 }),
-    (h) => h.record,
-  ),
-  ...accepts(
-    "target",
-    TARGET_TYPES,
-    (type) => ({ target: { type, count: 2, days: [1] } }),
-    (h) => h.target.type,
-  ),
-  ...accepts(
-    "cueType",
-    CUE_TYPES.map((c) => c.id),
-    (cueType) => (cueType === "stacked" ? { cueType, stackedAfter: "sit" } : { cueType }),
-    (h) => h.cueType,
-  ),
-  ...accepts(
-    "alarm",
-    ALARM_KINDS,
-    (kind) => ({ alarm: { time: "07:00", kind } }),
-    (h) => h.alarm?.kind,
-  ),
-];
-
-for (const { field, value, patch, read } of ACCEPTED_VALUES) {
-  test(`POST stores every listed ${field}: ${value}`, async () => {
-    const env = makeEnv();
-    const name = `${field} ${value}`;
-    assert.equal((await post(env, OWNER, { ...GARDEN, name, ...patch })).status, 201);
-    assert.equal(read(await habitNamed(env, name)), value);
-  });
-}
-
-test("a new bad habit with no record style is counted, as the form defaults it", async () => {
-  const env = makeEnv();
-  await post(env, OWNER, { type: "habit", name: "Snacking", kind: "bad" });
-  assert.equal((await habitNamed(env, "Snacking")).record, "count");
-});
-
-test("a new good habit with no record style is checked", async () => {
-  const env = makeEnv();
-  await post(env, OWNER, { type: "habit", name: "Stretch", kind: "good" });
-  assert.equal((await habitNamed(env, "Stretch")).record, "check");
-});
-
-test("posting a stackedAfter with no cueType normalizes the cue type to stacked", async () => {
-  const env = makeEnv();
-  await post(env, OWNER, { type: "habit", name: "Walk", stackedAfter: "sit" });
-  assert.equal((await habitNamed(env, "Walk")).cueType, "stacked");
-});
 
 test("a habit stacks after another habit; deleting that one clears the link", async () => {
   const env = makeEnv();
@@ -941,63 +755,6 @@ test("a saved draft reads back field for field, on insert and on update", async 
 
   assert.deepEqual(saved, { ...draft, id: saved.id });
   assert.deepEqual(await habitNamed(env, "Walk"), edited);
-});
-
-// A change that names only the habit takes the new-Habit form's default for every other field.
-const DEFAULTS: [keyof Habit, Json][] = [
-  ["description", ""],
-  ["usualWhen", ""],
-  ["places", []],
-  ["kind", "good"],
-  ["trees", []],
-  ["treeAskFrom", null],
-  ["priority", "normal"],
-  ["active", true],
-  ["startDate", torontoDay(new Date())],
-  ["cueType", ""],
-  ["stackedAfter", null],
-  ["target", { type: "daily", count: 7, days: [] }],
-  ["record", "check"],
-  ["targetMinutes", null],
-  ["goals", []],
-  ["alarm", null],
-  ["seasons", []],
-  ["seasonQuietUntil", null],
-];
-
-for (const [field, expected] of DEFAULTS) {
-  test(`a habit saved without ${field} defaults it`, async () => {
-    const env = makeEnv();
-    await post(env, OWNER, { type: "habit", name: "Stretch" });
-    assert.deepEqual((await habitNamed(env, "Stretch"))[field], expected);
-  });
-}
-
-test("Seasons save earliest first", async () => {
-  const env = makeEnv();
-  const later = { start: "2027-05-02", end: null };
-  const earlier = { start: "2026-05-03", end: "2026-10-18" };
-  await post(env, OWNER, { type: "habit", name: "Paddle", seasons: [later, earlier] });
-
-  assert.deepEqual((await habitNamed(env, "Paddle")).seasons, [earlier, later]);
-});
-
-test("a One-off or Reference Habit keeps no Season", async () => {
-  const env = makeEnv();
-  const seasons = [{ start: "2026-05-03", end: null }];
-  await post(env, OWNER, {
-    type: "habit",
-    name: "Once",
-    startDate: "2026-11-20",
-    target: { type: "once" },
-    seasons,
-  });
-  await post(env, OWNER, { type: "habit", name: "Ref", target: { type: "none" }, seasons });
-
-  assert.deepEqual(
-    [(await habitNamed(env, "Once")).seasons, (await habitNamed(env, "Ref")).seasons],
-    [[], []],
-  );
 });
 
 test("a description of MAX_BODY_BYTES saves", async () => {

@@ -3,6 +3,7 @@ import {
   clockLabel,
   formatDay,
   formatMinutes,
+  isMinutes,
   KINDS,
   minutesLabel,
   minutesOf,
@@ -14,7 +15,7 @@ import {
   type NewHabit,
 } from "@/core";
 import * as z from "zod/mini";
-import { DATE, isMinutes, MAX_COUNT } from "./habit-records";
+import { DATE, MAX_COUNT } from "./habit-records";
 import type { ModelCreate, ModelItem, ModelOneOff, ModelReply } from "./log-thread";
 
 /** What the log box knows about a Habit; the model sees the same fields. */

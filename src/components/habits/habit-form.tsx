@@ -6,7 +6,6 @@ import {
   canOptOut,
   habitTime,
   cueChoices,
-  cueMissing,
   dueDateLabel,
   hasHistory,
   isCountedTarget,
@@ -91,14 +90,6 @@ const COUNT_COPY: Record<
 const DEFAULT_TIME = "08:00";
 
 const NONE = "";
-
-function MissingAlert({ children }: { children: string }) {
-  return (
-    <Text role="alert" className="text-destructive text-sm">
-      {children}
-    </Text>
-  );
-}
 
 function SectionTitle({ children }: { children: string }) {
   return (
@@ -199,9 +190,6 @@ function Cue({ draft, update, habits }: SectionProps & { habits: Habit[] }) {
           value={draft.stackedAfter}
           onPick={(stackedAfter) => update({ stackedAfter })}
         />
-      )}
-      {cueMissing(draft) === "stacked" && (
-        <MissingAlert>Choose the habit this one comes after.</MissingAlert>
       )}
     </>
   );
@@ -532,7 +520,6 @@ function Target({ draft, update }: SectionProps) {
         />
       )}
       {hasTime && <Time draft={draft} update={update} />}
-      {cueMissing(draft) === "time" && <MissingAlert>Choose a time.</MissingAlert>}
       {target.type !== "none" && (
         <>
           <RecordFields draft={draft} update={update} />

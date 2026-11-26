@@ -1,7 +1,7 @@
-import { HabitDetails, Kind, CUE_TYPES, RecordStyle } from "@/core";
+import { HabitDetails, HabitName, Kind, CUE_TYPES, RecordStyle } from "@/core";
 import * as z from "zod/mini";
 import type { Env, Json } from "./env";
-import { Name, readHabits } from "./habit-records";
+import { readHabits } from "./habit-records";
 import { LOG_MODEL, readModelJson, type JsonModeAi } from "./log-model";
 import { readTime } from "./log-plan";
 import { MAX_TEXT, MessageText } from "./log-thread";
@@ -14,7 +14,7 @@ const PICKABLE_IDS = CUE_TYPES.map((c) => c.id).filter((id) => id !== "time" && 
 
 /** POST /api/habits/draft: the first call's guesses for the new Habit, and the sentence it came from. */
 export const DetailsRequest = z.object({
-  name: Name,
+  name: HabitName,
   kind: Kind,
   record: RecordStyle,
   text: z.optional(MessageText),

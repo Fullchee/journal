@@ -38,6 +38,7 @@ The app's vocabulary. Use these terms word for word in code, UI copy and docs.
   _Avoid_: coaching summary, weekly report
 - **Habit** — an action or how-to: a name, description, usual when, its **Places**, a **kind**, a **stage**, a **Frequency**, a **cue**, a **record** style and the Goals it serves. The felt why lives on the Goal it serves. Checked off in the Habit tracker. The only type for actions and how-tos, One-offs included.
   _Avoid_: routine, goal, practice, tool, guide, strategy, technique
+- **Habit draft** — a Habit as the Habit editor holds it before Save. Save stays off, with the first missing field named, until the draft meets every rule a Habit must; the server checks the same rules, plus that its Goals and stacked Habit still exist.
 - **Places** — the Check-in places where a Habit can be done, such as Home or Gym, picked from the same list as "Where were you?". No Places means anywhere. Different from the Habit's usual **spot** (such as Bedroom or Smart phone), which is free text in the habit loop sentence.
   _Avoid_: location, context, tag
 - **Reference Habit** — a Habit with no Frequency: a framework or how-to (Storm to Sun, Working Without Freezing) held as prose. Never in the Habit tracker; listed in the Library. Research that backs it sits under its `## Research` heading.

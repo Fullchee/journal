@@ -122,8 +122,6 @@ describe("HabitForm under More", () => {
       habits: [habit({ id: "teeth", name: "Brush teeth" })],
     });
 
-    expect(screen.getByText("Choose the habit this one comes after.")).toBeOnTheScreen();
-
     await userEvent.press(
       within(screen.getByLabelText("Comes after habit")).getByRole("button", {
         name: "Brush teeth",

@@ -291,15 +291,6 @@ export function cueChoices(kind: Kind, current: CueType | "") {
   return choices;
 }
 
-/** What a cue still needs before save: a stacked cue the Habit it follows, a Scheduled cue its time. A One-off has no cue. */
-export function cueMissing(habit: Draft) {
-  if (isOneOff(habit)) return null;
-
-  if (habit.cueType === "stacked" && habit.stackedAfter === null) return "stacked";
-
-  return habit.cueType === "time" && habitTime(habit) === null ? "time" : null;
-}
-
 /** The editor's empty new Habit: a good one starts with a Scheduled cue. */
 export const newHabitDraft = (kind: Kind): Draft => ({
   ...blankHabit(kind),
