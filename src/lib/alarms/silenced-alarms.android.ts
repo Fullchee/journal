@@ -44,17 +44,25 @@ function silencedToday() {
 /** The Habits whose ring the owner silenced today; it survives a relaunch, since only the phone rings. */
 export const useSilencedAlarms = () => useSyncExternalStore(subscribe, silencedToday);
 
-/** Silences today's ring for one Habit, or brings it back. */
-export function toggleSilenced(habitId: string) {
-  const was = silencedToday();
-
-  const silenced = {
-    day: torontoDay(new Date()),
-    habits: was.includes(habitId) ? was.filter((id) => id !== habitId) : [...was, habitId],
-  };
+function save(habits: string[]) {
+  const silenced = { day: torontoDay(new Date()), habits };
 
   storage.setItemSync(SILENCED_KEY, JSON.stringify(silenced));
   store.silenced = silenced;
 
   for (const listener of listeners) listener();
+}
+
+/** Silences today's ring for one Habit, or brings it back. */
+export function toggleSilenced(habitId: string) {
+  const was = silencedToday();
+
+  save(was.includes(habitId) ? was.filter((id) => id !== habitId) : [...was, habitId]);
+}
+
+/** Silences today's ring for one Habit; the upcoming-alarm notice's Dismiss can't bring it back. */
+export function silenceToday(habitId: string) {
+  const was = silencedToday();
+
+  if (!was.includes(habitId)) save([...was, habitId]);
 }

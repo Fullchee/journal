@@ -6,9 +6,17 @@ import {
 import { act, renderHook, waitFor } from "@testing-library/react-native";
 import { checksSince, MISSED, shiftDay, torontoDay } from "@/core";
 import type { ReactNode } from "react";
-import notifee, { EventType, type Event } from "react-native-notify-kit";
+import notifee, {
+  AlarmType,
+  EventType,
+  RepeatFrequency,
+  TriggerType,
+  type Event,
+  type Trigger,
+} from "react-native-notify-kit";
 
 import { registerAlarmActions, useAlarmActions } from "@/lib/alarms/alarm-actions.android";
+import { useSilencedAlarms } from "@/lib/alarms/silenced-alarms.android";
 import { apiFetch } from "@/lib/api/api-fetch";
 import { createQueryClient } from "@/lib/data/query-client";
 
@@ -16,6 +24,22 @@ import { createQueryClient } from "@/lib/data/query-client";
 import { fakeApi } from "../../../../jest/fake-api";
 
 jest.mock("@/lib/api/api-fetch", () => ({ apiFetch: jest.fn() }));
+
+jest.mock("@/lib/alarms/silenced-alarms", () =>
+  jest.requireActual<object>("@/lib/alarms/silenced-alarms.android"),
+);
+
+jest.mock("expo-sqlite/kv-store", () => {
+  const items = new Map<string, string>();
+
+  return {
+    __esModule: true,
+    default: {
+      getItemSync: (key: string) => items.get(key) ?? null,
+      setItemSync: (key: string, value: string) => items.set(key, value),
+    },
+  };
+});
 
 jest.mock("@tanstack/react-query-persist-client", () => ({
   ...jest.requireActual<object>("@tanstack/react-query-persist-client"),
@@ -310,4 +334,119 @@ test("a background event that isn't a button tap does nothing", async () => {
 
   expect(api.writes).toEqual([]);
   expect(persistQueryClientRestore).not.toHaveBeenCalled();
+});
+
+const NOTICE_DATA = { habit: "walk", ring: "70" };
+
+const notice = (action: string, data: Record<string, string> = NOTICE_DATA): Event => ({
+  type: EventType.ACTION_PRESS,
+  detail: { pressAction: { id: action }, notification: { id: "upcoming-70", data } },
+});
+
+describe("the upcoming-alarm notice", () => {
+  // Local noon is the same Day in Toronto and in UTC, where CI runs; an earlier test leaves real timers on.
+  beforeEach(() => jest.useFakeTimers({ now: new Date(2026, 10, 6, 12, 0) }));
+
+  const ring = { id: "70", title: "Walk", data: { habit: "walk", habitId: "walk" } };
+  const sixPm = new Date(2026, 10, 6, 18, 0).getTime();
+
+  const ringTrigger = (repeatFrequency?: RepeatFrequency): Trigger => ({
+    type: TriggerType.TIMESTAMP,
+    timestamp: sixPm,
+    ...(repeatFrequency !== undefined && { repeatFrequency }),
+    alarmManager: { type: AlarmType.SET_ALARM_CLOCK },
+  });
+
+  const scheduledRing = (trigger: Trigger) =>
+    jest
+      .spyOn(notifee, "getTriggerNotifications")
+      .mockResolvedValueOnce([{ notification: ring, trigger }]);
+
+  test("Dismiss silences today's ring, keeps tomorrow's and logs nothing", async () => {
+    const api = fakeApi();
+    scheduledRing(ringTrigger(RepeatFrequency.DAILY));
+
+    await backgroundHandler()(notice("dismiss-ring"));
+
+    expect(mockCreateTrigger).toHaveBeenCalledWith(
+      ring,
+      expect.objectContaining({
+        timestamp: new Date(2026, 10, 7, 18, 0).getTime(),
+        repeatFrequency: RepeatFrequency.DAILY,
+        alarmManager: { type: AlarmType.SET_ALARM_CLOCK },
+      }),
+    );
+    expect(mockCancelDisplayed).toHaveBeenCalledWith("upcoming-70");
+    const { result } = await renderHook(useSilencedAlarms);
+
+    expect(result.current).toContain("walk");
+    expect(api.writes).toEqual([]);
+    expect(persistQueryClientRestore).not.toHaveBeenCalled();
+  });
+
+  test("Dismiss on a weekly ring moves it a week", async () => {
+    scheduledRing(ringTrigger(RepeatFrequency.WEEKLY));
+
+    await backgroundHandler()(notice("dismiss-ring"));
+
+    expect(mockCreateTrigger).toHaveBeenCalledWith(
+      ring,
+      expect.objectContaining({ timestamp: new Date(2026, 10, 13, 18, 0).getTime() }),
+    );
+  });
+
+  test.each([
+    ["a ring that never repeats", ringTrigger()],
+    ["a ring on an interval trigger", { type: TriggerType.INTERVAL, interval: 60 } as const],
+  ])("Dismiss cancels %s", async (_name, trigger) => {
+    scheduledRing(trigger);
+
+    await backgroundHandler()(notice("dismiss-ring"));
+
+    expect(mockCancelTrigger).toHaveBeenCalledWith("70");
+    expect(mockCreateTrigger).not.toHaveBeenCalled();
+  });
+
+  test("Dismiss after the ring is gone clears only the notice", async () => {
+    jest.spyOn(notifee, "getTriggerNotifications").mockResolvedValueOnce([]);
+
+    await backgroundHandler()(notice("dismiss-ring"));
+
+    expect(mockCancelDisplayed).toHaveBeenCalledWith("upcoming-70");
+    expect(mockCancelTrigger).not.toHaveBeenCalled();
+  });
+
+  test("Dismiss without a ring or as a plain tap does nothing", async () => {
+    const handler = backgroundHandler();
+
+    await handler(notice("dismiss-ring", { habit: "walk" }));
+    await handler({ ...notice("dismiss-ring"), type: EventType.PRESS });
+
+    expect(mockCancelDisplayed).not.toHaveBeenCalled();
+  });
+
+  test("Done logs the Day and skips today's ring", async () => {
+    const api = fakeApi();
+    await mountIn(createQueryClient());
+    scheduledRing(ringTrigger(RepeatFrequency.DAILY));
+
+    await act(() => foregroundHandler()(notice("done")));
+
+    await waitFor(() => expect(api.writes).toHaveLength(1));
+    expect(mockCreateTrigger).toHaveBeenCalledWith(
+      ring,
+      expect.objectContaining({ timestamp: new Date(2026, 10, 7, 18, 0).getTime() }),
+    );
+  });
+
+  test("a count Habit's Done adds one and keeps the ring, since the count may fall short", async () => {
+    const api = fakeApi();
+    await mountIn(createQueryClient());
+    const getTriggers = jest.spyOn(notifee, "getTriggerNotifications");
+
+    await act(() => foregroundHandler()(notice("add-one")));
+
+    await waitFor(() => expect(api.writes).toHaveLength(1));
+    expect(getTriggers).not.toHaveBeenCalled();
+  });
 });

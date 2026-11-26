@@ -5,10 +5,7 @@ import notifee, {
   AndroidCategory,
   AndroidImportance,
   AndroidVisibility,
-  RepeatFrequency,
-  TriggerType,
   type Notification,
-  type TimestampTrigger,
 } from "react-native-notify-kit";
 
 import {
@@ -21,10 +18,19 @@ import {
   type Habit,
   type PlannedNotification,
   type TodayRecords,
+  type UpcomingRing,
+  UPCOMING_LEAD_MS,
 } from "@/core";
 
 import { useAlarmSound } from "@/lib/alarms/alarm-sound";
 import { POSTPONE_ACTION, postponedId } from "@/lib/alarms/postponed";
+import { ringTrigger } from "@/lib/alarms/ring-trigger";
+import {
+  DISMISS_RING_ACTION,
+  isUpcomingId,
+  UPCOMING_CHANNEL,
+  upcomingId,
+} from "@/lib/alarms/upcoming";
 import { useSilencedAlarms } from "@/lib/alarms/silenced-alarms";
 import { connectionsQuery } from "@/lib/data/connections";
 import { useTodayHabits } from "@/lib/data/habits";
@@ -37,17 +43,24 @@ import JournalAndroid from "../../../modules/journal-android";
 // Declared by the journal-android module's config plugin.
 const ALARM_ACTIVITY = "expo.modules.journalandroid.AlarmActivity";
 
-const REPEAT = { day: RepeatFrequency.DAILY, week: RepeatFrequency.WEEKLY } as const;
-
 // Android keeps a channel's sound and importance once created, so changing either needs a new channel id.
 // The alarm channel is native: notify-kit plays channel sounds at notification volume, not alarm volume.
-const createPersistentChannel = () =>
-  notifee.createChannel({
-    id: CHANNEL.persistent,
-    name: "Persistent",
-    importance: AndroidImportance.HIGH,
-    visibility: AndroidVisibility.PUBLIC,
-  });
+// The upcoming-alarm notice is low importance: the ring after it is the loud part.
+const createChannels = () =>
+  notifee.createChannels([
+    {
+      id: CHANNEL.persistent,
+      name: "Persistent",
+      importance: AndroidImportance.HIGH,
+      visibility: AndroidVisibility.PUBLIC,
+    },
+    {
+      id: UPCOMING_CHANNEL,
+      name: "Upcoming alarms",
+      importance: AndroidImportance.LOW,
+      visibility: AndroidVisibility.PUBLIC,
+    },
+  ]);
 
 // An `alarm` kind Habit loops its sound and opens AlarmActivity over the lock screen until Dismiss or Open.
 // AlarmActivity has no Done or Skip, so those buttons stop the ring only from the notification of an unlocked phone.
@@ -61,11 +74,12 @@ const ringing = (habitId: string): Partial<Notification> => ({
 });
 
 // No launchActivity: a button runs in the background (`alarm-actions`) without opening the app.
+const actionButtons = (actions: AlarmAction[]) =>
+  actions.map(({ id, title }) => ({ title, pressAction: { id } }));
+
 const buttons = (habitId: string, actions: AlarmAction[]): Partial<Notification> => ({
   data: { habit: habitId },
-  android: {
-    actions: [...actions.map(({ id, title }) => ({ title, pressAction: { id } })), POSTPONE_ACTION],
-  },
+  android: { actions: [...actionButtons(actions), POSTPONE_ACTION] },
 });
 
 function toNotifyKit({ notification, trigger }: PlannedNotification, alarmChannel: string) {
@@ -95,15 +109,58 @@ function toNotifyKit({ notification, trigger }: PlannedNotification, alarmChanne
     },
   };
 
-  const timestamp: TimestampTrigger = {
-    type: TriggerType.TIMESTAMP,
-    timestamp: trigger.timestamp,
-    ...(trigger.repeat !== null && { repeatFrequency: REPEAT[trigger.repeat] }),
-    // The alarm-clock type wakes a sleeping phone, and a repeat re-arms with the same type.
-    alarmManager: { type: AlarmType.SET_ALARM_CLOCK },
-  };
+  return [shown, ringTrigger(trigger)] as const;
+}
 
-  return [shown, timestamp] as const;
+// `ring` lets a button skip the ring itself; the notice leaves on its own once the ring is due.
+const upcomingNotice = (
+  { ringId, habitId, title, body, actions }: UpcomingRing,
+  timeoutAfter: number,
+): Notification => ({
+  id: upcomingId(ringId),
+  title,
+  body,
+  data: { habit: habitId, ring: String(ringId) },
+  android: {
+    channelId: UPCOMING_CHANNEL,
+    smallIcon: "ic_stat_alarm",
+    timeoutAfter,
+    onlyAlertOnce: true,
+    pressAction: { id: "default" },
+    actions: [...actionButtons(actions), DISMISS_RING_ACTION],
+  },
+});
+
+/** Shows the notices whose ring is inside the lead now, schedules the later ones, and clears the rest. */
+async function applyUpcoming(upcoming: UpcomingRing[]) {
+  const dueNow = upcoming.flatMap((ring) =>
+    ring.showNowForMs === null ? [] : [upcomingNotice(ring, ring.showNowForMs)],
+  );
+
+  const keep = new Set(dueNow.map(({ id }) => id));
+  const shown = await notifee.getDisplayedNotifications();
+
+  await Promise.all(
+    shown.flatMap(({ id }) =>
+      id !== undefined && isUpcomingId(id) && !keep.has(id)
+        ? [notifee.cancelDisplayedNotification(id)]
+        : [],
+    ),
+  );
+  await Promise.all([
+    ...dueNow.map((notice) => notifee.displayNotification(notice)),
+    // A notice needs no alarm-clock icon in the status bar, only an exact time.
+    ...upcoming.flatMap(({ trigger, ...ring }) =>
+      trigger === null
+        ? []
+        : [
+            notifee.createTriggerNotification(
+              upcomingNotice({ trigger, ...ring }, UPCOMING_LEAD_MS),
+              ringTrigger(trigger, AlarmType.SET_EXACT_AND_ALLOW_WHILE_IDLE),
+            ),
+          ],
+    ),
+  ]);
 }
 
 /** A postponed reminder rings only while its Habit's Day is open: not logged, not silenced. */
@@ -114,11 +171,14 @@ const postponedToKeep = (habits: Habit[], today: TodayRecords, now: Date) =>
       : [postponedId(habit.id)],
   );
 
-async function applySchedule({ notifications, widgetAlarms }: AlarmSchedule, keep: string[]) {
+async function applySchedule(
+  { notifications, upcoming, widgetAlarms }: AlarmSchedule,
+  keep: string[],
+) {
   // The ask comes with the first Alarm or reminder the owner sets, when the reason is plain, not at first launch.
   // Inside the queue, so a Connections load landing mid-ask waits for the answer instead of asking again.
   if (notifications.length > 0) await askNotificationPermissionOnce();
-  await createPersistentChannel();
+  await createChannels();
   const alarmChannel = JournalAndroid.createAlarmChannel();
   // Habits and Connections are the source of truth: Android drops exact alarms when the user revokes that setting.
   // The Check-in prompt plans its own triggers from the Check-ins, so they stay.
@@ -131,6 +191,7 @@ async function applySchedule({ notifications, widgetAlarms }: AlarmSchedule, kee
       notifee.createTriggerNotification(...toNotifyKit(planned, alarmChannel)),
     ),
   );
+  await applyUpcoming(upcoming);
   JournalAndroid.setAlarms(JSON.stringify(widgetAlarms));
 }
 

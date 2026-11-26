@@ -12,11 +12,17 @@ import {
   type RestPeriod,
 } from "@/core";
 import type { ReactNode } from "react";
-import notifee, { AlarmType, AuthorizationStatus, RepeatFrequency } from "react-native-notify-kit";
+import notifee, {
+  AlarmType,
+  AuthorizationStatus,
+  RepeatFrequency,
+  TriggerType,
+} from "react-native-notify-kit";
 
 import { NetworkError } from "@/lib/api/errors";
 import { pickAlarmSound } from "@/lib/alarms/alarm-sound.android";
 import { toggleSilenced } from "@/lib/alarms/silenced-alarms.android";
+import { isUpcomingId } from "@/lib/alarms/upcoming";
 import { useAlarmSchedule } from "@/lib/alarms/use-alarm-schedule.android";
 import { invalidateHabits } from "@/lib/data/habits";
 import { createQueryClient } from "@/lib/data/query-client";
@@ -107,7 +113,16 @@ const mockCreateTriggerNotification = jest.spyOn(notifee, "createTriggerNotifica
 const mockCancelTriggerNotifications = jest.spyOn(notifee, "cancelTriggerNotifications");
 const mockGetNotificationSettings = jest.spyOn(notifee, "getNotificationSettings");
 const mockRequestPermission = jest.spyOn(notifee, "requestPermission");
-const scheduled = () => mockCreateTriggerNotification.mock.calls;
+const mockDisplayNotification = jest.spyOn(notifee, "displayNotification");
+const mockCancelDisplayed = jest.spyOn(notifee, "cancelDisplayedNotification");
+
+const isNotice = ([notification]: Parameters<typeof notifee.createTriggerNotification>) =>
+  isUpcomingId(notification.id ?? "");
+
+// Rings and reminders; the upcoming-alarm notices before them are `notices()`.
+const scheduled = () => mockCreateTriggerNotification.mock.calls.filter((call) => !isNotice(call));
+
+const notices = () => mockCreateTriggerNotification.mock.calls.filter((call) => isNotice(call));
 
 beforeEach(() => jest.clearAllMocks());
 
@@ -391,5 +406,94 @@ describe("today's ring", () => {
     });
 
     await waitFor(() => expect(ringAt()).toMatchObject(tomorrow));
+  });
+});
+
+describe("the upcoming-alarm notice", () => {
+  // Local noon is the same Day in Toronto and in UTC, where CI runs.
+  beforeEach(() => jest.setSystemTime(new Date(2026, 10, 6, 12, 0)));
+
+  const ringId = String(notificationId("out-of-bed"));
+
+  test("shows quietly two hours before an alarm, with Done, Skip and Dismiss, until the ring", async () => {
+    await mount({ habits: [habit({ alarm: { time: "18:00", kind: "alarm" } })], connections: [] });
+
+    await waitFor(() => expect(notices()).toHaveLength(1));
+    const [notice, trigger] = notices()[0] ?? [];
+
+    expect(notice).toMatchObject({
+      id: `upcoming-${ringId}`,
+      title: "Out of bed",
+      body: "Rings at 6:00 PM",
+      data: { habit: "out-of-bed", ring: ringId },
+      android: { channelId: "upcoming", timeoutAfter: 2 * 60 * 60_000, onlyAlertOnce: true },
+    });
+    expect(notice?.android?.actions?.map(({ title }) => title)).toEqual([
+      "Done",
+      "Skip",
+      "Dismiss",
+    ]);
+    expect(trigger).toMatchObject({
+      timestamp: new Date(2026, 10, 6, 16, 0).getTime(),
+      repeatFrequency: RepeatFrequency.DAILY,
+      alarmManager: { type: AlarmType.SET_EXACT_AND_ALLOW_WHILE_IDLE },
+    });
+    expect(mockDisplayNotification).not.toHaveBeenCalled();
+  });
+
+  test("a quiet reminder gets none", async () => {
+    await mount({
+      habits: [habit({ alarm: { time: "18:00", kind: "persistent" } })],
+      connections: [],
+    });
+
+    await waitFor(() => expect(JournalAndroid.setAlarms).toHaveBeenCalled());
+    expect(notices()).toEqual([]);
+  });
+
+  test("an alarm inside the two hours shows its notice now, until the ring", async () => {
+    await mount({ habits: [habit({ alarm: { time: "13:00", kind: "alarm" } })], connections: [] });
+
+    await waitFor(() => expect(mockDisplayNotification).toHaveBeenCalled());
+    expect(mockDisplayNotification.mock.calls[0]?.[0]).toMatchObject({
+      id: `upcoming-${ringId}`,
+      android: { timeoutAfter: 60 * 60_000 },
+    });
+    expect(notices()[0]?.[1]).toMatchObject({ timestamp: new Date(2026, 10, 7, 11, 0).getTime() });
+  });
+
+  test("a One-off inside the two hours shows its notice now and schedules none", async () => {
+    await mount({
+      habits: [
+        habit({
+          startDate: "2026-11-06",
+          target: { type: "once", count: 1, days: [] },
+          alarm: { time: "13:00", kind: "alarm" },
+        }),
+      ],
+      connections: [],
+    });
+
+    await waitFor(() => expect(mockDisplayNotification).toHaveBeenCalled());
+    expect(notices()).toEqual([]);
+  });
+
+  test("a reschedule clears a shown notice whose ring is no longer near", async () => {
+    const trigger = { type: TriggerType.TIMESTAMP, timestamp: 0 } as const;
+    const shown = (id?: string) => ({ ...(id !== undefined && { id }), notification: {}, trigger });
+
+    jest
+      .spyOn(notifee, "getDisplayedNotifications")
+      .mockResolvedValueOnce([shown(`upcoming-${ringId}`), shown("42"), shown()]);
+
+    await mount({
+      habits: [habit({ alarm: { time: "13:00", kind: "alarm" } })],
+      counts: { "2026-11-06": { "out-of-bed": 1 } },
+      connections: [],
+    });
+
+    await waitFor(() => expect(mockCancelDisplayed).toHaveBeenCalledWith(`upcoming-${ringId}`));
+    expect(mockCancelDisplayed).toHaveBeenCalledTimes(1);
+    expect(mockDisplayNotification).not.toHaveBeenCalled();
   });
 });

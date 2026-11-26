@@ -13,16 +13,22 @@ import notifee, {
 } from "react-native-notify-kit";
 import * as z from "zod/mini";
 
-import { ALARM_ACTION_IDS, alarmActionCheck, torontoDay } from "@/core";
+import { afterNextRing, ALARM_ACTION_IDS, alarmActionCheck, torontoDay } from "@/core";
 
 import { WRITE_DELAY_MS } from "@/lib/data/cache-persister";
 import { persistOptions } from "@/lib/data/data-provider";
 import { queueHabitCheck, storedCount } from "@/lib/data/habits";
 import { createQueryClient, resumeQueuedMutations } from "@/lib/data/query-client";
 import { POSTPONE_ACTION, POSTPONE_MS, postponedId } from "@/lib/alarms/postponed";
+import { alarmTrigger, ringTrigger } from "@/lib/alarms/ring-trigger";
+import { silenceToday } from "@/lib/alarms/silenced-alarms";
+import { DISMISS_RING_ACTION } from "@/lib/alarms/upcoming";
 
-/** A Done or Skip tap on a Habit notification; `use-alarm-schedule` puts the Habit's id in its `data`. */
-const HabitData = z.object({ habit: z.string() });
+/**
+ * A Done or Skip tap on a Habit notification; `use-alarm-schedule` puts the Habit's id in its `data`, and on an
+ * upcoming-alarm notice the id of the ring it comes before.
+ */
+const HabitData = z.object({ habit: z.string(), ring: z.optional(z.string()) });
 
 const PressedAction = z.object({
   pressAction: z.object({ id: z.enum(ALARM_ACTION_IDS) }),
@@ -74,6 +80,42 @@ async function postpone({ shown, id, habit }: Postponed) {
   await notifee.cancelDisplayedNotification(id);
 }
 
+const NoticeData = z.object({ habit: z.string(), ring: z.string() });
+
+const DismissRingPress = z.object({
+  pressAction: z.object({ id: z.literal(DISMISS_RING_ACTION.pressAction.id) }),
+  notification: z.object({ id: z.string(), data: NoticeData }),
+});
+
+/** Moves a ring past its next time; Android keeps rings with the app closed, so this works without a reschedule. */
+async function skipNextRing(ringId: string) {
+  const rings = await notifee.getTriggerNotifications();
+  const ring = rings.find(({ notification }) => notification.id === ringId);
+
+  if (ring === undefined) return;
+  const trigger = alarmTrigger(ring.trigger);
+  const next = trigger === null ? null : afterNextRing(trigger, new Date());
+
+  await (next === null
+    ? notifee.cancelTriggerNotification(ringId)
+    : notifee.createTriggerNotification(ring.notification, ringTrigger(next)));
+}
+
+// The silence keeps the next reschedule from bringing today's ring back.
+async function dismissRing(event: Event) {
+  if (event.type !== EventType.ACTION_PRESS) return false;
+  const pressed = DismissRingPress.safeParse(event.detail).data;
+
+  if (pressed === undefined) return false;
+  const { id, data } = pressed.notification;
+
+  silenceToday(data.habit);
+  await skipNextRing(data.ring);
+  await notifee.cancelDisplayedNotification(id);
+
+  return true;
+}
+
 // Offline, a check waits in the queue and its promise never settles, so a background task stops waiting after this.
 const SAVE_WAIT_MS = 10_000;
 
@@ -119,6 +161,10 @@ async function runAction(client: QueryClient, { pressAction, notification }: Pre
   // Cancelling stops a looping alarm.
   await notifee.cancelDisplayedNotification(notification.id);
   await notifee.cancelTriggerNotification(postponedId(habit));
+
+  // From an upcoming-alarm notice, a logged Day needs no ring; a count's one more tap may still fall short.
+  if (notification.data.ring !== undefined && pressAction.id !== "add-one")
+    await skipNextRing(notification.data.ring);
   await saved;
 }
 
@@ -153,8 +199,9 @@ async function runWithoutApp(pressed: PressedAction) {
   }
 }
 
-// Postpone logs nothing, so it needs no client.
+// Postpone and Dismiss log nothing, so they need no client.
 async function answer(event: Event, check: (pressed: PressedAction) => Promise<void>) {
+  if (await dismissRing(event)) return;
   const postponed = postponePress(event);
 
   if (postponed !== null) return postpone(postponed);

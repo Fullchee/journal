@@ -42,6 +42,8 @@ export * from "./storm-to-sun-reminders";
 
 export * from "./alarm-schedule";
 
+export * from "./upcoming-ring";
+
 export * from "./log-api";
 
 export * from "./log-form";

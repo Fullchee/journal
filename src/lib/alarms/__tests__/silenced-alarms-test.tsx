@@ -37,6 +37,16 @@ describe("silenced alarms on Android", () => {
     expect(result.current).toEqual([]);
   });
 
+  test("the upcoming-alarm notice's Dismiss silences a ring once, and again keeps it silenced", async () => {
+    const { result } = await renderHook(onAndroid.useSilencedAlarms);
+
+    await act(() => onAndroid.silenceToday("stretch"));
+    await act(() => onAndroid.silenceToday("stretch"));
+    expect(result.current).toEqual(["stretch"]);
+
+    await act(() => onAndroid.toggleSilenced("stretch"));
+  });
+
   test("a silence survives a relaunch the same Day", () => {
     mockItems.clear();
     afterRelaunch((app) => app.toggleSilenced("out-of-bed"));
@@ -57,6 +67,7 @@ describe("silenced alarms on Android", () => {
 describe("silenced alarms off Android", () => {
   test("nothing rings, so nothing can be silenced", async () => {
     offAndroid.toggleSilenced("out-of-bed");
+    offAndroid.silenceToday("out-of-bed");
     const { result } = await renderHook(offAndroid.useSilencedAlarms);
 
     expect([offAndroid.canSilence(), result.current]).toEqual([false, []]);

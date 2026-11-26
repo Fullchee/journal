@@ -12,6 +12,7 @@ import type { Counts, Durations, Habit, Skips } from "./habits-view";
 import { isoAt, shiftDay, torontoDay } from "./calendar";
 import { isInSeason, nextSeasonDay } from "./season";
 import { restPeriodOn, type RestPeriod } from "./rest-mode";
+import { upcomingRings, type UpcomingRing } from "./upcoming-ring";
 
 /** When a notification first shows, in ms since 1970, and how often it repeats after that. */
 export interface AlarmTrigger {
@@ -26,6 +27,8 @@ export interface PlannedNotification {
 
 export interface AlarmSchedule {
   notifications: PlannedNotification[];
+  /** A notice before each `alarm` kind ring. */
+  upcoming: UpcomingRing[];
   widgetAlarms: WidgetAlarm[];
 }
 
@@ -188,6 +191,7 @@ export function reschedulePlan(
       ...habitNotifications,
       ...plan(connectionNotifications(connections ?? [], now), now),
     ],
+    upcoming: upcomingRings(habitNotifications, now),
     widgetAlarms: widgetAlarms(
       habits.filter(({ seasons }) => isInSeason(seasons, torontoDay(now))),
       restPeriods,

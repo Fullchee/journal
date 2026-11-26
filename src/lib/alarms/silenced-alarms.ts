@@ -8,3 +8,7 @@ export const useSilencedAlarms = () => NONE;
 export function toggleSilenced(_habitId: string) {
   // Nothing rings off Android.
 }
+
+export function silenceToday(_habitId: string) {
+  // Nothing rings off Android.
+}

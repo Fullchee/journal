@@ -168,6 +168,13 @@ Researched 2026-11-22 for Stage (#34). Every claim below was checked against the
 | **Wear OS**                        | Bridged phone notifications keep their actions; a Tile needs Kotlin                                                                                                                                                                    | Done from the wrist, for free, once notifications carry actions.                                                                              | Planned in [wear-os.md](wear-os.md)                                                                        |
 | **Health Connect auto-completion** | Records for steps, exercise sessions, sleep, hydration, mindfulness, weight and more. Background and >30-day reads need extra permissions ([data types][hc-types])                                                                     | Mark a Habit done when a matching record lands: a walk from steps, meditation from a mindfulness session, a workout from an exercise session. | Calm via Health Connect (`calm-auto-log.android.ts`); Hevy via the Worker. Both are **Auto-logged** Habits |
 
+### Upcoming-alarm notice
+
+AOSP's Clock shows a notice two hours before each alarm (`LOW_NOTIFICATION_HOUR_OFFSET = -2` in [`AlarmInstance.kt`][aosp-instance]). It has one **Dismiss** button, which cancels that ring only. At 30 minutes it raises the notice to high priority ([`AlarmNotifications.kt`][aosp-notif]). The journal copies the two-hour notice, on a low-importance channel so it stays silent. Its buttons are Done, Skip and Dismiss, so an early riser can log the Day before the ring.
+
+[aosp-instance]: https://android.googlesource.com/platform/packages/apps/DeskClock/+/refs/heads/main/src/com/android/deskclock/provider/AlarmInstance.kt
+[aosp-notif]: https://android.googlesource.com/platform/packages/apps/DeskClock/+/refs/heads/main/src/com/android/deskclock/alarms/AlarmNotifications.kt
+
 ## Habit vs recurring task vs task
 
 ### How apps split them
