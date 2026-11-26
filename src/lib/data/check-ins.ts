@@ -196,10 +196,21 @@ async function create(client: QueryClient, newCheckIn: NewCheckIn) {
   return row;
 }
 
+// The saved row replaces the shown one in place, keeping the clientId a queued change may still name.
+const storeSaved = (client: QueryClient, checkIn: number | string, saved: CheckIn) =>
+  client.setQueryData<CheckInsBody>(
+    CHECK_INS_KEY,
+    (body) =>
+      body && {
+        ...body,
+        checkIns: body.checkIns.map((row) => (matches(row, checkIn) ? { ...row, ...saved } : row)),
+      },
+  );
+
 async function update(client: QueryClient, { checkIn, patch }: CheckInChange) {
   const id = savedIdOf(client, checkIn);
 
-  return apiFetch(
+  const saved = await apiFetch(
     "/api/check-ins",
     {
       method: "PATCH",
@@ -207,6 +218,10 @@ async function update(client: QueryClient, { checkIn, patch }: CheckInChange) {
     },
     CheckIn,
   );
+
+  storeSaved(client, checkIn, saved);
+
+  return saved;
 }
 
 // Parts are described by name, after the other answers; an empty answer is left out.
@@ -235,22 +250,22 @@ export function registerCheckInCaptures(client: QueryClient) {
     },
   };
 
-  // Drops a refused create at once; the refetch then undoes any refused change.
-  const settle = (settled: Settled) => {
+  // A saved capture already holds the server's row; only a refused one needs the list reloaded to undo it.
+  const settle = (error: Error | null, settled: Settled) => {
     showUnsent(client, settled);
 
-    return client.invalidateQueries({ queryKey: CHECK_INS_KEY });
+    return error === null ? undefined : client.invalidateQueries({ queryKey: CHECK_INS_KEY });
   };
 
   client.setMutationDefaults(CREATE.key, {
     ...shared,
     mutationFn: (newCheckIn: NewCheckIn) => create(client, newCheckIn),
-    onSettled: (_saved, _error, newCheckIn) => settle({ create: newCheckIn }),
+    onSettled: (_saved, error, newCheckIn) => settle(error, { create: newCheckIn }),
   });
   client.setMutationDefaults(UPDATE.key, {
     ...shared,
     mutationFn: (change: CheckInChange) => update(client, change),
-    onSettled: (_saved, _error, change) => settle({ change }),
+    onSettled: (_saved, error, change) => settle(error, { change }),
   });
 
   describeCaptures(

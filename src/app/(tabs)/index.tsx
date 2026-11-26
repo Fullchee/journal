@@ -1,13 +1,4 @@
-import {
-  currentStreakLabel,
-  fixHolds,
-  freezesLabel,
-  ZONES,
-  type Position,
-  type Streak,
-  type Zone,
-  TIME_ZONE,
-} from "@/core";
+import { fixHolds, ZONES, type Position, type Zone, TIME_ZONE } from "@/core";
 import { Button, CheckInCard, PlanNext, Text } from "@/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
@@ -37,7 +28,6 @@ import {
 import { useIsOnline } from "@/lib/data/data-provider";
 import { useHabitNames } from "@/lib/data/habits";
 import { usePlanNext } from "@/lib/data/plan";
-import { useCheckInStreak } from "@/lib/data/streaks";
 import { currentPosition } from "@/lib/location/current-position";
 
 const todayTitle = () =>
@@ -110,20 +100,12 @@ function useCheckInPosition() {
   return { updateCheckIn, savePosition, guessNear };
 }
 
-// A Streak of 0 reads as a loss, so Today shows the line only while one runs.
-const checkInStreakLine = (streak: Streak | null) =>
-  streak !== null && streak.current > 0
-    ? `Check-in Streak: ${currentStreakLabel(streak)} · ${freezesLabel(streak)}`
-    : undefined;
-
 function CheckInSection({ zone }: { zone?: Zone | undefined }) {
   const isOnline = useIsOnline();
   const { open } = useLogDraft();
   const createCheckIn = useCreateCheckIn();
   const { updateCheckIn, savePosition, guessNear } = useCheckInPosition();
   const { celebrate } = useCelebrate();
-  // eslint-disable-next-line eslint-react/purity -- the Streak counts up to today, so each render reads the clock
-  const streak = useCheckInStreak(new Date());
 
   // Every new Check-in, queued offline or not, earns a celebration; edits go through onUpdate and don't.
   const checkIn = (score: number, checkedInAt: string) => {
@@ -150,7 +132,6 @@ function CheckInSection({ zone }: { zone?: Zone | undefined }) {
         {...(isOnline ? { guessPlace: guessNear } : {})}
         {...(zone === undefined ? {} : { zone })}
         offline={!isOnline}
-        streak={checkInStreakLine(streak)}
       />
     </CelebrationSpot>
   );

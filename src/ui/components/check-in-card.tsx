@@ -252,8 +252,6 @@ interface CheckInCardProps {
   offline?: boolean;
   /** Opens on a Check-in's details as though `score` had just been tapped. */
   defaultOpen?: { id: string; score: number };
-  /** The owner's Check-in Streak, e.g. "Check-in Streak: 12 days · 2 Freezes". */
-  streak?: string | undefined;
 }
 
 // The Storm to Sun capture: four zone plates of two halves each, then optional details.
@@ -269,7 +267,6 @@ function CheckInCard({
   zone,
   offline = false,
   defaultOpen,
-  streak,
 }: CheckInCardProps) {
   const [open, setOpen] = React.useState<Open | null>(() =>
     defaultOpen ? opened(defaultOpen.id, defaultOpen.score, new Date().toISOString()) : null,
@@ -341,7 +338,6 @@ function CheckInCard({
       <Text aria-level={2} variant="headline">
         How&apos;s the weather?
       </Text>
-      {streak !== undefined && <Text variant="muted">{streak}</Text>}
       <View role="group" aria-label="When?" className="gap-2">
         {when === null ? (
           <View className="flex-row items-center gap-2">

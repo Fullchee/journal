@@ -85,6 +85,8 @@ export default function TabsLayout() {
         <Tabs
           screenOptions={{
             ...BAR[isWide ? "wide" : "phone"](bottom),
+            // A hidden tab waits to re-render until it's shown, so a Check-in tap doesn't redraw the Check-ins chart.
+            freezeOnBlur: true,
             tabBarLabel: TabLabel,
             tabBarActiveTintColor: active,
             tabBarInactiveTintColor: inactive,

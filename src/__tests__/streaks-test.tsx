@@ -1,6 +1,5 @@
 import {
   checksSince,
-  isoAt,
   MISSED,
   shiftDay,
   torontoDay,
@@ -30,7 +29,7 @@ import type * as RouteMocks from "../../jest/route-mocks";
 // eslint-disable-next-line no-restricted-imports -- jest/ sits outside src, so no @/ alias reaches it
 import { fakeApi, reply, type Write } from "../../jest/fake-api";
 // eslint-disable-next-line no-restricted-imports -- jest/ sits outside src, so no @/ alias reaches it
-import { checkIn, habit } from "../../jest/fixtures";
+import { habit } from "../../jest/fixtures";
 // eslint-disable-next-line no-restricted-imports -- jest/ sits outside src, so no @/ alias reaches it
 import { dayButton, findDayButton, holdWrites, showMonthOf } from "../../jest/habit-calendar";
 // eslint-disable-next-line no-restricted-imports -- Jest maps sonner-native to this stand-in, so both are one module
@@ -239,7 +238,7 @@ describe("Rest mode at the foot of the Habits tab", () => {
 const doneUpToYesterday = (days: number): Counts =>
   Object.fromEntries(Array.from({ length: days }, (_, index) => [ago(index + 1), { walk: 1 }]));
 
-function serveToday(historyCounts: Counts, checkedInAt: string[] = []) {
+function serveToday(historyCounts: Counts) {
   fakeApi({
     "/api/habits": () => ({
       habits: [habit()],
@@ -248,9 +247,7 @@ function serveToday(historyCounts: Counts, checkedInAt: string[] = []) {
       skips: {},
     }),
     "/api/streaks": () => ({ counts: historyCounts, durations: {}, skips: {}, restPeriods: [] }),
-    "/api/check-ins": () => ({
-      checkIns: checkedInAt.map((at, index) => checkIn({ id: index + 1, checkedInAt: at })),
-    }),
+    "/api/check-ins": () => ({ checkIns: [] }),
     "/api/check-ins?at": () => ({ place: null }),
     "/api/connections": () => ({ connections: [] }),
     "/api/health-plan": () => ({ item: { body: "", updatedAt: null } }),
@@ -259,25 +256,7 @@ function serveToday(historyCounts: Counts, checkedInAt: string[] = []) {
 
 const hidden = { includeHiddenElements: true };
 
-const noonAgo = (days: number) => isoAt(ago(days), 12 * 60);
-
 describe("Streaks on Today", () => {
-  it("shows the Check-in Streak on the Check-in card", async () => {
-    serveToday({}, [noonAgo(1), noonAgo(2), noonAgo(2)]);
-    await renderRouter(APP_DIR);
-
-    expect(await screen.findByText("Check-in Streak: 2 days · 2 Freezes")).toBeOnTheScreen();
-  });
-
-  it("hides the Check-in Streak while none runs", async () => {
-    serveToday({}, [noonAgo(10)]);
-    await renderRouter(APP_DIR);
-
-    await screen.findByText("Walk");
-
-    expect(screen.queryByText(/Check-in Streak/)).not.toBeOnTheScreen();
-  });
-
   it("plays the big celebration when a Done reaches a 7-day Streak", async () => {
     jest.spyOn(Math, "random").mockReturnValue(0.9);
     serveToday(doneUpToYesterday(6));
