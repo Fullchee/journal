@@ -599,10 +599,12 @@ describe("habitDayReader", () => {
       scheduled: true,
       inSeason: true,
       due: true,
+      needed: true,
       beforeStart: false,
       rest: false,
       skip: null,
       done: true,
+      notDone: false,
       value: 3,
     });
   });
@@ -625,6 +627,30 @@ describe("habitDayReader", () => {
         read("2026-12-02").due,
       ],
       [true, false, true, false, true, false],
+    );
+  });
+
+  test("a Day logged Not done reads as not done", () => {
+    assert.deepEqual([read("2026-11-04").notDone, read("2026-11-02").notDone], [true, false]);
+  });
+
+  test("a weekly Habit's Days stay due but are no longer needed once the week meets N", () => {
+    const weekly = makeHabit({ id: "swim", target: { type: "weekly", count: 2, days: [] } });
+
+    const readWeekly = habitDayReader(weekly, {
+      counts: { "2026-11-02": { swim: 1 }, "2026-11-03": { swim: 1 } },
+      durations: {},
+      skips: {},
+      restPeriods: [],
+    });
+
+    assert.deepEqual(
+      [
+        readWeekly("2026-11-04").due,
+        readWeekly("2026-11-04").needed,
+        readWeekly("2026-11-10").needed,
+      ],
+      [true, false, true],
     );
   });
 });

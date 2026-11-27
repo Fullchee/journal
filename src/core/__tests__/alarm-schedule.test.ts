@@ -284,6 +284,20 @@ describe("reschedulePlan when today's Day is logged or silenced", () => {
     );
   });
 
+  test("a Postpone stays only for a Habit whose Day is still open", () => {
+    const silenced = { ...later, id: "stretch", name: "Stretch" };
+    const done = { ...later, id: "floss", name: "Floss" };
+
+    const plan = reschedulePlan(
+      [later, silenced, done],
+      [],
+      NOW,
+      recent({ counts: { [TODAY]: { floss: 1 } } }, ["stretch"]),
+    );
+
+    assert.deepEqual(plan?.postponesKept, ["out-of-bed"]);
+  });
+
   test("a fixed-weekday Habit logged today first rings on its next weekday", () => {
     // Friday is 5; the plugin's weekday 6.
     const fridays = { ...later, target: { type: "days" as const, count: 1, days: [5] } };
@@ -434,6 +448,41 @@ describe("reschedulePlan for a plant", () => {
     assert.deepEqual(
       firstRings(weekdays, history())?.map(({ timestamp }) => new Date(timestamp).getDate()),
       [30, 25, 27],
+    );
+  });
+
+  test("a weekly plant passes over a week that met its target and looks back to the week before", () => {
+    // Monday 2026-11-23: the week of 11-16 met 3, and Sunday 11-15 was done in a week that fell short.
+    const monday = new Date(isoAt("2026-11-23", 12 * 60));
+
+    const weekly = {
+      ...plant,
+      startDate: "2026-01-05",
+      target: { type: "weekly" as const, count: 3, days: [] },
+    };
+
+    const counts: Counts = {};
+
+    // Monday to Wednesday every week since the start, so Strength makes it a plant.
+    for (const day of daysFrom(weekly.startDate, "2026-11-08"))
+      if ([1, 2, 3].includes(new Date(isoAt(day)).getDay())) counts[day] = { up: 1 };
+
+    Object.assign(counts, {
+      "2026-11-09": { up: 1 },
+      "2026-11-15": { up: 1 },
+      "2026-11-16": { up: 1 },
+      "2026-11-17": { up: 1 },
+      "2026-11-18": { up: 1 },
+    });
+    const records = { ...NO_RECORDS, counts };
+
+    assert.deepEqual(
+      reschedulePlan([weekly], [], monday, {
+        records,
+        whole: records,
+        silenced: [],
+      })?.notifications.map(({ trigger }) => trigger),
+      [daily("2026-11-24")],
     );
   });
 

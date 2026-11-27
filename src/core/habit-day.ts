@@ -314,11 +314,18 @@ export interface DayReading {
   inSeason: boolean;
   /** Scheduled and in a Season. */
   due: boolean;
+  /**
+   * Due, and the target still needs the Day: a `weekly` or `monthly` good Habit's period that met N, or an
+   * answered One-off, needs no more.
+   */
+  needed: boolean;
   beforeStart: boolean;
   rest: boolean;
   /** The Day's Skip when it has a cause; a Skip with no cause is a plain not-done day. */
   skip: Skip | null;
   done: boolean;
+  /** Logged Not done; a Skip with no cause is stored this way. */
+  notDone: boolean;
   /** Toward a week's N: a count Habit's count, otherwise 1 when done. */
   value: number;
 }
@@ -328,7 +335,8 @@ export function habitDayReader(habit: Habit, records: HabitRecords): (day: strin
   const days = habitDays(habit, records);
 
   return (day) => {
-    const done = days.on(new Date(isoAt(day))).status === "done";
+    const { status, due: needed } = days.on(new Date(isoAt(day)));
+    const done = status === "done";
     const scheduled = onScheduledDay(habit, day);
     const inSeason = isInSeason(habit.seasons, day);
 
@@ -336,10 +344,12 @@ export function habitDayReader(habit: Habit, records: HabitRecords): (day: strin
       scheduled,
       inSeason,
       due: scheduled && inSeason,
+      needed,
       beforeStart: day < habit.startDate,
       rest: restPeriodOn(records.restPeriods, day) !== null,
       skip: records.skips[day]?.[habit.id] ?? null,
       done,
+      notDone: status === "missed",
       value: Number(done && habit.record === "count" ? records.counts[day]?.[habit.id] : done),
     };
   };

@@ -11,12 +11,9 @@ import notifee, {
 import {
   CHANNEL,
   CHECK_IN_PROMPT_IDS,
-  isLoggedToday,
   reschedulePlan,
   type AlarmAction,
   type AlarmSchedule,
-  type Habit,
-  type HabitRecords,
   type PlannedNotification,
   type UpcomingRing,
   UPCOMING_LEAD_MS,
@@ -163,22 +160,12 @@ async function applyUpcoming(upcoming: UpcomingRing[]) {
   ]);
 }
 
-/** A postponed reminder rings only while its Habit's Day is open: not logged, not silenced. */
-const postponedToKeep = (
-  habits: Habit[],
-  { records, silenced }: { records: HabitRecords; silenced: string[] },
-  now: Date,
-) =>
-  habits.flatMap((habit) =>
-    silenced.includes(habit.id) || isLoggedToday(habit, records, now)
-      ? []
-      : [postponedId(habit.id)],
-  );
-
-async function applySchedule(
-  { notifications, upcoming, widgetAlarms }: AlarmSchedule,
-  keep: string[],
-) {
+async function applySchedule({
+  notifications,
+  upcoming,
+  widgetAlarms,
+  postponesKept,
+}: AlarmSchedule) {
   // The ask comes with the first Alarm or reminder the owner sets, when the reason is plain, not at first launch.
   // Inside the queue, so a Connections load landing mid-ask waits for the answer instead of asking again.
   if (notifications.length > 0) await askNotificationPermissionOnce();
@@ -186,9 +173,10 @@ async function applySchedule(
   const alarmChannel = JournalAndroid.createAlarmChannel();
   // Habits and Connections are the source of truth: Android drops exact alarms when the user revokes that setting.
   // The Check-in prompt plans its own triggers from the Check-ins, so they stay.
+  const keep = new Set(postponesKept.map((habitId) => postponedId(habitId)));
   const triggerIds = await notifee.getTriggerNotificationIds();
   await notifee.cancelTriggerNotifications(
-    triggerIds.filter((id) => !CHECK_IN_PROMPT_IDS.includes(Number(id)) && !keep.includes(id)),
+    triggerIds.filter((id) => !CHECK_IN_PROMPT_IDS.includes(Number(id)) && !keep.has(id)),
   );
   await Promise.all(
     notifications.map((planned) =>
@@ -202,13 +190,13 @@ async function applySchedule(
 // One reschedule at a time, so a Connections load landing mid-way can't interleave with a Habits one.
 const queue = { latest: Promise.resolve() };
 
-async function applyAfter(previous: Promise<void>, schedule: AlarmSchedule, keep: string[]) {
+async function applyAfter(previous: Promise<void>, schedule: AlarmSchedule) {
   await Promise.allSettled([previous]);
-  await applySchedule(schedule, keep);
+  await applySchedule(schedule);
 }
 
-function reschedule(schedule: AlarmSchedule, keep: string[]) {
-  queue.latest = applyAfter(queue.latest, schedule, keep);
+function reschedule(schedule: AlarmSchedule) {
+  queue.latest = applyAfter(queue.latest, schedule);
 
   return queue.latest;
 }
@@ -226,11 +214,13 @@ export function useAlarmSchedule() {
   const silenced = useSilencedAlarms();
 
   useEffect(() => {
-    const now = new Date();
-    const context = { records, whole, silenced };
-    const schedule = reschedulePlan(habits?.habits, connections?.connections, now, context);
+    const schedule = reschedulePlan(habits?.habits, connections?.connections, new Date(), {
+      records,
+      whole,
+      silenced,
+    });
 
-    if (schedule && habits) void reschedule(schedule, postponedToKeep(habits.habits, context, now));
+    if (schedule) void reschedule(schedule);
     // A new sound means a new alarm channel, and every alarm must move onto it.
   }, [habits, connections, records, whole, sound, silenced]);
 }
