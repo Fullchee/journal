@@ -9,9 +9,12 @@ import {
   deleteHabitRecords,
   insertHabit,
   MAX_COUNT,
+  readDayStates,
   readRecords,
   removeDurations,
+  restoreDayStates,
   writeCheck,
+  writeCheckNote,
   writeSkip,
   type EntrySource,
   type RecordWrite,
@@ -368,6 +371,93 @@ test("removeDurations removes one entry by id, or one of several identical ones"
 
   assert.equal(await write(env, removeDurations(env.DB, { entry: match })), 1);
   assert.deepEqual((await dayOf(env, "run")).minutes, [30]);
+});
+
+const day = (habit: string) => ({ habit, date: DAY });
+
+const roundTrip = async (env: Env, habit: string, statements: RecordWrite) => {
+  const before = await readDayStates(env.DB, [day(habit)]);
+  await env.DB.batch(statements);
+  const after = await readDayStates(env.DB, [day(habit)]);
+  await env.DB.batch(restoreDayStates(env.DB, before));
+
+  return { before, after, restored: await readDayStates(env.DB, [day(habit)]) };
+};
+
+describe("restoreDayStates", () => {
+  test("a count and note added to a Day go back to the count and note it had", async () => {
+    const env = await envWith(pushups);
+    await write(env, writeCheck(env.DB, { habit: "pushups", date: DAY, count: 2, mode: "set" }));
+    await env.DB.batch([writeCheckNote(env.DB, { ...day("pushups"), note: "Morning" })]);
+
+    const { before, after, restored } = await roundTrip(env, "pushups", [
+      ...writeCheck(env.DB, { ...day("pushups"), count: 3, mode: "add" }),
+      writeCheckNote(env.DB, { ...day("pushups"), note: "Evening" }),
+    ]);
+
+    assert.deepEqual([after[0]?.check, restored], [{ count: 5, note: "Evening" }, before]);
+    assert.deepEqual(before[0]?.check, { count: 2, note: "Morning" });
+  });
+
+  test("a check on a Skipped Day goes back to the Skip, its cause and time included", async () => {
+    const env = await envWith(floss);
+    await skip("floss", "set", "outside")(env);
+
+    const { before, after, restored } = await roundTrip(
+      env,
+      "floss",
+      writeCheck(env.DB, { ...day("floss"), count: 1, mode: "add" }),
+    );
+
+    assert.deepEqual([after[0]?.skip, restored, before[0]?.skip?.cause], [null, before, "outside"]);
+  });
+
+  test("an entry on a Skipped Opt-out Day goes, and the Skip comes back", async () => {
+    const env = await envWith(boat);
+    await skip("boat", "set", "avoidance")(env);
+
+    const { before, after, restored } = await roundTrip(
+      env,
+      "boat",
+      addDurations(env.DB, "boat", [entry], "owner"),
+    );
+
+    assert.deepEqual(
+      [after[0]?.entries.length, after[0]?.check, restored, before[0]?.check?.count],
+      [1, null, before, MISSED],
+    );
+  });
+
+  test("only the entries the Day lacked go; the ones it had stay", async () => {
+    const env = await envWith(run);
+    await write(env, addDurations(env.DB, "run", [entry], "owner"));
+
+    const { before, restored } = await roundTrip(
+      env,
+      "run",
+      addDurations(env.DB, "run", [{ ...entry, startTime: "18:00" }], "owner"),
+    );
+
+    assert.deepEqual([restored, before[0]?.entries.length], [before, 1]);
+  });
+
+  test("a Day that held nothing goes back to nothing", async () => {
+    const env = await envWith(floss);
+
+    const { restored } = await roundTrip(
+      env,
+      "floss",
+      writeCheck(env.DB, { ...day("floss"), count: 1, mode: "set" }),
+    );
+
+    assert.deepEqual(restored, [{ ...day("floss"), check: null, skip: null, entries: [] }]);
+  });
+
+  test("readDayStates reads each Day once", async () => {
+    const env = await envWith(floss);
+
+    assert.equal((await readDayStates(env.DB, [day("floss"), day("floss")])).length, 1);
+  });
 });
 
 test("deleteHabitRecords deletes only that Habit's checks, entries and Skips", async () => {

@@ -1,10 +1,7 @@
 import assert from "node:assert/strict";
-import { MAX_COUNT } from "@worker/lib/habit-records";
 import {
   ASK_AGAIN,
-  capCount,
   dayLabel,
-  earliestDate,
   readCreate,
   receiptLine,
   resolveItems,
@@ -210,11 +207,6 @@ for (const [given, added] of [
     });
   });
 
-test("capCount stops at MAX_COUNT", () => {
-  assert.equal(capCount(MAX_COUNT + 5), MAX_COUNT);
-  assert.equal(capCount(4), 4);
-});
-
 test("an unknown Habit id becomes a question naming it", () => {
   const ask = askOf(resolveItems([{ habit: "youtube-shorts", minutes: 5 }], ctx));
 
@@ -332,14 +324,6 @@ const at = (startTime: string): Extract<Write, { record: "duration" }> => ({
   minutes: 30,
   endedNow: false,
   note: "",
-});
-
-test("earliestDate picks the first date written, or the fallback", () => {
-  assert.equal(
-    earliestDate([at("08:00"), { ...at("08:00"), date: "2026-11-02" }], "x"),
-    "2026-11-02",
-  );
-  assert.equal(earliestDate([], "x"), "x");
 });
 
 test("receiptLine reads each Record style", () => {

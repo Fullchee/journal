@@ -6,6 +6,7 @@ import {
   type Habit,
   MISSED,
   optOutLogs,
+  RESCHEDULE_CAUSES,
   Season,
   TreeSpan,
   type OptOutLog,
@@ -533,6 +534,98 @@ const removeSql = (db: D1, which: EntriesToRemove) => {
 export const removeDurations = (db: D1, which: EntriesToRemove): RecordWrite => [
   removeSql(db, which),
 ];
+
+const DayCheck = z.object({ count: z.number(), note: z.string() });
+
+const DaySkip = z.object({
+  cause: z.enum(RESCHEDULE_CAUSES),
+  note: z.string(),
+  created_at: z.string(),
+});
+
+const DayEntry = z.object({
+  id: z.number(),
+  start_time: z.string(),
+  minutes: z.number(),
+  note: z.string(),
+});
+
+/** Everything stored on one Habit's Day: its check, its Skip and its Duration entries. */
+export const DayState = z.object({
+  habit: z.string(),
+  date: z.string(),
+  check: z.nullable(DayCheck),
+  skip: z.nullable(DaySkip),
+  entries: z.array(DayEntry),
+});
+
+export type DayState = z.infer<typeof DayState>;
+
+const ON_DAY = "habit = d.habit AND date = d.date";
+
+/**
+ * A SQL expression for the JSON array of each Day's `DayState`, the Days bound as a JSON `[{habit, date}]` at `?param`.
+ * Run inside a write's batch, it reads exactly what the writes before it left, whatever rules they follow.
+ */
+export const dayStatesSql = (param: number) =>
+  "(SELECT json_group_array(json_object('habit', d.habit, 'date', d.date, " +
+  `'check', json((SELECT json_object('count', count, 'note', note) FROM habit_checks WHERE ${ON_DAY})), ` +
+  `'skip', json((SELECT json_object('cause', cause, 'note', note, 'created_at', created_at) FROM habit_skips WHERE ${ON_DAY})), ` +
+  "'entries', json((SELECT json_group_array(json_object('id', id, 'start_time', start_time, 'minutes', minutes, 'note', note) ORDER BY id) " +
+  `FROM habit_durations WHERE ${ON_DAY})))) ` +
+  `FROM (SELECT DISTINCT value ->> 'habit' AS habit, value ->> 'date' AS date FROM json_each(?${param})) d)`;
+
+const DayStates = z.array(DayState);
+
+export const daysJson = (days: DayOf[]) =>
+  JSON.stringify(days.map(({ habit, date }) => ({ habit, date })));
+
+/** Each Day's `DayState` as stored now. */
+export async function readDayStates(db: D1, days: DayOf[]) {
+  const { results } = await db
+    .prepare(`SELECT ${dayStatesSql(1)} AS states`)
+    .bind(daysJson(days))
+    .all<{ states: string }>();
+
+  return results.flatMap(({ states }) => DayStates.parse(JSON.parse(states)));
+}
+
+/**
+ * Puts each Day back as `before` holds it: its check and Skip exactly, and without the entries `before` lacks.
+ * An entry `before` holds that is gone stays gone: no write it undoes removes one.
+ */
+export const restoreDayStates = (db: D1, before: DayState[]): RecordWrite =>
+  before.flatMap(({ habit, date, check, skip, entries }) => {
+    const day = (sql: string, ...args: SqlValue[]) => db.prepare(sql).bind(habit, date, ...args);
+
+    return [
+      day(
+        `DELETE FROM habit_durations WHERE ${DAY} AND id NOT IN (SELECT value FROM json_each(?3))`,
+        JSON.stringify(entries.map(({ id }) => id)),
+      ),
+      day(`DELETE FROM habit_checks WHERE ${DAY}`),
+      ...(check === null
+        ? []
+        : [
+            day(
+              "INSERT INTO habit_checks (habit, date, count, note) VALUES (?1, ?2, ?3, ?4)",
+              check.count,
+              check.note,
+            ),
+          ]),
+      day(`DELETE FROM habit_skips WHERE ${DAY}`),
+      ...(skip === null
+        ? []
+        : [
+            day(
+              "INSERT INTO habit_skips (habit, date, cause, note, created_at) VALUES (?1, ?2, ?3, ?4, ?5)",
+              skip.cause,
+              skip.note,
+              skip.created_at,
+            ),
+          ]),
+    ];
+  });
 
 /** Every check, Duration entry and Skip of a Habit, before the Habit itself goes. */
 export const deleteHabitRecords = (db: D1, habit: string): RecordWrite =>

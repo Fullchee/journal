@@ -79,7 +79,7 @@ const counts = (env: TestEnv) =>
     "SELECT habit, date, count FROM habit_checks ORDER BY habit",
   );
 
-test("a log is recorded in log_actions with what it added", async () => {
+test("a log is recorded in log_actions with each Day before and after it", async () => {
   const env = await makeUndoEnv();
 
   await save(env, [watched("08:00"), { habit: "pushups", count: 2 }], "youtube and push-ups");
@@ -89,15 +89,27 @@ test("a log is recorded in log_actions with what it added", async () => {
     "SELECT text, applied, undone_at FROM log_actions",
   );
 
+  const untouched = { check: null, skip: null, entries: [] };
+
   assert.deepEqual(
     { ...action, applied: JSON.parse(action?.applied ?? "") },
     {
       text: "youtube and push-ups",
       applied: {
         habit: null,
-        added: [{ habit: "youtube", date: TODAY, start_time: "08:00", minutes: 30 }],
-        counts: [{ habit: "pushups", date: TODAY, before: 0, after: 2 }],
-        skipped: [],
+        before: [
+          { habit: "youtube", date: TODAY, ...untouched },
+          { habit: "pushups", date: TODAY, ...untouched },
+        ],
+        after: [
+          {
+            habit: "youtube",
+            date: TODAY,
+            ...untouched,
+            entries: [{ id: 1, start_time: "08:00", minutes: 30, note: "" }],
+          },
+          { habit: "pushups", date: TODAY, ...untouched, check: { count: 2, note: "" } },
+        ],
       },
       undone_at: null,
     },
@@ -239,23 +251,25 @@ test("Undo of an entry on a Skipped Opt-out Day puts the Skip back", async () =>
   );
 });
 
-test("Undo of a stored chat Replace removes what it added and ignores what it removed", async () => {
+test("Undo refuses a log saved before each Day's state was kept, and changes nothing", async () => {
   const env = await makeUndoEnv();
 
   const applied = {
     habit: null,
     added: [{ habit: "youtube", date: TODAY, start_time: "08:15", minutes: 30 }],
-    removed: [{ habit: "youtube", date: TODAY, start_time: "08:00", minutes: 30 }],
     counts: [],
   };
 
   await env.DB.exec(
     `INSERT INTO habit_durations (habit, date, start_time, minutes) VALUES ('youtube', '${TODAY}', '08:15', 30);` +
-      `INSERT INTO log_actions (id, text, applied) VALUES (1, 'replace', '${JSON.stringify(applied)}')`,
+      `INSERT INTO log_actions (id, text, applied) VALUES (1, 'old', '${JSON.stringify(applied)}')`,
   );
 
-  assert.equal((await undo(env, "1")).status, 204);
-  assert.deepEqual(await durations(env), []);
+  const res = await undo(env, "1");
+
+  assert.equal(res.status, 409);
+  assert.deepEqual(await readJson(res), { error: "This log is too old to undo." });
+  assert.equal((await durations(env)).length, 1);
 });
 
 test("Undo leaves a later entry that reused a deleted entry's id", async () => {
@@ -321,6 +335,22 @@ test("Undo refuses when a count changed since, and changes nothing", async () =>
     error: `Push-ups on ${TODAY} changed since (now 4), so Undo would lose that change.`,
   });
   assert.deepEqual(await counts(env), [{ habit: "pushups", date: TODAY, count: 4 }]);
+});
+
+test("Undo refuses when anything else on a logged Day changed since", async () => {
+  const env = await makeUndoEnv();
+  const action = await save(env, [watched("08:00")]);
+
+  await env.DB.exec(
+    `INSERT INTO habit_durations (habit, date, start_time, minutes) VALUES ('youtube', '${TODAY}', '09:00', 15)`,
+  );
+  const res = await undo(env, action);
+
+  assert.equal(res.status, 409);
+  assert.deepEqual(await readJson(res), {
+    error: `YouTube on ${TODAY} changed since, so Undo would lose that change.`,
+  });
+  assert.equal((await durations(env)).length, 2);
 });
 
 test("Undo refuses when a logged count was cleared since", async () => {

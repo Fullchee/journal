@@ -15,7 +15,7 @@ import {
   type NewHabit,
 } from "@/core";
 import * as z from "zod/mini";
-import { DATE, MAX_COUNT } from "./habit-records";
+import { DATE } from "./habit-records";
 import type { ModelCreate, ModelItem, ModelOneOff, ModelReply } from "./log-thread";
 
 /** What the log box knows about a Habit; the model sees the same fields. */
@@ -66,10 +66,6 @@ const timeOf = (minute: number) => formatMinutes(minute % MINUTES_PER_DAY);
 
 export const spanLabel = ({ startTime, minutes }: { startTime: string; minutes: number }) =>
   `${clockLabel(startTime)}–${clockLabel(timeOf(minutesOf(startTime) + minutes))}`;
-
-/** The earliest date the writes touch, or `fallback` when there are none. */
-export const earliestDate = (writes: Write[], fallback: string) =>
-  writes.map((w) => w.date).toSorted((a, b) => a.localeCompare(b))[0] ?? fallback;
 
 /** "today", "yesterday" or "Tue, Nov 3". */
 export function dayLabel(date: string, today: string) {
@@ -339,5 +335,3 @@ export function receiptLine(write: Write, dayTotal: number, today: string) {
 
   return `Logged ${habit.name}: ${minutesLabel(write.minutes)} at ${clockLabel(write.startTime)}${ended} (${day} ${minutesLabel(dayTotal)}${bar}).`;
 }
-
-export const capCount = (count: number) => Math.min(count, MAX_COUNT);
