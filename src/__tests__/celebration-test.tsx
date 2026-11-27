@@ -1,5 +1,6 @@
 import { CelebrationDrawing } from "@/ui";
 import { act, render, screen, userEvent } from "@testing-library/react-native";
+import { setAudioModeAsync, useAudioPlayer } from "expo-audio";
 import { NotificationFeedbackType, notificationAsync } from "expo-haptics";
 import { Platform, Pressable, Text } from "react-native";
 import * as Reanimated from "react-native-reanimated";
@@ -56,6 +57,22 @@ describe("useCelebrate", () => {
     expect(screen.getByTestId("celebration overlay", hidden)).toHaveProp("pointerEvents", "none");
     expect(screen.getByTestId("leaf", hidden)).toBeOnTheScreen();
     expect(notificationAsync).toHaveBeenCalledWith(NotificationFeedbackType.Success);
+  });
+
+  it("plays the completion sound from the start, muted by a silent ringer", async () => {
+    const sound = useAudioPlayer(null);
+    jest.mocked(sound.play).mockClear();
+    await render(
+      <CelebrationProvider>
+        <Milestone />
+      </CelebrationProvider>,
+    );
+
+    await userEvent.press(screen.getByRole("button", { name: "Milestone" }));
+
+    expect(setAudioModeAsync).toHaveBeenCalledWith({ playsInSilentMode: false });
+    expect(sound.seekTo).toHaveBeenCalledWith(0);
+    expect(sound.play).toHaveBeenCalledTimes(1);
   });
 
   it("removes the drawing once it finishes, or at once on stop", async () => {

@@ -1,5 +1,8 @@
 import { pickCelebration, type Celebration, type CelebrationKind } from "@/core";
+// One sample of "tonal-on" from github.com/joshwcomeau/button-sounds (MIT).
+import completionSound from "@/assets/sounds/completion.mp3";
 import { CelebrationDrawing } from "@/ui";
+import { setAudioModeAsync, useAudioPlayer } from "expo-audio";
 import { NotificationFeedbackType, notificationAsync } from "expo-haptics";
 import { useIsFocused } from "expo-router";
 import {
@@ -58,18 +61,31 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
   const [playing, setPlaying] = useState<Playing | null>(null);
   const spotsRef = useRef(new Map<string, boolean>());
   const playedRef = useRef(0);
+  const sound = useAudioPlayer(completionSound);
 
-  const celebrate = useCallback(({ kind, target }: CelebrateRequest) => {
-    const celebration = pickCelebration(kind);
-    const big = celebration.size === "big";
-    const spot = target === undefined ? undefined : spotsRef.current.get(target);
-    const onSpot = spot === true || (spot === false && !big);
-
-    if (big && Platform.OS === "android") void notificationAsync(NotificationFeedbackType.Success);
-
-    playedRef.current += 1;
-    setPlaying({ id: playedRef.current, target: onSpot ? target : undefined, celebration });
+  // Sound effects mix with other audio by default; on Android a silent or vibrate ringer mutes it.
+  useEffect(() => {
+    void setAudioModeAsync({ playsInSilentMode: false });
   }, []);
+
+  const celebrate = useCallback(
+    ({ kind, target }: CelebrateRequest) => {
+      const celebration = pickCelebration(kind);
+      const big = celebration.size === "big";
+      const spot = target === undefined ? undefined : spotsRef.current.get(target);
+      const onSpot = spot === true || (spot === false && !big);
+
+      if (big && Platform.OS === "android")
+        void notificationAsync(NotificationFeedbackType.Success);
+
+      void sound.seekTo(0);
+      sound.play();
+
+      playedRef.current += 1;
+      setPlaying({ id: playedRef.current, target: onSpot ? target : undefined, celebration });
+    },
+    [sound],
+  );
 
   const stop = useCallback(() => setPlaying(null), []);
 

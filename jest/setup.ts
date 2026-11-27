@@ -41,6 +41,13 @@ jest.mock("../modules/journal-android", () => ({
 }));
 
 // Its views are native components with no view manager under Jest; the shipped mock renders the Markdown as plain text.
+// expo-audio's native player class is missing under Jest; a stub player records each play.
+jest.mock("expo-audio", () => {
+  const player = { play: jest.fn(), seekTo: jest.fn() };
+
+  return { setAudioModeAsync: jest.fn(), useAudioPlayer: () => player };
+});
+
 jest.mock("react-native-enriched-markdown", () =>
   jest.requireActual<object>("react-native-enriched-markdown/jest"),
 );

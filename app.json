@@ -108,7 +108,8 @@
           "organization": "fullchee"
         }
       ],
-      "expo-background-task"
+      "expo-background-task",
+      ["expo-audio", { "recordAudioAndroid": false }]
     ],
     "experiments": {
       "typedRoutes": true,

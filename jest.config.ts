@@ -45,6 +45,7 @@ const config: Config = {
   testTimeout: 30_000,
   moduleNameMapper: {
     "\\.css$": "<rootDir>/jest/css-stub.ts",
+    "^@/assets/(.*)$": "<rootDir>/assets/$1",
     "^@/(.*)$": "<rootDir>/src/$1",
     "^lucide-react-native$": "<rootDir>/jest/lucide-react-native.cjs",
     "^react-native-reanimated/mock$": "<rootDir>/jest/reanimated-mock.ts",
