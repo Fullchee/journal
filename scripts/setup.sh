@@ -115,7 +115,7 @@ finish() {
 
 run_wizard() {
 
-	TOTAL_STAGES=8
+	TOTAL_STAGES=9
 
 	cd "$(git rev-parse --show-toplevel)"
 	MISE_FILE="mise.local.toml"
@@ -237,6 +237,28 @@ run_wizard() {
 				fi
 			done <<<"$PLUGIN_TODO"
 		fi
+	fi
+
+	stage "OpenCode skills"
+	say "OpenCode can't load Claude plugins: it reads opencode.json for their MCP servers and needs their skills installed on their own."
+	if ! have_cmd opencode; then
+		ok "skipped: OpenCode is not installed"
+	else
+		# Each Claude plugin's skills repo, and the plugin's skills to take from it ('*' for all).
+		OPENCODE_SKILLS=(
+			"https://github.com/cloudflare/skills|*"
+			"https://github.com/getsentry/sentry-for-ai|sentry-create-alert sentry-debug-issue sentry-fix-stack-traces sentry-get-started sentry-instrument"
+		)
+		for entry in "${OPENCODE_SKILLS[@]}"; do
+			repo="${entry%%|*}"
+			read -r -a skills <<<"${entry#*|}"
+			if bunx skills add "$repo" --global --agent opencode --skill "${skills[@]}" --yes >/dev/null; then
+				ok "installed the skills from $repo"
+			else
+				warn "Installing the skills from $repo failed."
+				SKIPPED+=("bunx skills add $repo --global --agent opencode")
+			fi
+		done
 	fi
 
 	stage "Environment"

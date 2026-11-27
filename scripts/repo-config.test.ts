@@ -57,3 +57,26 @@ test("web output stays single-page", () => {
     "with server output, hydration keeps the server's default theme colours and phone layout",
   );
 });
+
+const ClaudeSettings = z.object({ enabledPlugins: z.record(z.string(), z.boolean()) });
+
+const McpServers = z.object({ servers: z.record(z.string(), z.unknown()) });
+
+const OpencodeJson = z.object({ mcp: McpServers });
+
+// OpenCode can't load Claude plugins, so opencode.json repeats each plugin's MCP server.
+const PLUGINS_WITHOUT_MCP = new Set(["worktrunk@worktrunk"]);
+
+test("opencode.json has the MCP server of every Claude plugin", () => {
+  const { enabledPlugins } = readJson(".claude/settings.json", ClaudeSettings);
+  const servers = Object.keys(readJson("opencode.json", OpencodeJson).mcp.servers);
+
+  for (const [id, on] of Object.entries(enabledPlugins)) {
+    if (!on || PLUGINS_WITHOUT_MCP.has(id)) continue;
+    const name = id.slice(0, id.indexOf("@"));
+    assert.ok(
+      servers.includes(name),
+      `add the ${id} plugin's MCP server to opencode.json as "${name}", and its skills to setup.sh's OpenCode stage`,
+    );
+  }
+});

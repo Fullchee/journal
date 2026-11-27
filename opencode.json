@@ -5,6 +5,14 @@
       "expo": {
         "type": "remote",
         "url": "https://mcp.expo.dev/mcp"
+      },
+      "cloudflare": {
+        "type": "remote",
+        "url": "https://mcp.cloudflare.com/mcp"
+      },
+      "sentry": {
+        "type": "remote",
+        "url": "https://mcp.sentry.dev/mcp"
       }
     }
   }
