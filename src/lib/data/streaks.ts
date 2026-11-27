@@ -5,6 +5,7 @@ import {
   useQueryClient,
   type UseQueryResult,
 } from "@tanstack/react-query";
+import { useMemo } from "react";
 import * as z from "zod/mini";
 
 import {
@@ -12,20 +13,12 @@ import {
   Counts,
   DayNotes,
   Durations,
-  habitHistory,
-  habitStage,
-  habitStreak,
-  hasStreak,
   restPeriodOn,
   RestPeriod,
   Skips,
   torontoDay,
-  type Draft,
-  type Habit,
-  type HabitHistory,
-  type Stage,
-  type Streak,
-  type StreakRecords,
+  type HabitRecords,
+  type KnownRecords,
 } from "@/core";
 
 import { apiFetch } from "@/lib/api/api-fetch";
@@ -51,16 +44,9 @@ const streakHistoryQuery = queryOptions({
   meta: { persist: true },
 });
 
-/** The Rest periods, which decide alarms and whether a Habit is still a tree; empty before the first load. */
-export function useRestPeriods(): RestPeriod[] {
-  const { data } = useQuery({ ...streakHistoryQuery, select: (history) => history.restPeriods });
-
-  return data ?? [];
-}
-
 type ByDay<Value> = Record<string, Record<string, Value>>;
 
-// The tracker's recent days carry unsent taps, so they win over the history's copy of the same Habit and day.
+// The tracker's recent days are the fresher copy, so they win over the history's copy of the same Habit and day.
 function withRecent<Value>(history: ByDay<Value>, recent: ByDay<Value> = {}) {
   const merged = { ...history };
 
@@ -70,42 +56,46 @@ function withRecent<Value>(history: ByDay<Value>, recent: ByDay<Value> = {}) {
   return merged;
 }
 
-type RecentRecords = Pick<HabitsBody, "counts" | "durations" | "skips">;
+const NO_HISTORY: StreakHistory = {
+  counts: {},
+  durations: {},
+  skips: {},
+  restPeriods: [],
+  notes: {},
+};
 
-const recordsOf = (history: StreakHistory, recent: RecentRecords): StreakRecords => ({
-  counts: withRecent(history.counts, recent.counts),
-  durations: withRecent(history.durations, recent.durations),
-  skips: withRecent(history.skips, recent.skips),
+const recordsOf = (history: StreakHistory, recent: HabitsBody | undefined): HabitRecords => ({
+  counts: withRecent(history.counts, recent?.counts),
+  durations: withRecent(history.durations, recent?.durations),
+  skips: withRecent(history.skips, recent?.skips),
   restPeriods: history.restPeriods,
 });
 
-const streaksOf = (history: StreakHistory, recent: HabitsBody, now: Date) => {
-  const records = recordsOf(history, recent);
+// The persisted cache shows at once, so only a fetch since mount that has settled holds the server's answers.
+const isFresh = (query: Pick<UseQueryResult, "isFetchedAfterMount" | "fetchStatus">) =>
+  query.isFetchedAfterMount && query.fetchStatus === "idle";
 
-  return (habit: Habit): Streak | null =>
-    hasStreak(habit) ? habitStreak(habit, records, now) : null;
-};
+/**
+ * Every Habit's records: the tracker's recent Days laid over the full history, with unsent taps on top, so a tap
+ * shows everywhere before the server has it. `fresh` once both have refetched since mount, so the records are the
+ * server's now.
+ */
+export function useHabitRecords(): KnownRecords & { fresh: boolean } {
+  const client = useQueryClient();
+  const tracker = useHabitTracker();
+  const history = useQuery(streakHistoryQuery);
 
-/** Each Habit's Streak, or null for a Habit without one or before the history loads. */
-export function useHabitStreaks(recent: HabitsBody, now: Date) {
-  const { data } = useQuery(streakHistoryQuery);
+  // A tap writes both queries, so new data also brings each new unsent tap; effects keyed on the records rerun only then.
+  const records = useMemo(
+    () => withQueuedChecks(client, recordsOf(history.data ?? NO_HISTORY, tracker.data)),
+    [client, history.data, tracker.data],
+  );
 
-  return data ? streaksOf(data, recent, now) : () => null;
-}
-
-/** Every Habit's records since its start date, with the tracker's unsent taps; null before the history loads. */
-export function useHabitRecords(recent: RecentRecords = {}): StreakRecords | null {
-  const { data } = useQuery(streakHistoryQuery);
-
-  return data ? recordsOf(data, recent) : null;
-}
-
-/** A Habit's Stage today; null for an unsaved Habit, one without a Stage, or before the history loads. */
-export function useHabitStage({ id, ...draft }: Draft, now: Date): Stage | null {
-  const { data } = useHabitTracker();
-  const records = useHabitRecords(data);
-
-  return id === undefined || records === null ? null : habitStage({ ...draft, id }, records, now);
+  return {
+    records,
+    whole: history.data ? records : null,
+    fresh: tracker.isSuccess && history.isSuccess && isFresh(tracker) && isFresh(history),
+  };
 }
 
 /** Each Day's notes on Duration entries and checks; empty before the history loads. */
@@ -113,27 +103,6 @@ export function useDayNotes(): DayNotes {
   const { data } = useQuery({ ...streakHistoryQuery, select: (history) => history.notes });
 
   return data ?? {};
-}
-
-// The persisted cache shows at once, so only a fetch since mount that has settled holds the server's answers.
-const isFresh = (query: Pick<UseQueryResult, "isFetchedAfterMount" | "fetchStatus">) =>
-  query.isFetchedAfterMount && query.fetchStatus === "idle";
-
-/** The tracker's Habits and every Habit's records as the server holds them now; null until both refetch since mount. */
-export function useFreshHabitRecords() {
-  const tracker = useHabitTracker();
-  const history = useQuery(streakHistoryQuery);
-
-  return tracker.isSuccess && history.isSuccess && isFresh(tracker) && isFresh(history)
-    ? { habits: tracker.data.habits, records: recordsOf(history.data, tracker.data) }
-    : null;
-}
-
-/** A Habit's History, read from the same records as its Streak; null before the history loads. */
-export function useHabitHistory(habit: Habit, recent: HabitsBody, now: Date): HabitHistory | null {
-  const records = useHabitRecords(recent);
-
-  return records && habitHistory(habit, records, now);
 }
 
 /** The Check-in Streak, or null before Check-ins and the history load. */

@@ -13,7 +13,7 @@ import {
   type PillarGoal,
   type PillarSources,
 } from "@/core/pillar-balance";
-import type { StreakRecords } from "@/core";
+import type { HabitRecords } from "@/core";
 import { makeHabit } from "./helpers/habit";
 
 // A Sunday, so the window is one ISO week, 9 to 15 Nov, and the one before is 2 to 8 Nov.
@@ -33,7 +33,7 @@ const goal = (id: number, pillar: Pillar | null, parentId: number | null = null)
   pillar,
 });
 
-const EMPTY_RECORDS: StreakRecords = { counts: {}, durations: {}, skips: {}, restPeriods: [] };
+const EMPTY_RECORDS: HabitRecords = { counts: {}, durations: {}, skips: {}, restPeriods: [] };
 
 const sources = (over: Partial<PillarSources>): PillarSources => ({
   goals: [],
@@ -219,10 +219,10 @@ describe("connection", () => {
   });
 });
 
-const walks = (days: string[]): StreakRecords["counts"] =>
+const walks = (days: string[]): HabitRecords["counts"] =>
   Object.fromEntries(days.map((d) => [d, { walk: 1 }]));
 
-const planBar = (habits: Habit[], records: Partial<StreakRecords> = {}) =>
+const planBar = (habits: Habit[], records: Partial<HabitRecords> = {}) =>
   pillarBars(
     sources({
       goals: [goal(1, "stress"), goal(2, null, 1)],

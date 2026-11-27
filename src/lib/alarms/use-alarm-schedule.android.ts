@@ -16,8 +16,8 @@ import {
   type AlarmAction,
   type AlarmSchedule,
   type Habit,
+  type HabitRecords,
   type PlannedNotification,
-  type TodayRecords,
   type UpcomingRing,
   UPCOMING_LEAD_MS,
 } from "@/core";
@@ -35,7 +35,7 @@ import { useSilencedAlarms } from "@/lib/alarms/silenced-alarms";
 import { connectionsQuery } from "@/lib/data/connections";
 import { useTodayHabits } from "@/lib/data/habits";
 import { askNotificationPermissionOnce } from "@/lib/notifications/ask-permission";
-import { useHabitRecords, useRestPeriods } from "@/lib/data/streaks";
+import { useHabitRecords } from "@/lib/data/streaks";
 
 // eslint-disable-next-line no-restricted-imports -- Expo local modules live outside src, where no @/ alias reaches
 import JournalAndroid from "../../../modules/journal-android";
@@ -164,9 +164,13 @@ async function applyUpcoming(upcoming: UpcomingRing[]) {
 }
 
 /** A postponed reminder rings only while its Habit's Day is open: not logged, not silenced. */
-const postponedToKeep = (habits: Habit[], today: TodayRecords, now: Date) =>
+const postponedToKeep = (
+  habits: Habit[],
+  { records, silenced }: { records: HabitRecords; silenced: string[] },
+  now: Date,
+) =>
   habits.flatMap((habit) =>
-    today.silenced.includes(habit.id) || isLoggedToday(habit, today, now)
+    silenced.includes(habit.id) || isLoggedToday(habit, records, now)
       ? []
       : [postponedId(habit.id)],
   );
@@ -217,22 +221,16 @@ function reschedule(schedule: AlarmSchedule, keep: string[]) {
 export function useAlarmSchedule() {
   const { data: habits } = useTodayHabits();
   const { data: connections } = useQuery(connectionsQuery);
-  const restPeriods = useRestPeriods();
-  const records = useHabitRecords(habits);
+  const { records, whole } = useHabitRecords();
   const sound = useAlarmSound();
   const silenced = useSilencedAlarms();
 
   useEffect(() => {
     const now = new Date();
-    const today = { ...habits, silenced };
+    const context = { records, whole, silenced };
+    const schedule = reschedulePlan(habits?.habits, connections?.connections, now, context);
 
-    const schedule = reschedulePlan(habits?.habits, connections?.connections, now, {
-      restPeriods,
-      today,
-      records,
-    });
-
-    if (schedule && habits) void reschedule(schedule, postponedToKeep(habits.habits, today, now));
+    if (schedule && habits) void reschedule(schedule, postponedToKeep(habits.habits, context, now));
     // A new sound means a new alarm channel, and every alarm must move onto it.
-  }, [habits, connections, restPeriods, records, sound, silenced]);
+  }, [habits, connections, records, whole, sound, silenced]);
 }

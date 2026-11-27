@@ -1,5 +1,5 @@
 import { clockLabel, dayOfWeek, shiftDay, torontoDay } from "./calendar";
-import { habitDays, type HabitDay } from "./habit-day";
+import { habitDays, type HabitDay, type HabitRecords } from "./habit-day";
 import { isTree } from "./habit-tree";
 import { withOptOutDays } from "./opt-out";
 import {
@@ -8,11 +8,8 @@ import {
   isOneOff,
   isReference,
   WEEKDAYS,
-  type Counts,
-  type Durations,
   type Habit,
 } from "./habits-view";
-import type { RestPeriod } from "./rest-mode";
 
 /**
  * `time` is the Habit's time of day as HH:MM, or null when it has none.
@@ -58,11 +55,7 @@ const isOptOutOn = ({ optOutFrom }: Habit, day: string) => optOutFrom !== null &
  */
 export function dueToday(
   habits: Habit[],
-  {
-    counts,
-    durations,
-    restPeriods,
-  }: { counts: Counts; durations: Durations; restPeriods: RestPeriod[] },
+  { counts, durations, restPeriods }: Omit<HabitRecords, "skips">,
   today = new Date(),
 ): DueHabit[] {
   const records = withOptOutDays(habits, { counts, durations }, today);

@@ -6,7 +6,7 @@ import {
   type HistoryUnit,
   type LoggedPeriod,
 } from "./habit-history";
-import { habitDayReader, type StreakRecords } from "./habit-day";
+import { habitDayReader, type HabitRecords } from "./habit-day";
 import { isTreeOn, treeSpans } from "./habit-tree";
 import { isTimed, type Habit, type TimedHabit } from "./habits-view";
 
@@ -56,7 +56,7 @@ const PERIOD_DAY_LIST: Record<HistoryUnit, (start: string) => string[]> = {
 };
 
 // A timed bad Habit stays under when no day passes its minutes and its days with entries fit the limit.
-function timedUnder(habit: TimedHabit, records: StreakRecords, days: string[], limit: number) {
+function timedUnder(habit: TimedHabit, records: HabitRecords, days: string[], limit: number) {
   const entries = days.map((day) => records.durations[day]?.[habit.id] ?? []);
   const minutes = entries.map((dayEntries) => dayEntries.reduce((sum, e) => sum + e.minutes, 0));
 
@@ -80,7 +80,7 @@ const MARK_COMPLETION: Record<HistoryMark, Completion> = {
 
 function badCompletions(
   habit: Habit,
-  records: StreakRecords,
+  records: HabitRecords,
   unit: HistoryUnit,
   periods: LoggedPeriod[],
 ): Completion[] {
@@ -111,7 +111,7 @@ function badCompletions(
 // A tree's period with nothing logged is frozen like a Skip: logging every automatic Habit would be routine input.
 function goodCompletions(
   habit: Habit,
-  records: StreakRecords,
+  records: HabitRecords,
   { unit, periods }: { unit: HistoryUnit; periods: HistoryPeriod[] },
   now: Date,
 ): Completion[] {
@@ -139,7 +139,7 @@ export interface GradedPeriod {
 }
 
 /** A recurring Habit's History periods, newest first, graded the way Strength and the Pillar bar count them. */
-export function gradedHistory(habit: Habit, records: StreakRecords, now: Date) {
+export function gradedHistory(habit: Habit, records: HabitRecords, now: Date) {
   const history = habitHistory(habit, records, now);
 
   const completions =
@@ -159,7 +159,7 @@ export function gradedHistory(habit: Habit, records: StreakRecords, now: Date) {
  * A recurring Habit's Strength from 0 to 1, read from its History with Loop's decaying score: each hit or miss
  * moves it toward 1 or 0 and every other period leaves it as it was. Null before its first counted period.
  */
-export function habitStrength(habit: Habit, records: StreakRecords, now: Date): number | null {
+export function habitStrength(habit: Habit, records: HabitRecords, now: Date): number | null {
   const history = gradedHistory(habit, records, now);
 
   const counted = history.periods

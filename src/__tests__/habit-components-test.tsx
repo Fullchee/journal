@@ -480,10 +480,10 @@ describe("HabitWeek", () => {
 });
 
 describe("HabitCard", () => {
+  const records = { counts: {}, durations: {}, skips: {}, restPeriods: [] };
+
   const cardProps = {
-    counts: {},
-    durations: {},
-    skips: {},
+    records,
     today: TODAY,
     nameOf: (id: string) => id,
     goalName: String,
@@ -504,7 +504,7 @@ describe("HabitCard", () => {
           record: "count",
           target: { type: "weekly", count: 1, days: [] },
         })}
-        counts={{ [DAY]: { walk: 2 } }}
+        records={{ ...records, counts: { [DAY]: { walk: 2 } } }}
       />,
     );
 

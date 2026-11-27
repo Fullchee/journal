@@ -13,7 +13,7 @@ import {
   type CalendarState,
   type Habit,
   type Skip,
-  type StreakRecords,
+  type HabitRecords,
 } from "@/core";
 import { Button, Icon, Text } from "@/ui";
 import { Check, ChevronLeft, ChevronRight, X } from "lucide-react-native";
@@ -135,7 +135,7 @@ function DayCell({ habit, day, onPress, onShowSkip }: CellProps) {
 
 export interface HabitCalendarProps {
   habit: Habit;
-  records: StreakRecords;
+  records: HabitRecords;
   today: string;
   onPressDay: (day: CalendarDay) => void;
 }

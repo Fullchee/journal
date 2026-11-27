@@ -4,7 +4,7 @@ import {
   habitDays,
   type DayReading,
   type HabitDay,
-  type StreakRecords,
+  type HabitRecords,
 } from "./habit-day";
 import type { Habit, Skip } from "./habits-view";
 
@@ -107,7 +107,7 @@ function stateOf(
 /** Reads each Day of a Habit's month calendar from the same records as its Streak and History; builds the Habit's days once. */
 export function calendarReader(
   habit: Habit,
-  records: StreakRecords,
+  records: HabitRecords,
   today: string,
 ): (day: string) => CalendarDay {
   const days = habitDays(habit, records);

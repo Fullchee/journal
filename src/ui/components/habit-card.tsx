@@ -7,10 +7,9 @@ import {
   STAGE_LABELS,
   streakLabel,
   strengthLabel,
-  type Counts,
-  type Durations,
   type Habit,
   type HabitDays,
+  type HabitRecords,
   type HabitWeekSummary,
   type Skips,
   type Stage,
@@ -31,9 +30,7 @@ import { cn } from "@/ui/lib/utils";
 
 export interface HabitCardProps {
   habit: Habit;
-  counts: Counts;
-  durations: Durations;
-  skips: Skips;
+  records: HabitRecords;
   today: Date;
   expanded: boolean;
   /** The Streak of a recurring good Habit. */
@@ -270,8 +267,9 @@ function HabitFacts({
 
 type HabitDetailsProps = Omit<
   HabitCardProps,
-  "counts" | "durations" | "expanded" | "streak" | "stage" | "asksTree" | "onToggle" | "onOpen"
+  "records" | "expanded" | "streak" | "stage" | "asksTree" | "onToggle" | "onOpen"
 > & {
+  skips: Skips;
   tree: boolean;
   days: HabitDays;
   streak: Streak | null;
@@ -329,9 +327,7 @@ function HabitDetails({
 /** One Habit in the tracker: name, Stage and this week's progress, expanding to its details and week. */
 export function HabitCard({
   habit,
-  counts,
-  durations,
-  skips,
+  records,
   today,
   expanded,
   streak = null,
@@ -345,7 +341,7 @@ export function HabitCard({
   saving = false,
   ...details
 }: HabitCardProps) {
-  const days = habitDays(habit, { counts, durations });
+  const days = habitDays(habit, records);
   const { row } = days.week(today);
   const day = days.on(today);
 
@@ -379,7 +375,7 @@ export function HabitCard({
           habit={habit}
           days={days}
           tree={stage === "tree"}
-          skips={skips}
+          skips={records.skips}
           today={today}
           streak={streak}
           offline={offline}

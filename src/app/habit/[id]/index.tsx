@@ -7,6 +7,7 @@ import {
   draftOfNewHabit,
   dueDateLabel,
   canFixDate,
+  habitHistory,
   hasHistory,
   isOneOff,
   torontoDay,
@@ -38,14 +39,8 @@ import { ApiError } from "@/lib/api/errors";
 import { confirm } from "@/lib/confirm";
 import { useIsOnline } from "@/lib/data/data-provider";
 import { useHabitDetails } from "@/lib/data/habit-draft";
-import {
-  missingHabitText,
-  useDeleteHabit,
-  useHabitTracker,
-  useSaveHabit,
-  type HabitsBody,
-} from "@/lib/data/habits";
-import { useHabitHistory } from "@/lib/data/streaks";
+import { missingHabitText, useDeleteHabit, useHabitTracker, useSaveHabit } from "@/lib/data/habits";
+import { useHabitRecords } from "@/lib/data/streaks";
 
 // The form checks each field before Save, so the server refuses only over what the database holds.
 const saveError = (error: Error) =>
@@ -348,16 +343,17 @@ function HistoryLink({ id }: { id: string | undefined }) {
   const habit = data?.habits.find((h) => h.id === id);
 
   return data !== undefined && habit !== undefined && hasHistory(habit) ? (
-    <HistorySummaryLink habit={habit} body={data} />
+    <HistorySummaryLink habit={habit} />
   ) : null;
 }
 
 // The editor opened from History goes back to it; opened anywhere else, History takes its place.
-function HistorySummaryLink({ habit, body }: { habit: Habit; body: HabitsBody }) {
+function HistorySummaryLink({ habit }: { habit: Habit }) {
   const [now] = useState(() => new Date());
-  const history = useHabitHistory(habit, body, now);
+  const { whole } = useHabitRecords();
 
-  if (history === null) return null;
+  if (whole === null) return null;
+  const history = habitHistory(habit, whole, now);
 
   const openHistory = () =>
     router.dismissTo({ pathname: "/habit/[id]/history", params: { id: habit.id } });

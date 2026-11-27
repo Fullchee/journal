@@ -1,4 +1,4 @@
-import type { Draft, Goal, Habit, Stage } from "@/core";
+import { daysFrom, torontoDay, type Draft, type Goal, type Habit, type HabitRecords } from "@/core";
 import { Text } from "@/ui";
 import { render, screen, userEvent, waitFor, within } from "@testing-library/react-native";
 
@@ -14,17 +14,24 @@ jest.mock("@/lib/data/check-ins", () => ({ useCheckInPlaces: () => ["Home", "Gym
 
 jest.mock("@/lib/data/data-provider", () => ({ useIsOnline: () => true }));
 
-interface StageState {
-  value: Stage | null;
+interface WholeState {
+  value: HabitRecords | null;
 }
 
-const mockStage: StageState = { value: null };
+const mockWhole: WholeState = { value: null };
 
-jest.mock("@/lib/data/streaks", () => ({ useHabitStage: () => mockStage.value }));
+jest.mock("@/lib/data/streaks", () => ({ useHabitRecords: () => ({ whole: mockWhole.value }) }));
 
 afterEach(() => {
-  mockStage.value = null;
+  mockWhole.value = null;
 });
+
+// Done every day since the fixture's start: a Strength near 100% makes it a plant.
+function everyDay() {
+  const days = daysFrom("2026-01-01", torontoDay(new Date()));
+
+  return Object.fromEntries(days.map((day) => [day, { walk: 1 }]));
+}
 
 jest.mock("@/lib/image-upload", () => ({ pickImage: jest.fn(), uploadImage: jest.fn() }));
 
@@ -203,10 +210,25 @@ describe("HabitForm under More", () => {
   });
 
   it("tells a plant's owner it notifies only after a missed day", async () => {
-    mockStage.value = "plant";
+    mockWhole.value = { counts: everyDay(), durations: {}, skips: {}, restPeriods: [] };
     await show(habit({ usualWhen: "08:00", alarm: { time: "08:00", kind: "alarm" } }));
 
     expect(screen.getByText(/Plant Habits notify only after a missed day\./)).toBeOnTheScreen();
+  });
+
+  it("gives a Habit not yet saved no Stage, whatever its records hold", async () => {
+    mockWhole.value = { counts: everyDay(), durations: {}, skips: {}, restPeriods: [] };
+
+    const { id: _id, ...draft } = habit({
+      usualWhen: "08:00",
+      alarm: { time: "08:00", kind: "alarm" },
+    });
+
+    await show(draft);
+
+    expect(
+      screen.queryByText(/Plant Habits notify only after a missed day\./),
+    ).not.toBeOnTheScreen();
   });
 
   it("shows no alarm sound off Android", async () => {

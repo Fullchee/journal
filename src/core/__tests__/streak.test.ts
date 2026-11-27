@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { isoAt, shiftDay } from "@/core/calendar";
-import { MISSED, type StreakRecords } from "@/core/habit-day";
+import { MISSED, type HabitRecords } from "@/core/habit-day";
 import type { Counts, Habit, Skip, Skips } from "@/core/habits-view";
 import {
   checkInStreak,
@@ -8,7 +8,7 @@ import {
   freezeNote,
   freezesLabel,
   habitStreak,
-  hasStreak,
+  streakOrNull,
   reachedMilestone,
   streakGrid,
   streakLabel,
@@ -48,7 +48,7 @@ const DAY_CODES = new Map<string, DayCode>([
  * One character per day from START, spaces ignored: D done, x Not done, o outside Skip, a avoidance Skip,
  * R a Rest day, Q a Rest day done anyway, . nothing logged.
  */
-function records(pattern: string): StreakRecords {
+function records(pattern: string): HabitRecords {
   const counts: Counts = {};
   const skips: Skips = {};
   const restPeriods: RestPeriod[] = [];
@@ -97,7 +97,7 @@ describe("who has a Streak", () => {
     ["a One-off", makeHabit({ target: { type: "once", count: 1, days: [] } }), false],
     ["a Reference Habit", makeHabit({ target: { type: "none", count: 0, days: [] } }), false],
   ])("%s: %s", (_name, habit, expected) => {
-    assert.equal(hasStreak(habit), expected);
+    assert.equal(streakOrNull(habit, records(""), noonOn(0)) !== null, expected);
   });
 });
 

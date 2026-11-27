@@ -10,7 +10,7 @@ import {
   type HabitHistory,
 } from "@/core/habit-history";
 import type { Counts, Habit, Skip, Skips } from "@/core/habits-view";
-import type { RestPeriod, StreakRecords } from "@/core";
+import type { RestPeriod, HabitRecords } from "@/core";
 import { makeHabit } from "./helpers/habit";
 
 /** One 40-minute Duration entry. */
@@ -45,7 +45,7 @@ const DAY_CODES = new Map<string, DayCode>([
  * One character per day from START, spaces ignored: D done, 3 a count of 3, x Not done, o outside Skip,
  * a avoidance Skip, R a Rest day, . nothing logged.
  */
-function records(pattern: string): StreakRecords {
+function records(pattern: string): HabitRecords {
   const counts: Counts = {};
   const skips: Skips = {};
   const restPeriods: RestPeriod[] = [];

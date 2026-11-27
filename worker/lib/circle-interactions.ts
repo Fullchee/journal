@@ -1,4 +1,4 @@
-import { torontoDay, type StreakRecords } from "@/core";
+import { torontoDay, type HabitRecords } from "@/core";
 import type { Env } from "@worker/lib/env";
 import { readRecords } from "@worker/lib/habit-records";
 
@@ -12,7 +12,7 @@ interface CountedDay {
 }
 
 /** Each counted day of the `followed` Habits: a done check, or a duration Habit's entries summed. A Skip's count is negative, so it counts for nothing. */
-function countedDays({ counts, durations }: StreakRecords, followed: Set<string>) {
+function countedDays({ counts, durations }: HabitRecords, followed: Set<string>) {
   const days = new Map<string, CountedDay>();
 
   const count = (day: CountedDay) => {

@@ -1,6 +1,6 @@
 import { daysFrom, isoAt, torontoDay, torontoTime } from "./calendar";
-import { habitDays } from "./habit-day";
-import { habitTime, type Counts, type Durations, type Habit, type Target } from "./habits-view";
+import { habitDays, type DayRecords } from "./habit-day";
+import { habitTime, type Habit, type Target } from "./habits-view";
 
 /** Opt-out needs fixed due days: a `weekly` or `monthly` Habit has none, and a `bad` Habit is never done by default. */
 export const canOptOut = ({
@@ -19,11 +19,6 @@ export interface OptOutLog {
   minutes: number | null;
 }
 
-interface HabitRecords {
-  counts: Counts;
-  durations: Durations;
-}
-
 const UNTIMED_START = "00:00";
 
 // A timed day counts from its time on; an untimed one only once the day is over.
@@ -37,7 +32,7 @@ function hasPassed(day: string, time: string | null, now: Date) {
  * Each due day from when the Habit became Opt-out up to `now` that has passed with nothing stored: no check,
  * no Skip and no Duration entry. Empty for a Habit that isn't Opt-out.
  */
-export function optOutLogs(habit: Habit, records: HabitRecords, now: Date): OptOutLog[] {
+export function optOutLogs(habit: Habit, records: DayRecords, now: Date): OptOutLog[] {
   const { optOutFrom } = habit;
 
   if (optOutFrom === null) return [];
@@ -60,9 +55,9 @@ export function optOutLogs(habit: Habit, records: HabitRecords, now: Date): OptO
 const UNSAVED_ENTRY = -1;
 
 function withLog(
-  { counts, durations }: HabitRecords,
+  { counts, durations }: DayRecords,
   { date, habit, startTime, minutes }: OptOutLog,
-): HabitRecords {
+): DayRecords {
   if (minutes === null)
     return { counts: { ...counts, [date]: { ...counts[date], [habit]: 1 } }, durations };
 
@@ -72,7 +67,7 @@ function withLog(
 }
 
 /** The records with every Opt-out day that has passed counted, as the server stores them on its next read. */
-export const withOptOutDays = (habits: Habit[], records: HabitRecords, now: Date): HabitRecords =>
+export const withOptOutDays = (habits: Habit[], records: DayRecords, now: Date): DayRecords =>
   habits
     .flatMap((habit) => optOutLogs(habit, records, now))
     .reduce((next, log) => withLog(next, log), records);

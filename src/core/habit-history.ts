@@ -1,6 +1,6 @@
 import { daysFrom, mondayOf, monthDaysOf, shiftDay, torontoDay } from "./calendar";
 import { monthLabel } from "./habit-calendar";
-import { habitDayReader, type DayReading, type StreakRecords } from "./habit-day";
+import { habitDayReader, type DayReading, type HabitRecords } from "./habit-day";
 import { dayMonthLabel, dueDateLabel, type DayNotes, type Habit } from "./habits-view";
 import { dayMark, streakFacts, weekSlot, type DayFacts } from "./streak";
 
@@ -148,7 +148,7 @@ function periodHistoryMark(
 }
 
 // A count Habit logs its count, a timed one its entries and a check Habit 1 a day.
-function loggedOn(habit: Habit, records: StreakRecords, day: string) {
+function loggedOn(habit: Habit, records: HabitRecords, day: string) {
   return habit.record === "duration"
     ? (records.durations[day]?.[habit.id]?.length ?? 0)
     : Math.max(0, records.counts[day]?.[habit.id] ?? 0);
@@ -156,7 +156,7 @@ function loggedOn(habit: Habit, records: StreakRecords, day: string) {
 
 function badHistory(
   habit: Habit,
-  records: StreakRecords,
+  records: HabitRecords,
   unit: HistoryUnit,
   starts: string[],
 ): HabitHistory {
@@ -181,7 +181,7 @@ function badHistory(
  * A recurring Habit's History from its start date to today, a Toronto day: one period a day (only due days for
  * a `days` or `interval` Habit), a week for an N-a-week Habit or a month for an N-a-month one. Read from the same checks, Skips and Rest periods as the Streak.
  */
-export function habitHistory(habit: Habit, records: StreakRecords, now: Date): HabitHistory {
+export function habitHistory(habit: Habit, records: HabitRecords, now: Date): HabitHistory {
   const today = torontoDay(now);
   const { type } = habit.target;
   const unit: HistoryUnit = isRecurring(type) ? UNIT_OF_TARGET[type] : "day";

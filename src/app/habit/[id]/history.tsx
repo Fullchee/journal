@@ -6,7 +6,7 @@ import {
   torontoDay,
   type CalendarDay,
   type Habit,
-  type StreakRecords,
+  type HabitRecords,
 } from "@/core";
 import { Button, Icon, Text } from "@/ui";
 import { router, Stack, useLocalSearchParams } from "expo-router";
@@ -19,12 +19,7 @@ import { HabitDayDetail, type DayDetail } from "@/components/habits/habit-day-de
 import { HabitTargets } from "@/components/goal-target";
 import { HistoryList, HistorySummary } from "@/components/habits/habit-history";
 import { Screen } from "@/components/screen";
-import {
-  missingHabitText,
-  useCheckHabit,
-  useHabitTracker,
-  type HabitsBody,
-} from "@/lib/data/habits";
+import { missingHabitText, useCheckHabit, useHabitTracker } from "@/lib/data/habits";
 import { useDayNotes, useHabitRecords } from "@/lib/data/streaks";
 
 // Years of daily periods would be a long render, so the list grows a page at a time.
@@ -56,7 +51,7 @@ export default function HistoryScreen() {
         <Text>Edit</Text>
       </Button>
       {hasHistory(habit) ? (
-        <HistoryBody habit={habit} body={data} />
+        <HistoryBody habit={habit} />
       ) : (
         <Text variant="muted">One-offs and Reference Habits have no History.</Text>
       )}
@@ -71,7 +66,7 @@ function BackfillCalendar({
   today,
 }: {
   habit: Habit;
-  records: StreakRecords;
+  records: HabitRecords;
   today: string;
 }) {
   const check = useCheckHabit();
@@ -116,10 +111,10 @@ function BackfillCalendar({
   );
 }
 
-function HistoryBody({ habit, body }: { habit: Habit; body: HabitsBody }) {
+function HistoryBody({ habit }: { habit: Habit }) {
   const [now] = useState(() => new Date());
   const [limit, setLimit] = useState(PAGE);
-  const records = useHabitRecords(body);
+  const { whole: records } = useHabitRecords();
   const notes = useDayNotes();
 
   if (records === null) return <Text variant="muted">Loading History…</Text>;

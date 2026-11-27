@@ -2,7 +2,7 @@ import { isoAt, shiftDay } from "@/core/calendar";
 import { MISSED } from "@/core/habit-day";
 import { habitStrength, strengthLabel } from "@/core/habit-strength";
 import type { Counts, Durations, Habit, Skips } from "@/core/habits-view";
-import type { RestPeriod, StreakRecords } from "@/core";
+import type { RestPeriod, HabitRecords } from "@/core";
 import { makeHabit } from "./helpers/habit";
 
 // A Monday, so a 7-character pattern is one week.
@@ -20,7 +20,7 @@ const COUNT_CODES = new Map([
   ["x", MISSED],
 ]);
 
-function records(pattern: string): StreakRecords {
+function records(pattern: string): HabitRecords {
   const counts: Counts = {};
   const skips: Skips = {};
   const restPeriods: RestPeriod[] = [];
@@ -40,7 +40,7 @@ function records(pattern: string): StreakRecords {
 const lastDay = (pattern: string) => pattern.replaceAll(" ", "").length - 1;
 
 /** The Strength at noon on the pattern's last day. */
-function strengthOf(pattern: string, habit: Habit, extra: Partial<StreakRecords> = {}) {
+function strengthOf(pattern: string, habit: Habit, extra: Partial<HabitRecords> = {}) {
   const today = day(lastDay(pattern));
   const noon = new Date(isoAt(today, 12 * 60));
 

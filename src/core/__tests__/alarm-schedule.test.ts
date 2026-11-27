@@ -1,13 +1,8 @@
 import assert from "node:assert/strict";
-import {
-  firstTrigger,
-  reschedulePlan,
-  ringsLaterToday,
-  type TodayRecords,
-} from "@/core/alarm-schedule";
+import { firstTrigger, reschedulePlan, ringsLaterToday } from "@/core/alarm-schedule";
 import { notificationId } from "@/core/alarms";
 import { daysFrom, isoAt } from "@/core/calendar";
-import type { StreakRecords } from "@/core/habit-day";
+import type { HabitRecords } from "@/core/habit-day";
 import type { Counts, Habit } from "@/core/habits-view";
 import { makeConnection } from "./helpers/connection";
 import { makeHabit } from "./helpers/habit";
@@ -19,6 +14,15 @@ const wake = makeHabit({
   id: "out-of-bed",
   name: "Out of bed",
   alarm: { time: "07:15", kind: "alarm" },
+});
+
+const NO_RECORDS: HabitRecords = { counts: {}, durations: {}, skips: {}, restPeriods: [] };
+
+/** Only the recent Days known: the history hasn't loaded. */
+const recent = (records: Partial<HabitRecords>, silenced: string[] = []) => ({
+  records: { ...NO_RECORDS, ...records },
+  whole: null,
+  silenced,
 });
 
 const at = (...parts: [number, number, number, number, number]) => new Date(...parts).getTime();
@@ -145,9 +149,12 @@ describe("reschedulePlan during Rest mode", () => {
   const priya = makeConnection({ meetups: [{ label: "Dragon boat", days: [6], time: "18:30" }] });
 
   test("Habit alarms first ring the morning after it ends; Connection reminders keep their times", () => {
-    const triggers = reschedulePlan([wake], [priya], NOW, { restPeriods: rest })?.notifications.map(
-      ({ trigger }) => trigger,
-    );
+    const triggers = reschedulePlan(
+      [wake],
+      [priya],
+      NOW,
+      recent({ restPeriods: rest }),
+    )?.notifications.map(({ trigger }) => trigger);
 
     assert.deepEqual(triggers, [
       { timestamp: at(2026, 10, 9, 7, 15), repeat: "day" },
@@ -162,14 +169,17 @@ describe("reschedulePlan during Rest mode", () => {
       target: { type: "once" as const, count: 1, days: [] },
     };
 
-    assert.deepEqual(reschedulePlan([portage], [], NOW, { restPeriods: rest })?.notifications, []);
+    assert.deepEqual(
+      reschedulePlan([portage], [], NOW, recent({ restPeriods: rest }))?.notifications,
+      [],
+    );
   });
 
   test("a Rest period that ended or hasn't started changes nothing", () => {
     const past = [{ start: "2026-11-01", end: "2026-11-05" }];
 
     assert.deepEqual(
-      reschedulePlan([wake], [], NOW, { restPeriods: past }),
+      reschedulePlan([wake], [], NOW, recent({ restPeriods: past })),
       reschedulePlan([wake], [], NOW),
     );
   });
@@ -207,7 +217,7 @@ describe("reschedulePlan with Seasons", () => {
       [{ ...wake, seasons: [{ start: "2026-11-07", end: null }] }],
       [],
       NOW,
-      { restPeriods: [{ start: "2026-11-05", end: "2026-11-08" }] },
+      recent({ restPeriods: [{ start: "2026-11-05", end: "2026-11-08" }] }),
     );
 
     assert.deepEqual(
@@ -223,10 +233,12 @@ const entry = (minutes: number) => ({ id: 1, startTime: "07:00", minutes });
 describe("reschedulePlan when today's Day is logged or silenced", () => {
   const later = { ...wake, alarm: { time: "09:30", kind: "alarm" as const } };
   const TODAY = "2026-11-06";
-  const nothing: TodayRecords = { silenced: [] };
 
-  const triggersOf = (habit: typeof wake, today: Partial<TodayRecords>) =>
-    reschedulePlan([habit], [], NOW, { today: { ...nothing, ...today } })?.notifications.map(
+  const triggersOf = (
+    habit: typeof wake,
+    { silenced, ...records }: Partial<HabitRecords> & { silenced?: string[] },
+  ) =>
+    reschedulePlan([habit], [], NOW, recent(records, silenced))?.notifications.map(
       ({ trigger }) => trigger,
     );
 
@@ -264,9 +276,7 @@ describe("reschedulePlan when today's Day is logged or silenced", () => {
   test("a silenced Habit first rings tomorrow; the others ring today", () => {
     const other = { ...later, id: "stretch", name: "Stretch" };
 
-    const plan = reschedulePlan([later, other], [], NOW, {
-      today: { ...nothing, silenced: ["out-of-bed"] },
-    });
+    const plan = reschedulePlan([later, other], [], NOW, recent({}, ["out-of-bed"]));
 
     assert.deepEqual(
       plan?.notifications.map(({ trigger }) => trigger),
@@ -364,8 +374,8 @@ describe("reschedulePlan for a plant", () => {
   /** Done every day from the start through Saturday, then `over` replaces or clears single days. */
   function history(
     over: Record<string, number | null> = {},
-    extra: Partial<StreakRecords> = {},
-  ): StreakRecords {
+    extra: Partial<HabitRecords> = {},
+  ): HabitRecords {
     const counts: Counts = {};
 
     for (const day of daysFrom(start, "2026-11-21")) counts[day] = { up: 1 };
@@ -376,10 +386,12 @@ describe("reschedulePlan for a plant", () => {
     return { counts, durations: {}, skips: {}, restPeriods: [], ...extra };
   }
 
-  const firstRings = (habit: Habit, records: StreakRecords, today?: TodayRecords) =>
-    reschedulePlan([habit], [], sunday, { records, ...(today && { today }) })?.notifications.map(
-      ({ trigger }) => trigger,
-    );
+  const firstRings = (habit: Habit, records: HabitRecords) =>
+    reschedulePlan([habit], [], sunday, {
+      records,
+      whole: records,
+      silenced: [],
+    })?.notifications.map(({ trigger }) => trigger);
 
   const daily = (day: string) => ({
     timestamp: new Date(`${day}T18:00`).getTime(),
@@ -393,9 +405,7 @@ describe("reschedulePlan for a plant", () => {
   test("a plant logged done today skips tomorrow's ring", () => {
     const records = history({ "2026-11-22": 1 });
 
-    assert.deepEqual(firstRings(plant, records, { counts: records.counts, silenced: [] }), [
-      daily("2026-11-24"),
-    ]);
+    assert.deepEqual(firstRings(plant, records), [daily("2026-11-24")]);
   });
 
   test.each([
@@ -440,39 +450,28 @@ describe("reschedulePlan for a plant", () => {
   });
 
   test("a seed rings as before, and a Habit without an alarm plans nothing", () => {
-    const never: StreakRecords = { counts: {}, durations: {}, skips: {}, restPeriods: [] };
-
-    assert.deepEqual(firstRings(plant, never), [daily("2026-11-22")]);
+    assert.deepEqual(firstRings(plant, NO_RECORDS), [daily("2026-11-22")]);
     assert.deepEqual(firstRings({ ...plant, alarm: null }, history()), []);
   });
 
   test("a plant whose next ring is held back has no ring left today to silence", () => {
-    const logged = { counts: {} };
+    const held = history();
+    const missed = history({ "2026-11-21": null });
 
-    assert.equal(
-      ringsLaterToday(plant, sunday, { restPeriods: [], logged, records: history() }),
-      false,
-    );
-    assert.equal(
-      ringsLaterToday(plant, sunday, {
-        restPeriods: [],
-        logged,
-        records: history({ "2026-11-21": null }),
-      }),
-      true,
-    );
+    assert.equal(ringsLaterToday(plant, sunday, { records: held, whole: held }), false);
+    assert.equal(ringsLaterToday(plant, sunday, { records: missed, whole: missed }), true);
+  });
+
+  test("before the history loads, a plant rings as a seed would", () => {
+    assert.equal(ringsLaterToday(plant, sunday, { records: history(), whole: null }), true);
   });
 });
 
 describe("ringsLaterToday", () => {
   const tree: Habit = { ...wake, trees: [{ start: "2026-11-01", end: null }] };
-  const nothing = { counts: {} };
 
-  const ask = (
-    habit: Habit,
-    now: Date,
-    more: Partial<Parameters<typeof ringsLaterToday>[2]> = {},
-  ) => ringsLaterToday(habit, now, { restPeriods: [], logged: nothing, records: null, ...more });
+  const ask = (habit: Habit, now: Date, records: Partial<HabitRecords> = {}) =>
+    ringsLaterToday(habit, now, recent(records));
 
   test.each([
     ["before its time today", wake, new Date(2026, 10, 6, 7, 0), true],
@@ -486,10 +485,7 @@ describe("ringsLaterToday", () => {
   test("a Day logged today keeps the ring quiet", () => {
     const early = new Date(2026, 10, 6, 6, 0);
 
-    assert.equal(
-      ask(wake, early, { logged: { counts: { "2026-11-06": { "out-of-bed": 1 } } } }),
-      false,
-    );
+    assert.equal(ask(wake, early, { counts: { "2026-11-06": { "out-of-bed": 1 } } }), false);
   });
 
   test("Rest mode keeps today's ring quiet", () => {

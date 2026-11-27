@@ -21,7 +21,7 @@ import {
 } from "@/core";
 
 import { useCheckIns } from "@/lib/data/check-ins";
-import { useRestPeriods } from "@/lib/data/streaks";
+import { useHabitRecords } from "@/lib/data/streaks";
 import { askNotificationPermissionOnce } from "@/lib/notifications/ask-permission";
 
 const CHANNEL_ID = "check-in-prompt";
@@ -108,7 +108,7 @@ function pressedHref(detail: EventDetail): Href | null {
  */
 export function useCheckInPrompt() {
   const { data } = useCheckIns();
-  const restPeriods = useRestPeriods();
+  const { restPeriods } = useHabitRecords().records;
   const { navigate } = useRouter();
 
   useEffect(() => {

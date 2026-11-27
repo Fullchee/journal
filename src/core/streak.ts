@@ -1,5 +1,5 @@
 import { daysFrom, mondayOf, monthDaysOf, shiftDay, torontoDay } from "./calendar";
-import { dueBySchedule, habitDayReader, type DayReading, type StreakRecords } from "./habit-day";
+import { dueBySchedule, habitDayReader, type DayReading, type HabitRecords } from "./habit-day";
 import { TRACKED_TARGET_TYPES, type Habit } from "./habits-view";
 import { restPeriodOn, type RestPeriod } from "./rest-mode";
 
@@ -39,8 +39,8 @@ export interface Streak {
   repair: Repair | null;
 }
 
-/** Recurring `good` Habits have a Streak; One-offs, Reference Habits and `bad` Habits don't. */
-export const hasStreak = ({ kind, target }: Pick<Habit, "kind" | "target">) =>
+// Recurring `good` Habits have a Streak; One-offs, Reference Habits and `bad` Habits don't.
+const hasStreak = ({ kind, target }: Pick<Habit, "kind" | "target">) =>
   kind === "good" && TRACKED_TARGET_TYPES.some((type) => type === target.type);
 
 /** What a replay needs to know about one day. */
@@ -304,7 +304,7 @@ const EMPTY_STREAK = (unit: Streak["unit"]): Streak => ({
  * A Habit's Streak, replayed from its first done day to today, a Toronto day (midnight boundary).
  * Computed from checks, Skips and Rest periods; nothing about it is stored.
  */
-export function habitStreak(habit: Habit, records: StreakRecords, now: Date): Streak {
+export function habitStreak(habit: Habit, records: HabitRecords, now: Date): Streak {
   const today = torontoDay(now);
   const unit = unitOf(habit);
   const read = habitDayReader(habit, records);
@@ -432,3 +432,7 @@ export function streakGrid(
     }),
   );
 }
+
+/** A Habit's Streak, or null for a Habit without one. */
+export const streakOrNull = (habit: Habit, records: HabitRecords, now: Date): Streak | null =>
+  hasStreak(habit) ? habitStreak(habit, records, now) : null;

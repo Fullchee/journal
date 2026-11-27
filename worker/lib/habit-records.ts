@@ -14,7 +14,7 @@ import {
   type Skip,
   type SkipCause,
   type Skips,
-  type StreakRecords,
+  type HabitRecords,
 } from "@/core";
 import * as z from "zod/mini";
 import type { D1, D1Statement, Env, SqlValue } from "./env";
@@ -326,7 +326,7 @@ async function storeOptOutDays(env: Env, now: Date) {
  * Every Habit's records from `since` on: counts (every One-off answer too), Duration entries, Skips and the Rest
  * periods that reach it. Stores the passed Opt-out Days first, so every read counts them.
  */
-export async function readRecords(env: Env, since: string, now: Date): Promise<StreakRecords> {
+export async function readRecords(env: Env, since: string, now: Date): Promise<HabitRecords> {
   await storeOptOutDays(env, now);
 
   const [counts, durations, skips, restPeriods] = await Promise.all([

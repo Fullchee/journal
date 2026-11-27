@@ -52,9 +52,15 @@ const mockCheck = jest.fn();
 
 jest.mock("@/lib/data/streaks", () => ({
   ...jest.requireActual<object>("@/lib/data/streaks"),
-  useHabitStreaks: () => () => null,
-  useHabitRecords: () => null,
-  useRestPeriods: () => [],
+  useHabitRecords: () => ({
+    records: {
+      counts: mockTracker.data?.counts ?? {},
+      durations: mockTracker.data?.durations ?? {},
+      skips: mockTracker.data?.skips ?? {},
+      restPeriods: [],
+    },
+    whole: null,
+  }),
   useCheckInStreak: () => null,
 }));
 

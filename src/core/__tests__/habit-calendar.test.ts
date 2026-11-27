@@ -9,7 +9,7 @@ import {
 } from "@/core/habit-calendar";
 import { MISSED } from "@/core/habit-day";
 import type { Habit } from "@/core/habits-view";
-import type { StreakRecords } from "@/core";
+import type { HabitRecords } from "@/core";
 import { makeHabit } from "./helpers/habit";
 
 // A Saturday at noon, so a weekday pattern is fixed.
@@ -17,7 +17,7 @@ const TODAY = torontoDay(new Date(isoAt("2026-11-14", 12 * 60)));
 
 const ago = (days: number) => shiftDay(TODAY, -days);
 
-const records = (over: Partial<StreakRecords> = {}): StreakRecords => ({
+const records = (over: Partial<HabitRecords> = {}): HabitRecords => ({
   counts: {},
   durations: {},
   skips: {},
@@ -30,7 +30,7 @@ const walk = (over: Partial<Habit> = {}) =>
 
 const entry = (minutes: number) => [{ id: 1, startTime: "08:00", minutes }];
 
-const stateOn = (habit: Habit, recorded: StreakRecords, day: string) =>
+const stateOn = (habit: Habit, recorded: HabitRecords, day: string) =>
   calendarReader(habit, recorded, TODAY)(day).state;
 
 describe("month helpers", () => {

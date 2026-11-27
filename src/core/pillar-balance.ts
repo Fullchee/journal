@@ -4,7 +4,7 @@ import * as z from "zod/mini";
 
 import { daysFrom, mondayOf, shiftDay, torontoDay } from "./calendar";
 import { buildGoalTree, goalSubtreeIds } from "./goal-tree";
-import type { StreakRecords } from "./habit-day";
+import type { HabitRecords } from "./habit-day";
 import { hasHistory, type HistoryUnit } from "./habit-history";
 import { gradedHistory, type GradedPeriod } from "./habit-strength";
 import type { Habit } from "./habits-view";
@@ -224,7 +224,7 @@ function tally(
 
 interface PlanInput {
   habits: Habit[];
-  records: StreakRecords;
+  records: HabitRecords;
   now: Date;
 }
 
@@ -265,7 +265,7 @@ export interface PillarGoal {
 export interface PillarSources {
   goals: PillarGoal[];
   habits: Habit[];
-  records: StreakRecords;
+  records: HabitRecords;
   sleep: SleepNight[];
   activity: ActivityDay[];
   /** Days with a strength workout, from Hevy or the watch. */

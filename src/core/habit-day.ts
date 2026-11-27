@@ -241,15 +241,35 @@ const rowProgress = (habit: Habit, counts: Counts, total: number, day: string) =
     ? nextDueLabel(habit, counts, day)
     : progressLabel(habit, total, day);
 
-interface HabitRecords {
+/**
+ * Everything stored about the Habits' Days: checks, Duration entries, Skips and Rest periods. Today, the Streak,
+ * History, Strength, Stage and alarms all read this one shape.
+ */
+export interface HabitRecords {
   counts: Counts;
   durations: Durations;
+  skips: Skips;
+  restPeriods: RestPeriod[];
 }
 
+/**
+ * What the app knows of every Habit's Days: the recent Days at once, the whole history once it loads. Before then
+ * `records` hold only the recent Days and no Rest periods, and `whole` is null: a Streak, Stage, Strength, History or
+ * tree question read from recent Days alone would be wrong.
+ */
+export interface KnownRecords {
+  records: HabitRecords;
+  /** `records`, once they reach back to each Habit's start. */
+  whole: HabitRecords | null;
+}
+
+/** What decides a Day's count and status. */
+export type DayRecords = Pick<HabitRecords, "counts" | "durations">;
+
 /** Everything a screen shows about one Habit's days, read from the stored counts and Duration entries. */
-export function habitDays(habit: TimedHabit, records: HabitRecords): HabitDays<TimedDay>;
-export function habitDays(habit: Habit, records: HabitRecords): HabitDays;
-export function habitDays(habit: Habit, { counts, durations }: HabitRecords): HabitDays {
+export function habitDays(habit: TimedHabit, records: DayRecords): HabitDays<TimedDay>;
+export function habitDays(habit: Habit, records: DayRecords): HabitDays;
+export function habitDays(habit: Habit, { counts, durations }: DayRecords): HabitDays {
   const reached = withDurations(counts, habit, durations);
 
   return {
@@ -284,12 +304,6 @@ export function habitDays(habit: Habit, { counts, durations }: HabitRecords): Ha
   };
 }
 
-/** Everything stored about a Habit's Days: checks, Duration entries, Skips and Rest periods. */
-export interface StreakRecords extends HabitRecords {
-  skips: Skips;
-  restPeriods: RestPeriod[];
-}
-
 /**
  * One Day of a Habit, as the Streak, History, Strength, Calendar and Pillar bar all read it. Each turns these
  * facts into its own mark; none of them decides due, Season, Rest mode or Skip on its own.
@@ -310,7 +324,7 @@ export interface DayReading {
 }
 
 /** Reads each Day of one Habit from its records; builds the Habit's days once. */
-export function habitDayReader(habit: Habit, records: StreakRecords): (day: string) => DayReading {
+export function habitDayReader(habit: Habit, records: HabitRecords): (day: string) => DayReading {
   const days = habitDays(habit, records);
 
   return (day) => {
@@ -343,7 +357,7 @@ export interface HabitDone {
  */
 export function habitsDone(
   habits: Habit[],
-  { counts, durations }: HabitRecords,
+  { counts, durations }: DayRecords,
   from: string,
   to: string,
 ): HabitDone[] {

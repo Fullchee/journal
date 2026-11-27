@@ -10,10 +10,10 @@ import {
   isTimed,
   isTinyDay,
   MISSED,
-  type Counts,
   type DueHabit,
-  type Durations,
   type Habit,
+  type HabitRecords,
+  type KnownRecords,
   type TimedHabit,
   formatMinutes,
   isoAt,
@@ -52,7 +52,7 @@ import {
   type HabitCheck,
   type HabitsBody,
 } from "@/lib/data/habits";
-import { useHabitRecords, useRestPeriods } from "@/lib/data/streaks";
+import { useHabitRecords } from "@/lib/data/streaks";
 
 // Minutes typed now were just spent, so the entry starts that long ago, but never before midnight.
 const startedAgo = (now: Date, minutes: number) =>
@@ -60,11 +60,7 @@ const startedAgo = (now: Date, minutes: number) =>
 
 // An overdue One-off's Not done is stored on its past date, so Today no longer lists it; it stays under
 // "Done today" for as long as this screen is open.
-function missedHere(
-  habits: Habit[],
-  ids: string[],
-  records: { counts: Counts; durations: Durations },
-): DueHabit[] {
+function missedHere(habits: Habit[], ids: string[], records: HabitRecords): DueHabit[] {
   return habits.flatMap((habit) => {
     if (!ids.includes(habit.id) || !isOneOff(habit)) return [];
     const day = habitDays(habit, records).on(new Date(isoAt(habit.startDate)));
@@ -97,34 +93,31 @@ export function HabitsDueToday() {
 
 /**
  * The cache takes a check at once but tells its readers on TanStack's next tick, so a ticked Habit would linger in the
- * due list. This screen lays each check it sends over the body until a newer body lands, which already holds them.
+ * due list. This screen lays each check it sends over the records until a newer body lands, which already holds them.
  */
-function useSentChecks(fetched: HabitsBody) {
+function useSentChecks(body: HabitsBody) {
+  const { records, whole } = useHabitRecords();
+
   const [sent, setSent] = useState<{ base: HabitsBody; checks: HabitCheck[] }>({
-    base: fetched,
+    base: body,
     checks: [],
   });
 
-  if (sent.base !== fetched) setSent({ base: fetched, checks: [] });
+  if (sent.base !== body) setSent({ base: body, checks: [] });
+  const laid = withChecks(records, sent.base === body ? sent.checks : []);
+  const known: KnownRecords = { records: laid, whole: whole && laid };
 
   return {
-    body: withChecks(fetched, sent.base === fetched ? sent.checks : []),
+    known,
     // Functional, since Undo's toast calls this long after the render that made it.
     lay: (checks: HabitCheck[]) =>
       setSent((was) => ({ base: was.base, checks: [...was.checks, ...checks] })),
   };
 }
 
-/** The Habit's alarm still rings today, as the alarm schedule plans it. */
-function useRingsLaterToday(habit: Habit, logged: HabitsBody, now: Date) {
-  const restPeriods = useRestPeriods();
-  const records = useHabitRecords(logged);
-
-  return ringsLaterToday(habit, now, { restPeriods, logged, records });
-}
-
-function DueHabits({ body: fetched }: { body: HabitsBody }) {
-  const { body, lay } = useSentChecks(fetched);
+function DueHabits({ body }: { body: HabitsBody }) {
+  const { known, lay } = useSentChecks(body);
+  const { records } = known;
   const check = useCheckHabit(lay);
   const [detail, setDetail] = useState<DayDetail | null>(null);
   const [rescheduling, setRescheduling] = useState<Habit | null>(null);
@@ -133,9 +126,7 @@ function DueHabits({ body: fetched }: { body: HabitsBody }) {
   // eslint-disable-next-line eslint-react/purity -- what is due counts from this moment, so each render reads the clock
   const today = new Date();
   const date = torontoDay(today);
-  const records = { counts: body.counts ?? {}, durations: body.durations ?? {} };
-  const restPeriods = useRestPeriods();
-  const rows = dueToday(body.habits, { ...records, restPeriods }, today);
+  const rows = dueToday(body.habits, records, today);
   const tinyDay = isTinyDay(useCheckIns().data?.checkIns ?? [], today);
   const listed = new Set(rows.map((row) => row.habit.id));
   const open = rows.filter((row) => row.day.status === "empty");
@@ -160,7 +151,7 @@ function DueHabits({ body: fetched }: { body: HabitsBody }) {
       due={due}
       today={today}
       tinyDay={tinyDay}
-      logged={body}
+      known={known}
       onAnswer={(count) => answer(due, count)}
       onOpenDay={(habit) => setDetail({ habit, date })}
       onReschedule={() => setRescheduling(due.habit)}
@@ -261,7 +252,7 @@ function DueRow({
   due,
   today,
   tinyDay,
-  logged,
+  known,
   onAnswer,
   onOpenDay,
   onReschedule,
@@ -271,8 +262,8 @@ function DueRow({
   today: Date;
   /** The day's newest Check-in is Rain or Storm. */
   tinyDay: boolean;
-  /** Today's records, with unsent taps: a logged Day already keeps the alarm quiet. */
-  logged: HabitsBody;
+  /** With unsent taps: a logged Day already keeps the alarm quiet. */
+  known: KnownRecords;
   onAnswer: (count: number) => void;
   onOpenDay: (habit: TimedHabit) => void;
   onReschedule: () => void;
@@ -282,7 +273,6 @@ function DueRow({
   const { mutate: addDuration } = useAddDuration();
   const isOnline = useIsOnline();
   const silenced = useSilencedAlarms();
-  const ringsLater = useRingsLaterToday(habit, logged, today);
 
   const props: HabitDueRowProps = {
     habit,
@@ -306,7 +296,7 @@ function DueRow({
     // A recurring Habit's Not done is a Skip; a One-off keeps Not done.
     ...(!isOneOff(habit) && { onSkip }),
     ...(canSilence() &&
-      ringsLater && {
+      ringsLaterToday(habit, today, known) && {
         alarm: {
           silenced: silenced.includes(habit.id),
           onSilence: () => toggleSilenced(habit.id),

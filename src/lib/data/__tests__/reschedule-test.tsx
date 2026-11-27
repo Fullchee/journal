@@ -1,4 +1,4 @@
-import type { Counts, Durations, Habit, RestPeriod, Skips } from "@/core";
+import type { Habit, HabitRecords } from "@/core";
 import { QueryClientProvider, type QueryClient } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react-native";
 import type { ReactNode } from "react";
@@ -7,7 +7,7 @@ import { CelebrationProvider } from "@/components/celebration";
 import { apiFetch } from "@/lib/api/api-fetch";
 import { useCheckHabit, useHabitTracker, useReschedule } from "@/lib/data/habits";
 import { createQueryClient } from "@/lib/data/query-client";
-import { useRestPeriods } from "@/lib/data/streaks";
+import { useHabitRecords } from "@/lib/data/streaks";
 
 // eslint-disable-next-line no-restricted-imports -- jest/ sits outside src, so no @/ alias reaches it
 import { habit } from "../../../../jest/fixtures";
@@ -25,16 +25,8 @@ const wrapperFor = (client: QueryClient) =>
     );
   };
 
-/** What `/api/streaks` answers. */
-interface StreakHistory {
-  counts: Counts;
-  durations: Durations;
-  skips: Skips;
-  restPeriods: RestPeriod[];
-}
-
 // The owner's API: the Streak history and the Habits; a POST answers with `post()`.
-function serveWithStreaks(habits: Habit[], history: StreakHistory, post: () => Promise<undefined>) {
+function serveWithStreaks(habits: Habit[], history: HabitRecords, post: () => Promise<undefined>) {
   jest.mocked(apiFetch).mockImplementation((path, init) => {
     if (init.method === "POST") return post();
 
@@ -143,7 +135,7 @@ describe("useReschedule", () => {
       () => ({
         tracker: useHabitTracker(),
         reschedule: useReschedule(),
-        restPeriods: useRestPeriods(),
+        restPeriods: useHabitRecords().records.restPeriods,
       }),
       { wrapper },
     );
@@ -173,12 +165,12 @@ describe("a queued Habit check", () => {
   it("lays the unsent check over the Habit lists and the Streak history", async () => {
     const client = createQueryClient();
     const wrapper = wrapperFor(client);
-    const history: StreakHistory = { counts: {}, durations: {}, skips: {}, restPeriods: [] };
+    const history: HabitRecords = { counts: {}, durations: {}, skips: {}, restPeriods: [] };
 
     serveWithStreaks([habit()], history, () => new Promise(jest.fn()));
 
     const { result } = await renderHook(
-      () => ({ tracker: useHabitTracker(), check: useCheckHabit(), restPeriods: useRestPeriods() }),
+      () => ({ tracker: useHabitTracker(), check: useCheckHabit(), records: useHabitRecords() }),
       { wrapper },
     );
 

@@ -1,25 +1,25 @@
-import { reachedMilestone } from "@/core";
+import { reachedMilestone, streakOrNull } from "@/core";
 import { useEffect, useRef } from "react";
 
 import { useCelebrate } from "@/components/celebration";
 import { useHabitTracker } from "@/lib/data/habits";
-import { useCheckInStreak, useHabitStreaks } from "@/lib/data/streaks";
+import { useCheckInStreak, useHabitRecords } from "@/lib/data/streaks";
 
 const CHECK_IN = "check-in";
 
 // The Habits tab's query, so a tap's optimistic count moves the Streak at once.
 function useCurrentStreaks(now: Date) {
   const { data } = useHabitTracker();
-  const streakOf = useHabitStreaks(data ?? { habits: [] }, now);
+  const { whole } = useHabitRecords();
   const checkIn = useCheckInStreak(now);
   const currents = new Map<string, number>();
-  const habits = data?.habits ?? [];
 
-  for (const habit of habits) {
-    const streak = streakOf(habit);
+  const streaks =
+    whole && data
+      ? data.habits.map((habit) => [habit.id, streakOrNull(habit, whole, now)] as const)
+      : [];
 
-    if (streak) currents.set(habit.id, streak.current);
-  }
+  for (const [id, streak] of streaks) if (streak) currents.set(id, streak.current);
 
   if (checkIn) currents.set(CHECK_IN, checkIn.current);
 

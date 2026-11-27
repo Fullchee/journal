@@ -11,6 +11,7 @@ import {
   isAnswered,
   isOneOff,
   isTimed,
+  streakOrNull,
   torontoDay,
   type Counts,
   type Habit,
@@ -30,7 +31,7 @@ import { Section } from "@/components/screen";
 import { useIsWide } from "@/hooks/use-is-wide";
 import { useIsOnline } from "@/lib/data/data-provider";
 import { useCheckHabit, useHabitTracker, type HabitsBody } from "@/lib/data/habits";
-import { useHabitRecords, useHabitStreaks, useRestMode } from "@/lib/data/streaks";
+import { useHabitRecords, useRestMode } from "@/lib/data/streaks";
 
 // Filters live in the URL, so `?kind=bad` opens Problems and a reload keeps the list.
 function useFilters() {
@@ -150,11 +151,8 @@ function HabitList({ body, filters }: { body: HabitsBody; filters: HabitFilters 
   const [detail, setDetail] = useState<DayDetail | null>(null);
   // eslint-disable-next-line eslint-react/purity -- streaks and due days count from this moment, so each render reads the clock
   const today = new Date();
-  const counts = body.counts ?? {};
-  const durations = body.durations ?? {};
-  const streakOf = useHabitStreaks(body, today);
-  const records = useHabitRecords(body);
-  const stageOf = (habit: Habit) => records && habitStage(habit, records, today);
+  const { records, whole } = useHabitRecords();
+  const stageOf = (habit: Habit) => whole && habitStage(habit, whole, today);
   const shown = filterHabits(body.habits.filter(inTracker), filters, stageOf);
   const tracked = shown.filter((habit) => habit.active);
   const backlog = shown.filter((habit) => !habit.active);
@@ -174,17 +172,13 @@ function HabitList({ body, filters }: { body: HabitsBody; filters: HabitFilters 
     <ManagedHabitCard
       key={habit.id}
       habit={habit}
-      counts={counts}
-      durations={durations}
-      skips={body.skips ?? {}}
+      records={records}
       today={today}
       expanded={expanded.has(habit.id)}
-      streak={streakOf(habit)}
+      streak={whole && streakOrNull(habit, whole, today)}
       stage={stageOf(habit)}
-      asksTree={records !== null && asksTreeQuestion(habit, records, today)}
-      strength={
-        records !== null && expanded.has(habit.id) ? habitStrength(habit, records, today) : null
-      }
+      asksTree={whole !== null && asksTreeQuestion(habit, whole, today)}
+      strength={whole && expanded.has(habit.id) ? habitStrength(habit, whole, today) : null}
       offline={!isOnline}
       description={<HabitDescription habit={habit} />}
       nameOf={nameOf}
@@ -201,7 +195,7 @@ function HabitList({ body, filters }: { body: HabitsBody; filters: HabitFilters 
     <View className="gap-3">
       <OneOffs
         oneOffs={filterHabits(body.habits.filter(isOneOff), filters, stageOf)}
-        counts={counts}
+        counts={records.counts}
         today={torontoDay(today)}
       />
       <Text aria-level={2} variant="headline">
@@ -233,7 +227,11 @@ function HabitList({ body, filters }: { body: HabitsBody; filters: HabitFilters 
       )}
       {showBacklog && backlog.map((habit) => card(habit))}
       {detail && (
-        <HabitDayDetail detail={detail} durations={durations} onClose={() => setDetail(null)} />
+        <HabitDayDetail
+          detail={detail}
+          durations={records.durations}
+          onClose={() => setDetail(null)}
+        />
       )}
     </View>
   );

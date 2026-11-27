@@ -1,6 +1,5 @@
-import { isoAt, shiftDay, torontoDay, type Habit } from "@/core";
+import { isoAt, shiftDay, torontoDay, type HabitRecords } from "@/core";
 
-import type { HabitsBody } from "@/lib/data/habits";
 import { habitWidgets, tileEntry } from "@/lib/widgets/habit-widgets";
 
 // eslint-disable-next-line no-restricted-imports -- jest/ sits outside src, so no @/ alias reaches it
@@ -10,10 +9,11 @@ const NOW = new Date();
 const TODAY = torontoDay(NOW);
 const YESTERDAY = shiftDay(TODAY, -1);
 
-const body = (habits: Habit[], over: Partial<HabitsBody> = {}): HabitsBody => ({
-  habits,
+const records = (over: Partial<HabitRecords> = {}): HabitRecords => ({
   counts: {},
   durations: {},
+  skips: {},
+  restPeriods: [],
   ...over,
 });
 
@@ -24,20 +24,18 @@ describe("habitWidgets", () => {
     const walk = habit({ id: "walk", name: "Walk" });
     const meds = habit({ id: "meds", name: "Meds" });
 
-    expect(habitWidgets(body([walk, meds], { counts: { [TODAY]: { meds: 1 } } }), [], NOW)).toEqual(
-      {
-        date: TODAY,
-        due: [{ id: "walk", name: "Walk", tick: true, places: [], time: null, priority: "normal" }],
-        places: [],
-        timed: null,
-      },
-    );
+    expect(habitWidgets([walk, meds], records({ counts: { [TODAY]: { meds: 1 } } }), NOW)).toEqual({
+      date: TODAY,
+      due: [{ id: "walk", name: "Walk", tick: true, places: [], time: null, priority: "normal" }],
+      places: [],
+      timed: null,
+    });
   });
 
   it("gives a timed Habit no tick, since it logs minutes", () => {
     const read = timedHabit({ id: "read", name: "Read" });
 
-    expect(habitWidgets(body([read]), [], NOW).due).toMatchObject([
+    expect(habitWidgets([read], records(), NOW).due).toMatchObject([
       { id: "read", name: "Read", tick: false },
     ]);
   });
@@ -51,7 +49,7 @@ describe("habitWidgets", () => {
       priority: "high",
     });
 
-    expect(habitWidgets(body([lift]), [], NOW).due).toEqual([
+    expect(habitWidgets([lift], records(), NOW).due).toEqual([
       { id: "lift", name: "Lift", tick: true, places: ["Gym"], time: "07:30", priority: "high" },
     ]);
   });
@@ -61,17 +59,11 @@ describe("habitWidgets", () => {
     const stretch = habit({ id: "stretch", places: [" gym ", "Office"] });
     const shelved = habit({ id: "shelved", places: ["Library"], active: false });
 
-    expect(habitWidgets(body([lift, stretch, shelved]), [], NOW).places).toEqual([
+    expect(habitWidgets([lift, stretch, shelved], records(), NOW).places).toEqual([
       "Gym",
       "Home",
       "Office",
     ]);
-  });
-
-  it("reads a list fetched without checks as nothing done yet", () => {
-    const walk = habit({ id: "walk", name: "Walk" });
-
-    expect(habitWidgets({ habits: [walk] }, [], NOW).due).toHaveLength(1);
   });
 });
 
@@ -85,14 +77,14 @@ describe("the Quick Settings tile's Habit", () => {
       [TODAY]: { meditate: [entry("06:30")], read: [entry("07:15")] },
     };
 
-    expect(habitWidgets(body([meditate, read], { durations }), [], NOW).timed).toEqual({
+    expect(habitWidgets([meditate, read], records({ durations }), NOW).timed).toEqual({
       id: "read",
       name: "Read",
     });
   });
 
   it("is the first timed Habit when none was logged this week", () => {
-    expect(habitWidgets(body([meditate, read]), [], NOW).timed).toEqual({
+    expect(habitWidgets([meditate, read], records(), NOW).timed).toEqual({
       id: "meditate",
       name: "Meditate",
     });
@@ -104,14 +96,14 @@ describe("the Quick Settings tile's Habit", () => {
     const walk = habit({ id: "walk", name: "Walk" });
     const durations = { [TODAY]: { hevy: [entry("08:00")], shelved: [entry("09:00")] } };
 
-    expect(habitWidgets(body([hevy, shelved, walk, read], { durations }), [], NOW).timed).toEqual({
+    expect(habitWidgets([hevy, shelved, walk, read], records({ durations }), NOW).timed).toEqual({
       id: "read",
       name: "Read",
     });
   });
 
   it("is none without a timed Habit", () => {
-    expect(habitWidgets({ habits: [habit()] }, [], NOW).timed).toBeNull();
+    expect(habitWidgets([habit()], records(), NOW).timed).toBeNull();
   });
 });
 

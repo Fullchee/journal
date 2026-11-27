@@ -7,11 +7,9 @@ import {
   torontoTime,
   type Durations,
   type Habit,
+  type HabitRecords,
   type Priority,
-  type RestPeriod,
 } from "@/core";
-
-import type { HabitsBody } from "@/lib/data/habits";
 
 /**
  * One open Habit on the Habits widget; `tick` is false for a timed Habit, which logs minutes, not a check.
@@ -53,8 +51,8 @@ function lastLoggedId(durations: Durations, ids: Set<string>) {
   return logged.toSorted((a, b) => b.at.localeCompare(a.at))[0]?.id;
 }
 
-/** The tile's Habit: the timed Habit logged most recently this week, else the first timed one. */
-function tileHabit({ habits, durations = {} }: HabitsBody) {
+/** The tile's Habit: the timed Habit logged most recently, else the first timed one. */
+function tileHabit(habits: Habit[], durations: Durations) {
   const timed = habits.filter((habit) => isTileHabit(habit));
   const lastId = lastLoggedId(durations, new Set(timed.map((habit) => habit.id)));
   const habit = timed.find(({ id }) => id === lastId) ?? timed[0];
@@ -76,16 +74,17 @@ const activePlaces = (habits: Habit[]) =>
   normalizePlaces(habits.filter((habit) => habit.active).flatMap((habit) => habit.places));
 
 /** Today's due Habits still open, in Today's order, plus the Quick Settings tile's timed Habit. */
-export function habitWidgets(body: HabitsBody, restPeriods: RestPeriod[], now: Date): HabitWidgets {
-  const due = dueToday(
-    body.habits,
-    { counts: body.counts ?? {}, durations: body.durations ?? {}, restPeriods },
-    now,
-  )
+export function habitWidgets(habits: Habit[], records: HabitRecords, now: Date): HabitWidgets {
+  const due = dueToday(habits, records, now)
     .filter(({ day }) => day.status === "empty")
     .map(({ habit }) => widgetHabit(habit));
 
-  return { date: torontoDay(now), due, places: activePlaces(body.habits), timed: tileHabit(body) };
+  return {
+    date: torontoDay(now),
+    due,
+    places: activePlaces(habits),
+    timed: tileHabit(habits, records.durations),
+  };
 }
 
 const MINUTE_MS = 60_000;

@@ -54,9 +54,15 @@ const mockRest: RestState = { periods: [] };
 
 jest.mock("@/lib/data/streaks", () => ({
   ...jest.requireActual<object>("@/lib/data/streaks"),
-  useHabitStreaks: () => () => null,
-  useHabitRecords: () => null,
-  useRestPeriods: () => mockRest.periods,
+  useHabitRecords: () => ({
+    records: {
+      counts: mockTracker.data?.counts ?? {},
+      durations: mockTracker.data?.durations ?? {},
+      skips: mockTracker.data?.skips ?? {},
+      restPeriods: mockRest.periods,
+    },
+    whole: null,
+  }),
 }));
 
 jest.mock("@/lib/data/check-ins", () => ({

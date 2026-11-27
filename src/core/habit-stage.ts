@@ -1,5 +1,5 @@
 import { daysBetween, shiftDay, torontoDay } from "./calendar";
-import type { StreakRecords } from "./habit-day";
+import type { HabitRecords } from "./habit-day";
 import { habitStrength } from "./habit-strength";
 import { hasStage, isTree, treeSpans } from "./habit-tree";
 import type { Habit, Stage } from "./habits-view";
@@ -26,7 +26,7 @@ function strengthStage(strength: number | null): Stage {
  * A Habit's Stage: tree while a yes holds, otherwise its Strength band. Null for a Habit without a Stage. The one
  * source for every screen, alarm, filter and the Worker.
  */
-export function habitStage(habit: Habit, records: StreakRecords, now: Date): Stage | null {
+export function habitStage(habit: Habit, records: HabitRecords, now: Date): Stage | null {
   if (!hasStage(habit)) return null;
 
   if (isTree(habit, records.restPeriods, now)) return "tree";
@@ -35,7 +35,7 @@ export function habitStage(habit: Habit, records: StreakRecords, now: Date): Sta
 }
 
 // Not yet's Day, or 30 days after the latest tree span ended, whichever is later.
-function asksFrom(habit: Habit, records: StreakRecords, today: string) {
+function asksFrom(habit: Habit, records: HabitRecords, today: string) {
   const ended = treeSpans(habit, records.restPeriods, today).at(-1)?.end ?? null;
   const afterFall = ended === null ? "" : shiftDay(ended, TREE_WAIT_DAYS);
   const notYet = habit.treeAskFrom ?? "";
@@ -44,7 +44,7 @@ function asksFrom(habit: Habit, records: StreakRecords, today: string) {
 }
 
 /** The card asks "Do you do this without thinking?" once Strength reaches 95% and the Habit is 66 days old. */
-export function asksTreeQuestion(habit: Habit, records: StreakRecords, now: Date) {
+export function asksTreeQuestion(habit: Habit, records: HabitRecords, now: Date) {
   // The cheap checks go first: Strength replays the Habit's whole History.
   if (!hasStage(habit) || !habit.active || habit.startDate === "") return false;
 
@@ -71,7 +71,7 @@ export type TreeAnswer = (typeof TREE_ANSWERS)[number];
 export function answerTree(
   habit: Habit,
   answer: TreeAnswer,
-  records: StreakRecords,
+  records: HabitRecords,
   now: Date,
 ): Pick<Habit, "trees" | "treeAskFrom"> | null {
   const today = torontoDay(now);

@@ -4,6 +4,7 @@ import {
   WEEKDAYS,
   alarmNote,
   canOptOut,
+  habitStage,
   habitTime,
   cueChoices,
   dueDateLabel,
@@ -36,7 +37,7 @@ import { useCSSVariable } from "uniwind";
 import { AddImageButton, useAddImage } from "@/components/add-image";
 import { pickAlarmSound, useAlarmSound } from "@/lib/alarms/alarm-sound";
 import { useCheckInPlaces } from "@/lib/data/check-ins";
-import { useHabitStage } from "@/lib/data/streaks";
+import { useHabitRecords } from "@/lib/data/streaks";
 import { ChoiceChips, TextField, type Choice } from "@/components/habits/form-fields";
 import { SeasonFields } from "@/components/habits/season-fields";
 import { TinyVersionField } from "@/components/habits/tiny-version-field";
@@ -300,8 +301,12 @@ function TargetCount({ draft, update, type }: SectionProps & { type: CountedTarg
 
 // A tree doesn't ring and a plant notifies only after a miss, so the note follows today's Stage.
 function AlarmNote({ draft, alarm }: { draft: Draft; alarm: Alarm }) {
-  // eslint-disable-next-line eslint-react/purity -- the Stage today reads the clock
-  const stage = useHabitStage(draft, new Date());
+  const { whole } = useHabitRecords();
+  const { id } = draft;
+
+  const stage =
+    // eslint-disable-next-line eslint-react/purity -- the Stage today reads the clock
+    id === undefined || whole === null ? null : habitStage({ ...draft, id }, whole, new Date());
 
   return <Text variant="muted">{alarmNote({ ...draft, alarm }, stage)}</Text>;
 }

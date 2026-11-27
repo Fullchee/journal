@@ -1,5 +1,5 @@
 import { daysFrom, isoAt, shiftDay } from "@/core/calendar";
-import type { StreakRecords } from "@/core/habit-day";
+import type { HabitRecords } from "@/core/habit-day";
 import { answerTree, asksTreeQuestion, habitStage, TREE_WAIT_DAYS } from "@/core/habit-stage";
 import { isTree, isTreeOn, treeSpans } from "@/core/habit-tree";
 import type { Counts, Habit } from "@/core/habits-view";
@@ -14,7 +14,7 @@ const NOW = new Date(isoAt(TODAY, 12 * 60));
 function records(
   done: (day: string) => boolean = () => true,
   restPeriods: RestPeriod[] = [],
-): StreakRecords {
+): HabitRecords {
   const counts: Counts = {};
   const days = daysFrom(START, shiftDay(TODAY, -1));
 
