@@ -4,6 +4,7 @@ import { onRequestPost as postEntries } from "@worker/api/log/entries";
 import { onRequestPost as postUndo } from "@worker/api/log/undo";
 import type { Env, Json } from "@worker/lib/env";
 import { insertHabit } from "@worker/lib/habit-records";
+import { applyLog } from "@worker/lib/log-store";
 import { MISSED } from "@/core";
 import { makeD1 } from "./helpers/d1";
 import { apiRequest, makeEnv, OWNER, STRANGER } from "./helpers/env";
@@ -114,6 +115,21 @@ test("a log is recorded in log_actions with each Day before and after it", async
       undone_at: null,
     },
   );
+});
+
+test("a count log for a Habit that became a duration Habit since its plan stores nothing and reports 0", async () => {
+  const env = await makeUndoEnv();
+  const write = { record: "count", habit: youtube, date: TODAY, count: 2, note: "" } as const;
+
+  const { lines } = await applyLog(env, {
+    text: "2 youtube",
+    writes: [write],
+    created: null,
+    today: TODAY,
+  });
+
+  assert.deepEqual(lines, ["Logged YouTube: +2 (today 0)."]);
+  assert.deepEqual(await counts(env), []);
 });
 
 test("Undo removes exactly what a log added", async () => {
