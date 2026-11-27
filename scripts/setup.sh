@@ -115,7 +115,7 @@ finish() {
 
 run_wizard() {
 
-	TOTAL_STAGES=7
+	TOTAL_STAGES=8
 
 	cd "$(git rev-parse --show-toplevel)"
 	MISE_FILE="mise.local.toml"
@@ -195,6 +195,48 @@ run_wizard() {
 	else
 		warn "Approving the wt.toml commands failed."
 		SKIPPED+=("wt config approvals add --yes")
+	fi
+
+	stage "Claude Code plugins"
+	say "Installs the plugins .claude/settings.json turns on; Claude Code errors on any that are on but missing."
+	if ! have_cmd claude; then
+		warn "Claude Code is not installed, so its plugins are not installed."
+		SKIPPED+=("install Claude Code, then re-run")
+	else
+		# Prints "marketplace <repo>" for each unknown marketplace, then "plugin <id>" for each missing plugin.
+		PLUGIN_TODO=$(
+			MARKETPLACES=$(claude plugin marketplace list --json) PLUGINS=$(claude plugin list --json) bun -e '
+				const { enabledPlugins = {}, extraKnownMarketplaces = {} } = await Bun.file(".claude/settings.json").json();
+				const knownMarketplaces = new Set(JSON.parse(process.env.MARKETPLACES).map((m) => m.name));
+				for (const [name, { source }] of Object.entries(extraKnownMarketplaces))
+					if (!knownMarketplaces.has(name)) console.log("marketplace " + source.repo);
+				const installed = new Set(
+					JSON.parse(process.env.PLUGINS)
+						.filter((p) => p.scope === "user" || p.projectPath === process.cwd())
+						.map((p) => p.id),
+				);
+				for (const [id, on] of Object.entries(enabledPlugins)) if (on && !installed.has(id)) console.log("plugin " + id);
+			'
+		)
+		if [[ -z "$PLUGIN_TODO" ]]; then
+			ok "every plugin is installed"
+		else
+			while read -r kind name; do
+				if [[ "$kind" == marketplace ]]; then
+					if claude plugin marketplace add "$name" >/dev/null; then
+						ok "added the $name marketplace"
+					else
+						warn "Adding the $name marketplace failed."
+						SKIPPED+=("claude plugin marketplace add $name")
+					fi
+				elif claude plugin install "$name" --scope project >/dev/null; then
+					ok "installed $name"
+				else
+					warn "Installing $name failed."
+					SKIPPED+=("claude plugin install $name --scope project")
+				fi
+			done <<<"$PLUGIN_TODO"
+		fi
 	fi
 
 	stage "Environment"
