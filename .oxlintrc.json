@@ -43,7 +43,6 @@
     { "name": "jest-js", "specifier": "eslint-plugin-jest" },
     { "name": "sonarjs", "specifier": "eslint-plugin-sonarjs" },
     { "name": "regexp", "specifier": "eslint-plugin-regexp" },
-    { "name": "slop", "specifier": "eslint-plugin-slop" },
     { "name": "eslint-react", "specifier": "@eslint-react/eslint-plugin" },
     { "name": "expo", "specifier": "eslint-plugin-expo" },
     { "name": "shadcn", "specifier": "@shadcn/lint" }
@@ -110,7 +109,7 @@
       "error",
       { "components": ["TextInput", "Input", "TextField"] }
     ],
-    // Recommended sets of unicorn, sonarjs, regexp and slop, copied from ESLint; type-aware rules stay there.
+    // Recommended sets of unicorn, sonarjs and regexp, copied from ESLint; type-aware rules stay there.
     "unicorn-js/better-dom-traversing": "error",
     "unicorn/catch-error-name": "error",
     "unicorn-js/class-reference-in-static-methods": "error",
@@ -644,14 +643,6 @@
     "regexp/sort-flags": "error",
     "regexp/strict": "error",
     "regexp/use-ignore-case": "error",
-    "slop/no-em-dash": "error",
-    "slop/max-comment-length": "error",
-    "slop/no-chained-type-assertions": "error",
-    "slop/no-jargon": "error",
-    "slop/no-static-only-class": "error",
-    "slop/no-trivial-functions": "error",
-    "slop/no-trivial-type-aliases": "error",
-    "slop/prefer-jsdoc": "error",
     // typescript-eslint's strict and stylistic type-checked sets, ESLint's recommended set and React's hooks rules.
     // tsgolint runs the type-aware ones (options.typeAware). Left out: rules that need type information
     // Oxlint's JS plugins lack (sonarjs's type-checked set and void-use, unicorn's prefer-await, prefer-top-level-await, prefer-includes-over-repeated-comparisons,
@@ -1029,7 +1020,6 @@
         "unicorn/prefer-module": "off",
         "unicorn-js/no-top-level-assignment-in-function": "off",
         "sonarjs/no-hardcoded-passwords": "off", // pragma: allowlist secret
-        "slop/no-em-dash": "off",
         "max-lines": "off",
         "typescript/no-non-null-assertion": "off",
         // It flags `expect(mock.method)`, which never runs unbound; jest's typed variant needs type information Oxlint plugins lack.

@@ -33,7 +33,6 @@ export interface RescheduleSheetProps {
 }
 
 const CAUSES: { cause: Reschedule["cause"]; label: string }[] = [
-  // oxlint-disable-next-line slop/no-em-dash -- the label the owner asked for (#55), not prose
   { cause: "outside", label: "Couldn't — outside" },
   { cause: "avoidance", label: "Put it off" },
 ];
@@ -113,7 +112,7 @@ export function RescheduleSheet({
     <BottomSheet label={`Reschedule ${name}`} onClose={onClose}>
       <Text variant="title">{`Reschedule ${name}`}</Text>
       {renderDateField({ label: "New date", value: to, min, onChange: setTo })}
-      {!dateOk && <Text className="text-destructive text-sm">{`Pick ${min} or later.`}</Text>}
+      {!dateOk && <Text className="text-sm text-destructive">{`Pick ${min} or later.`}</Text>}
       <CausePicker cause={cause} note={note} onCause={setCause} onNote={setNote} />
       {offline && <Text variant="muted">Rescheduling needs a connection.</Text>}
       {failed && <Text className="text-destructive">{"Couldn't reschedule. Try again."}</Text>}

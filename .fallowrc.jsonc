@@ -24,8 +24,8 @@
     // `screenshot:web` in package.json runs it through web-preview.sh
     "scripts/screenshot-web.ts",
   ],
-  // lint:sh runs the system shellcheck and shfmt (Homebrew locally; CI installs pinned releases).
-  "ignoreBinaries": ["shellcheck", "shfmt"],
+  // lint:sh and lint:actions run system shellcheck, shfmt and zizmor (Homebrew locally; CI installs pinned releases).
+  "ignoreBinaries": ["shellcheck", "shfmt", "zizmor"],
   "ignoreDependencies": [
     // babel.config.cjs preset
     "babel-preset-expo",

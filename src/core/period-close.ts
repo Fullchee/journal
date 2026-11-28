@@ -158,7 +158,6 @@ const VERB: Record<MoveKind, string> = {
   achieve: "achieved",
 };
 
-// oxlint-disable-next-line slop/no-em-dash -- the dated move line's format, which the issue sets (#61); not prose
 const DASH = " — ";
 
 /** The reflection's line for one move: its date, then e.g. `Cultivate Meditation achieved: <words>`. A carry changes nothing, so it gets no date. */
