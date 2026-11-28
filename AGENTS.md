@@ -23,7 +23,7 @@ In app tests, press and type with `userEvent` (`press`, `paste`); keep `fireEven
 
 To accept a detect-secrets false positive, run `bun run secrets:scan` and mark the hit `is_secret: false`.
 
-`.github/workflows/actions.lock` pins every action to a commit. After changing a `uses:` line, run `GH_TOKEN=$(gh auth token --user Fullchee) gh actions-lock` and commit the lock with it.
+`.github/workflows/actions.lock` pins every action to a commit. After changing a `uses:` line, run `GH_TOKEN=$(gh auth token --user Fullchee) gh actions-lock` and commit the lock with it. `bun run lint:actions` runs zizmor, which reads the lock and fails on a `uses:` missing from it.
 
 Create worktrees with `wt switch --create <branch>`; its setup script copies the untracked `mise.local.toml`, `CLAUDE.local.md` and `.dev.vars`.
 

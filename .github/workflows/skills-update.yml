@@ -26,7 +26,8 @@ jobs:
       BRANCH: chore/skills-update
       GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v7.0.1
+      # The last step pushes the branch with the token checkout saves; the job uploads no artifacts.
+      - uses: actions/checkout@v7.0.1 # zizmor: ignore[artipacked]
       # Reads the Bun version from package.json `packageManager`.
       - uses: oven-sh/setup-bun@v2.2.0
       # Pinned: a new CLI can rewrite the lockfile format or move skill folders.

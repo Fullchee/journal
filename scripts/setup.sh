@@ -121,6 +121,8 @@ run_wizard() {
 	MISE_FILE="mise.local.toml"
 	NODE_VERSION=$(cat .nvmrc)
 	BUN_VERSION=$(sed -n 's/.*"packageManager": "bun@\([^"]*\)".*/\1/p' package.json)
+	# Matches the zizmor release CI downloads in .github/workflows/ci.yml.
+	ZIZMOR_VERSION=1.32.0
 	OS=$(uname -s)
 	SETUP_ANDROID="${SETUP_ANDROID:-1}"
 
@@ -158,17 +160,18 @@ run_wizard() {
 		say '  eval "$(mise activate zsh)"'
 	fi
 
-	stage "Node $NODE_VERSION, Bun $BUN_VERSION and uv"
-	say "Pins them in $MISE_FILE (git ignores it), matching .nvmrc and package.json. uv runs the detect-secrets pre-commit hook."
-	if [[ -f "$MISE_FILE" ]] && have_version node "$NODE_VERSION" && have_version bun "$BUN_VERSION" && have_cmd uv; then
-		ok "already pinned: node $(node --version), bun $(bun --version), $(uv --version)"
+	stage "Node $NODE_VERSION, Bun $BUN_VERSION, uv and zizmor $ZIZMOR_VERSION"
+	say "Pins them in $MISE_FILE (git ignores it), matching .nvmrc and package.json. uv runs the detect-secrets pre-commit hook; zizmor lints the GitHub workflows."
+	if [[ -f "$MISE_FILE" ]] && have_version node "$NODE_VERSION" && have_version bun "$BUN_VERSION" && have_cmd uv && [[ "$(zizmor --version 2>/dev/null)" == "zizmor $ZIZMOR_VERSION" ]]; then
+		ok "already pinned: node $(node --version), bun $(bun --version), $(uv --version), $(zizmor --version)"
 	else
-		mise use --path "$MISE_FILE" "node@$NODE_VERSION" "bun@$BUN_VERSION" uv
+		mise use --path "$MISE_FILE" "node@$NODE_VERSION" "bun@$BUN_VERSION" uv "zizmor@$ZIZMOR_VERSION"
 		mise trust "$MISE_FILE" >/dev/null
 		eval "$(mise env -s bash)"
 		ok "node $(node --version)"
 		ok "bun $(bun --version)"
 		ok "$(uv --version)"
+		ok "$(zizmor --version)"
 	fi
 
 	stage "Dependencies"

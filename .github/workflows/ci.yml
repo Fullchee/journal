@@ -9,6 +9,9 @@ on:
       - "docs/**"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -19,6 +22,8 @@ jobs:
       cancel-in-progress: true
     steps:
       - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
       # Jest and Expo run on Node; bun only installs and starts scripts.
       - uses: actions/setup-node@v7.1.0
         id: node
@@ -43,8 +48,8 @@ jobs:
             /tmp/jest_*
           key: checks-${{ runner.os }}-${{ github.sha }}
           restore-keys: checks-${{ runner.os }}-
-      # `lint:sh` needs these; pinned to the versions Homebrew gives the owner, since the runner's shellcheck is older.
-      - name: Install shellcheck and shfmt
+      # `lint:sh` and `lint:actions` need these; pinned to the versions Homebrew gives the owner, since the runner's shellcheck is older.
+      - name: Install shellcheck, shfmt and zizmor
         run: |
           mkdir -p "$HOME/.local/bin"
           curl -fsSL -o shellcheck.tar.xz https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.linux.x86_64.tar.xz
@@ -54,6 +59,10 @@ jobs:
           curl -fsSL -o "$HOME/.local/bin/shfmt" https://github.com/mvdan/sh/releases/download/v3.13.1/shfmt_v3.13.1_linux_amd64
           echo "fb096c5d1ac6beabbdbaa2874d025badb03ee07929f0c9ff67563ce8c75398b1  $HOME/.local/bin/shfmt" | sha256sum -c -
           chmod +x "$HOME/.local/bin/shfmt"
+          curl -fsSL -o zizmor.tar.gz https://github.com/zizmorcore/zizmor/releases/download/v1.32.0/zizmor-x86_64-unknown-linux-gnu.tar.gz
+          echo "bb110cc765eca9cd7efb2e284a956be5974c60027b0970f16397d86208a9957b  zizmor.tar.gz" | sha256sum -c -
+          tar -xzf zizmor.tar.gz -C "$HOME/.local/bin" zizmor
+          rm zizmor.tar.gz
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - if: steps.node-modules.outputs.cache-hit != 'true'
         run: bun install --frozen-lockfile
@@ -91,6 +100,8 @@ jobs:
       url: https://journal.fullchee.workers.dev
     steps:
       - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v7.1.0
         with:
           node-version-file: .nvmrc

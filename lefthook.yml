@@ -21,6 +21,10 @@ pre-commit:
     # `--no-verify` skips this, so .github/workflows/secrets.yml scans every push to main too.
     detect-secrets:
       run: uvx --from detect-secrets==1.5.0 detect-secrets-hook --baseline .secrets.baseline {staged_files}
+    # Reads .github/workflows/actions.lock, so a `uses:` missing from the lock fails too.
+    zizmor:
+      glob: ".github/workflows/*.{yml,yaml,lock}"
+      run: zizmor --offline .github
     typecheck:
       glob: "*.{ts,tsx}"
       run: bunx tsc --noEmit && bunx tsc --noEmit -p worker && bunx tsc --noEmit -p tsconfig.node.json
