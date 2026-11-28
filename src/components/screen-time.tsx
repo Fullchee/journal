@@ -1,7 +1,8 @@
 import { formatDay, hoursLabel, shiftDay } from "@/core";
-import { Button, Text } from "@/ui";
+import { Text } from "@/ui";
 import { View } from "react-native";
 
+import { SettingPrompt } from "@/components/setting-prompt";
 import { useScreenTime } from "@/lib/data/screen-time";
 import { useUsageAccess } from "@/lib/screen-time/screen-time";
 
@@ -38,19 +39,10 @@ export function ScreenTimeDays({ today }: { today: string }) {
 }
 
 /** Asks for Usage access on an Android phone that hasn't given it; quiet everywhere else. */
-export function UsageAccessPrompt() {
-  const access = useUsageAccess();
-
-  if (access === null || access.granted) return null;
-
-  return (
-    <View className="gap-2">
-      <Text variant="muted">
-        To count this phone, switch on Usage access for Journal. It sends only each Day's total.
-      </Text>
-      <Button variant="outline" className="self-start" onPress={access.open}>
-        <Text>Open Usage access</Text>
-      </Button>
-    </View>
-  );
-}
+export const UsageAccessPrompt = () => (
+  <SettingPrompt
+    access={useUsageAccess()}
+    reason="To count this phone, switch on Usage access for Journal. It sends only each Day's total."
+    action="Open Usage access"
+  />
+);

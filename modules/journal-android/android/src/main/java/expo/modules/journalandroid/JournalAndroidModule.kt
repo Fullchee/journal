@@ -62,6 +62,12 @@ class JournalAndroidModule : Module() {
 
     Function("createAlarmChannel") { AlarmSound.createChannel(context) }
 
+    Function("canUseFullScreenIntent") { FullScreenAlarm.isAllowed(context) }
+
+    Function("openFullScreenIntentSettings") { FullScreenAlarm.openSettings(context) }
+
+    Function("showAlarmScreen") { FullScreenAlarm.show(context) }
+
     Function("hasUsageAccess") { ScreenTime.hasUsageAccess(context) }
 
     Function("openUsageAccessSettings") { ScreenTime.openUsageAccessSettings(context) }

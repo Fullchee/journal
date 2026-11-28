@@ -22,6 +22,8 @@ import { createQueryClient } from "@/lib/data/query-client";
 
 // eslint-disable-next-line no-restricted-imports -- jest/ sits outside src, so no @/ alias reaches it
 import { fakeApi } from "../../../../jest/fake-api";
+// eslint-disable-next-line no-restricted-imports -- Expo local modules live outside src, where no @/ alias reaches
+import JournalAndroid from "../../../../modules/journal-android";
 
 jest.mock("@/lib/api/api-fetch", () => ({ apiFetch: jest.fn() }));
 
@@ -334,6 +336,30 @@ test("a background event that isn't a button tap does nothing", async () => {
 
   expect(api.writes).toEqual([]);
   expect(persistQueryClientRestore).not.toHaveBeenCalled();
+});
+
+const delivered = (data: Record<string, string>): Event => ({
+  type: EventType.DELIVERED,
+  detail: { notification: { id: "42", data } },
+});
+
+test("an alarm that rings with the app on screen opens the alarm screen", async () => {
+  await mountIn(createQueryClient());
+
+  await act(() => foregroundHandler()(delivered({ habit: "walk", habitId: "walk" })));
+
+  expect(JournalAndroid.showAlarmScreen).toHaveBeenCalledTimes(1);
+});
+
+test.each([
+  ["a reminder delivered", delivered({ habit: "walk" })],
+  ["a tap on an alarm", { ...delivered({ habitId: "walk" }), type: EventType.PRESS }],
+])("%s with the app on screen opens no alarm screen", async (_, event) => {
+  await mountIn(createQueryClient());
+
+  await act(() => foregroundHandler()(event));
+
+  expect(JournalAndroid.showAlarmScreen).not.toHaveBeenCalled();
 });
 
 const NOTICE_DATA = { habit: "walk", ring: "70" };

@@ -24,6 +24,9 @@ import { alarmTrigger, ringTrigger } from "@/lib/alarms/ring-trigger";
 import { silenceToday } from "@/lib/alarms/silenced-alarms";
 import { DISMISS_RING_ACTION } from "@/lib/alarms/upcoming";
 
+// eslint-disable-next-line no-restricted-imports -- Expo local modules live outside src, where no @/ alias reaches
+import JournalAndroid from "../../../modules/journal-android";
+
 /**
  * A Done or Skip tap on a Habit notification; `use-alarm-schedule` puts the Habit's id in its `data`, and on an
  * upcoming-alarm notice the id of the ring it comes before.
@@ -217,6 +220,16 @@ const onBackgroundEvent = (event: Event) =>
       : settleWithinSaveWait(runAction(app.client, pressed)),
   );
 
+// `use-alarm-schedule` puts `habitId` only on an `alarm` kind ring.
+const RingingData = z.object({ habitId: z.string() });
+const RingingAlarm = z.object({ notification: z.object({ data: RingingData }) });
+
+// Android shows a full-screen ring as a heads-up while the phone is in use, but lets the app on screen open it.
+function showRingingAlarm({ type, detail }: Event) {
+  if (type === EventType.DELIVERED && RingingAlarm.safeParse(detail).success)
+    JournalAndroid.showAlarmScreen();
+}
+
 /** Call once at app start, outside React: Android runs a button tap with the app closed as a headless task. */
 export function registerAlarmActions() {
   notifee.onBackgroundEvent(onBackgroundEvent);
@@ -230,6 +243,7 @@ export function useAlarmActions() {
     app.client = client;
 
     const unsubscribe = notifee.onForegroundEvent((event) => {
+      showRingingAlarm(event);
       void answer(event, (pressed) => runAction(client, pressed));
     });
 

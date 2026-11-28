@@ -142,6 +142,9 @@ test("an alarm Habit rings over the lock screen on an alarm-clock trigger, daily
       ongoing: true,
       loopSound: true,
       category: "alarm",
+      // A tap on the heads-up opens the alarm screen and keeps the ring going.
+      autoCancel: false,
+      pressAction: { launchActivity: "expo.modules.journalandroid.AlarmActivity" },
       fullScreenAction: { launchActivity: "expo.modules.journalandroid.AlarmActivity" },
     },
   });

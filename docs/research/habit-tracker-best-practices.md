@@ -175,6 +175,15 @@ AOSP's Clock shows a notice two hours before each alarm (`LOW_NOTIFICATION_HOUR_
 [aosp-instance]: https://android.googlesource.com/platform/packages/apps/DeskClock/+/refs/heads/main/src/com/android/deskclock/provider/AlarmInstance.kt
 [aosp-notif]: https://android.googlesource.com/platform/packages/apps/DeskClock/+/refs/heads/main/src/com/android/deskclock/alarms/AlarmNotifications.kt
 
+### Full-screen alarm
+
+A full-screen intent covers the lock screen only on a locked phone. On an unlocked phone, Android shows it as an expanded heads-up with its buttons instead ([build a notification][n-urgent]). Android 14 limits `USE_FULL_SCREEN_INTENT` to calling and alarm apps through the Play Store, and lets the owner turn it off; an app checks `NotificationManager.canUseFullScreenIntent()` and opens `ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT` ([Android 14 changes][a14-fsi]). AOSP's Clock sets the ringing alarm's tap action to its alarm screen too ([`AlarmNotifications.kt`][aosp-notif]).
+
+The journal copies Clock: a tap on the heads-up opens the alarm screen and keeps the ring going. With the journal itself on screen, Android lets it open the alarm screen at once. When the sideloaded APK lacks the permission, the Habits screen and the Habit form show a button to the setting.
+
+[n-urgent]: https://developer.android.com/develop/ui/views/notifications/build-notification#urgent-message
+[a14-fsi]: https://developer.android.com/about/versions/14/behavior-changes-14#fsi-permission
+
 ## Habit vs recurring task vs task
 
 ### How apps split them

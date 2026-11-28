@@ -35,6 +35,7 @@ import { ActivityIndicator, Pressable, View } from "react-native";
 import { useCSSVariable } from "uniwind";
 
 import { AddImageButton, useAddImage } from "@/components/add-image";
+import { FullScreenAlarmPrompt } from "@/components/habits/full-screen-alarm-prompt";
 import { pickAlarmSound, useAlarmSound } from "@/lib/alarms/alarm-sound";
 import { useCheckInPlaces } from "@/lib/data/check-ins";
 import { useHabitRecords } from "@/lib/data/streaks";
@@ -353,7 +354,12 @@ function Time({ draft, update }: SectionProps) {
         }
       />
       {draft.alarm && <AlarmNote draft={draft} alarm={draft.alarm} />}
-      {draft.alarm?.kind === "alarm" && <AlarmSound />}
+      {draft.alarm?.kind === "alarm" && (
+        <>
+          <AlarmSound />
+          <FullScreenAlarmPrompt />
+        </>
+      )}
     </>
   );
 }

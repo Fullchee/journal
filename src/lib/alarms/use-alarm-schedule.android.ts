@@ -61,11 +61,15 @@ const createChannels = () =>
 
 // An `alarm` kind Habit loops its sound and opens AlarmActivity over the lock screen until Dismiss or Open.
 // AlarmActivity has no Done or Skip, so those buttons stop the ring only from the notification of an unlocked phone.
+// An unlocked phone shows the ring as a heads-up; a tap opens AlarmActivity, as Android's Clock does, so the tap
+// must leave the notification, and its sound, in place.
 const ringing = (habitId: string): Partial<Notification> => ({
   data: { habitId },
   android: {
     loopSound: true,
     category: AndroidCategory.ALARM,
+    autoCancel: false,
+    pressAction: { id: "alarm", launchActivity: ALARM_ACTIVITY },
     fullScreenAction: { id: "alarm", launchActivity: ALARM_ACTIVITY },
   },
 });

@@ -23,6 +23,7 @@ import { ChevronDown, ChevronRight, Minus, Plus } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 
+import { FullScreenAlarmPrompt } from "@/components/habits/full-screen-alarm-prompt";
 import { HabitDayDetail, type DayDetail } from "@/components/habits/habit-day-detail";
 import { HabitFilterBar } from "@/components/habits/habit-filter-bar";
 import { useQuickManage } from "@/components/habits/use-quick-manage";
@@ -339,6 +340,9 @@ export default function HabitsScreen() {
       contentContainerClassName="w-full max-w-5xl gap-4 self-center p-4"
     >
       <NewHabit kind={filters.kind} />
+      {data?.habits.some((habit) => habit.alarm?.kind === "alarm") === true && (
+        <FullScreenAlarmPrompt />
+      )}
       <View className={isWide ? "flex-row items-start gap-8" : "gap-4"}>
         <HabitFilterBar filters={filters} onChange={setFilters} isWide={isWide} />
         <View className="flex-1">

@@ -19,6 +19,12 @@ export default requireNativeModule<{
   pickAlarmSound: () => Promise<AlarmSoundInfo | null>;
   /** Creates the alarm channel for the chosen sound, at alarm volume, and returns its id. */
   createAlarmChannel: () => string;
+  /** Whether a ringing alarm may open its screen over the lock screen; Android 14+ lets the owner turn it off. */
+  canUseFullScreenIntent: () => boolean;
+  /** Opens the full-screen alarms setting for this app; does nothing below Android 14, where it is always on. */
+  openFullScreenIntentSettings: () => void;
+  /** Opens the ringing alarm's screen; Android allows it only while the app is on screen. */
+  showAlarmScreen: () => void;
   /** Whether the owner switched on Usage access, which screen time reads. */
   hasUsageAccess: () => boolean;
   /** Opens the Usage access setting for this app. */

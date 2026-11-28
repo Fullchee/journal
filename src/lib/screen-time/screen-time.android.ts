@@ -2,11 +2,12 @@ import { useQueryClient } from "@tanstack/react-query";
 import * as BackgroundTask from "expo-background-task";
 import storage from "expo-sqlite/kv-store";
 import * as TaskManager from "expo-task-manager";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { AppState } from "react-native";
 
 import { DEVICE_NAME, lastDays, screenMinutes } from "@/core";
 
+import { useSettingAccess } from "@/hooks/use-setting-access";
 import { apiFetch } from "@/lib/api/api-fetch";
 
 // eslint-disable-next-line no-restricted-imports -- Expo local modules live outside src, where no @/ alias reaches
@@ -113,17 +114,8 @@ export function useScreenTimeSync() {
   }, [client]);
 }
 
+const hasUsageAccess = () => JournalAndroid.hasUsageAccess();
+const openUsageAccessSettings = () => JournalAndroid.openUsageAccessSettings();
+
 /** Whether Usage access is on, read again each time the owner comes back from Settings. */
-export function useUsageAccess() {
-  const [granted, setGranted] = useState(() => JournalAndroid.hasUsageAccess());
-
-  useEffect(() => {
-    const listener = AppState.addEventListener("change", (state) => {
-      if (state === "active") setGranted(JournalAndroid.hasUsageAccess());
-    });
-
-    return () => listener.remove();
-  }, []);
-
-  return { granted, open: () => JournalAndroid.openUsageAccessSettings() };
-}
+export const useUsageAccess = () => useSettingAccess(hasUsageAccess, openUsageAccessSettings);
